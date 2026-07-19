@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.api.routes import share, messages, health, updates
@@ -43,6 +44,12 @@ app.include_router(health.router, tags=["Health"])
 app.include_router(share.router, prefix="/v1/share", tags=["Share"])
 app.include_router(messages.router, prefix="/v1/messages", tags=["Messages"])
 app.include_router(updates.router, prefix="/v1/updates", tags=["Updates"])
+
+# 静态文件 — APK 下载
+import os
+static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+if os.path.isdir(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 if __name__ == "__main__":
