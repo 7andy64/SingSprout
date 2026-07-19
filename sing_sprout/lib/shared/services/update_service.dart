@@ -26,18 +26,6 @@ class UpdateInfo {
     required this.sha256,
     required this.changelog,
   });
-
-  factory UpdateInfo.fromJson(Map<String, dynamic> json) {
-    return UpdateInfo(
-      hasUpdate: json['has_update'] as bool? ?? false,
-      forceUpdate: json['force_update'] as bool? ?? false,
-      latestVersion: json['latest_version'] as String? ?? '',
-      downloadUrl: json['download_url'] as String? ?? '',
-      fileSize: json['file_size'] as int? ?? 0,
-      sha256: json['sha256'] as String? ?? '',
-      changelog: json['changelog'] as String? ?? '',
-    );
-  }
 }
 
 class UpdateService {
@@ -46,24 +34,76 @@ class UpdateService {
   UpdateService._();
 
   static const _installChannel = MethodChannel('com.singsprout.app/install');
-  final _baseUrl = AppConfig.apiBaseUrl;
 
-  /// 检查是否有新版本
+  static const _apiUrl =
+      'https://api.github.com/repos/nanbujiwanfeng/SingSprout/releases/latest';
+
+  /// 检查 GitHub Releases 是否有新版本
   Future<UpdateInfo?> checkForUpdate() async {
     try {
-      final uri = Uri.parse(
-        '$_baseUrl/updates/check?platform=android&version=${AppConfig.version}',
-      );
       final response = await http
-          .get(uri)
+          .get(Uri.parse(_apiUrl))
           .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final info = UpdateInfo.fromJson(data);
-        return info.hasUpdate ? info : null;
+      if (response.statusCode != 200) return null;
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+      // 解析版本号 (tag_name: "v0.2.0" → "0.2.0")
+      final tag = (data['tag_name'] as String?) ?? '';
+      final latestVersion =
+          tag.startsWith('v') ? tag.substring(1) : tag;
+      if (latestVersion.isEmpty) return null;
+
+      // 找到 APK 文件
+      final assets = (data['assets'] as List?) ?? [];
+      Map<String, dynamic>? apkAsset;
+      for (final a in assets) {
+        final name = (a['name'] as String?) ?? '';
+        if (name.endsWith('.apk')) {
+          apkAsset = a as Map<String, dynamic>;
+          break;
+        }
       }
-      return null;
+      if (apkAsset == null) return null;
+
+      final downloadUrl =
+          apkAsset['browser_download_url'] as String? ?? '';
+      if (downloadUrl.isEmpty) return null;
+
+      final fileSize = apkAsset['size'] as int? ?? 0;
+
+      // 解析 Release body
+      final body = (data['body'] as String?) ?? '';
+      final forceUpdate = body.contains('[force]');
+
+      // 从 body 中提取 SHA256
+      final sha256Match = RegExp(r'SHA256:\s*([a-f0-9]{64})',
+              caseSensitive: false)
+          .firstMatch(body);
+      final sha256 = sha256Match?.group(1) ?? '';
+
+      // 去除 [force] 和 SHA256 行后的纯文本 changelog
+      final changelog = body
+          .replaceAll(RegExp(r'\[force\]', caseSensitive: false), '')
+          .replaceAll(RegExp(r'SHA256:\s*[a-f0-9]{64}', caseSensitive: false),
+              '')
+          .trim();
+
+      // 版本比较
+      final hasUpdate = _versionGreater(latestVersion, AppConfig.version);
+
+      if (!hasUpdate) return null;
+
+      return UpdateInfo(
+        hasUpdate: true,
+        forceUpdate: forceUpdate,
+        latestVersion: latestVersion,
+        downloadUrl: downloadUrl,
+        fileSize: fileSize,
+        sha256: sha256,
+        changelog: changelog,
+      );
     } catch (_) {
       return null;
     }
@@ -75,7 +115,8 @@ class UpdateService {
     void Function(double) onProgress,
   ) async {
     final dir = await getExternalStorageDirectory();
-    final savePath = '${dir!.path}/update_${DateTime.now().millisecondsSinceEpoch}.apk';
+    final savePath =
+        '${dir!.path}/update_${DateTime.now().millisecondsSinceEpoch}.apk';
 
     final client = HttpClient();
     try {
@@ -119,5 +160,22 @@ class UpdateService {
     await _installChannel.invokeMethod('installApk', {
       'filePath': file.path,
     });
+  }
+
+  /// 简单 semver 比较：a > b
+  static bool _versionGreater(String a, String b) {
+    try {
+      final pa = a.split('.').map(int.parse).toList();
+      final pb = b.split('.').map(int.parse).toList();
+      while (pa.length < 3) { pa.add(0); }
+      while (pb.length < 3) { pb.add(0); }
+      for (var i = 0; i < 3; i++) {
+        if (pa[i] > pb[i]) return true;
+        if (pa[i] < pb[i]) return false;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 }
