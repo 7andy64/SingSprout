@@ -35,83 +35,91 @@ class UpdateService {
 
   static const _installChannel = MethodChannel('com.singsprout.app/install');
 
-  static const _apiUrl =
-      'https://api.github.com/repos/nanbujiwanfeng/SingSprout/releases/latest';
+  // Gitee 国内快，优先；GitHub 做备用
+  static const _apiUrls = [
+    'https://gitee.com/api/v5/repos/nanbujiwanfeng/SingSprout/releases/latest',
+    'https://api.github.com/repos/nanbujiwanfeng/SingSprout/releases/latest',
+  ];
 
-  /// 检查 GitHub Releases 是否有新版本
+  /// 依次尝试 Gitee → GitHub，谁通用谁
   Future<UpdateInfo?> checkForUpdate() async {
+    for (final url in _apiUrls) {
+      final info = await _tryApi(url);
+      if (info != null) return info;
+    }
+    return null;
+  }
+
+  Future<UpdateInfo?> _tryApi(String apiUrl) async {
     try {
       final response = await http
-          .get(Uri.parse(_apiUrl))
-          .timeout(const Duration(seconds: 15));
+          .get(Uri.parse(apiUrl))
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-
-      // 解析版本号 (tag_name: "v0.2.0" → "0.2.0")
-      final tag = (data['tag_name'] as String?) ?? '';
-      final latestVersion =
-          tag.startsWith('v') ? tag.substring(1) : tag;
-      if (latestVersion.isEmpty) return null;
-
-      // 找到 APK 文件
-      final assets = (data['assets'] as List?) ?? [];
-      Map<String, dynamic>? apkAsset;
-      for (final a in assets) {
-        final name = (a['name'] as String?) ?? '';
-        if (name.endsWith('.apk')) {
-          apkAsset = a as Map<String, dynamic>;
-          break;
-        }
-      }
-      if (apkAsset == null) return null;
-
-      var downloadUrl =
-          apkAsset['browser_download_url'] as String? ?? '';
-      if (downloadUrl.isEmpty) return null;
-
-      // 国内下载加速：自动加镜像前缀
-      if (downloadUrl.contains('github.com')) {
-        downloadUrl = 'https://ghproxy.com/$downloadUrl';
-      }
-
-      final fileSize = apkAsset['size'] as int? ?? 0;
-
-      // 解析 Release body
-      final body = (data['body'] as String?) ?? '';
-      final forceUpdate = body.contains('[force]');
-
-      // 从 body 中提取 SHA256
-      final sha256Match = RegExp(r'SHA256:\s*([a-f0-9]{64})',
-              caseSensitive: false)
-          .firstMatch(body);
-      final sha256 = sha256Match?.group(1) ?? '';
-
-      // 去除 [force] 和 SHA256 行后的纯文本 changelog
-      final changelog = body
-          .replaceAll(RegExp(r'\[force\]', caseSensitive: false), '')
-          .replaceAll(RegExp(r'SHA256:\s*[a-f0-9]{64}', caseSensitive: false),
-              '')
-          .trim();
-
-      // 版本比较
-      final hasUpdate = _versionGreater(latestVersion, AppConfig.version);
-
-      if (!hasUpdate) return null;
-
-      return UpdateInfo(
-        hasUpdate: true,
-        forceUpdate: forceUpdate,
-        latestVersion: latestVersion,
-        downloadUrl: downloadUrl,
-        fileSize: fileSize,
-        sha256: sha256,
-        changelog: changelog,
-      );
+      return _parseResponse(data);
     } catch (_) {
       return null;
     }
+  }
+
+  /// 解析 Release JSON（Gitee 和 GitHub 格式基本一致）
+  UpdateInfo? _parseResponse(Map<String, dynamic> data) {
+    final tag = (data['tag_name'] as String?) ?? '';
+    final latestVersion =
+        tag.startsWith('v') ? tag.substring(1) : tag;
+    if (latestVersion.isEmpty) return null;
+
+    // 找到 APK
+    final assets = (data['assets'] as List?) ?? [];
+    Map<String, dynamic>? apkAsset;
+    for (final a in assets) {
+      final name = (a['name'] as String?) ?? '';
+      if (name.endsWith('.apk')) {
+        apkAsset = a as Map<String, dynamic>;
+        break;
+      }
+    }
+    if (apkAsset == null) return null;
+
+    var downloadUrl =
+        apkAsset['browser_download_url'] as String? ?? '';
+    if (downloadUrl.isEmpty) return null;
+
+    // GitHub 下载走镜像加速
+    if (downloadUrl.contains('github.com')) {
+      downloadUrl = 'https://ghproxy.com/$downloadUrl';
+    }
+
+    final fileSize = apkAsset['size'] as int? ?? 0;
+
+    final body = (data['body'] as String?) ?? '';
+    final forceUpdate = body.contains('[force]');
+
+    final sha256Match = RegExp(r'SHA256:\s*([a-f0-9]{64})',
+            caseSensitive: false)
+        .firstMatch(body);
+    final sha256 = sha256Match?.group(1) ?? '';
+
+    final changelog = body
+        .replaceAll(RegExp(r'\[force\]', caseSensitive: false), '')
+        .replaceAll(RegExp(r'SHA256:\s*[a-f0-9]{64}', caseSensitive: false),
+            '')
+        .trim();
+
+    if (!_versionGreater(latestVersion, AppConfig.version)) return null;
+
+    return UpdateInfo(
+      hasUpdate: true,
+      forceUpdate: forceUpdate,
+      latestVersion: latestVersion,
+      downloadUrl: downloadUrl,
+      fileSize: fileSize,
+      sha256: sha256,
+      changelog: changelog,
+    );
   }
 
   /// 下载 APK，通过 [onProgress] 回调进度 (0.0 ~ 1.0)
