@@ -17,6 +17,8 @@ dependencies:
   http: ^1.1.2
   uuid: ^4.2.1
   flutter_animate: ^4.3.0
+  crypto: ^3.0.3
+  path_provider: ^2.1.1
 
 dev_dependencies:
   flutter_test:

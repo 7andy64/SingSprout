@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     SHARE_LINK_BASE_URL: str = "https://singsprout.app/s"
     SHARE_LINK_EXPIRE_DAYS: int = 180
 
+    # ── App 更新 ──
+    LATEST_VERSION: str = "0.1.0"
+    MIN_VERSION: str = "0.1.0"
+    APK_DOWNLOAD_URL: str = ""
+    APK_FILE_SIZE: int = 0
+    APK_SHA256: str = ""
+    UPDATE_CHANGELOG_ZH: str = ""
+
     # ── 内容安全 ──
     CONTENT_FILTER_ENABLED: bool = True
     MAX_TEXT_LENGTH: int = 500

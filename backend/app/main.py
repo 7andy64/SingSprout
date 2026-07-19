@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.core.config import settings
-from app.api.routes import share, messages, health
+from app.api.routes import share, messages, health, updates
 
 
 @asynccontextmanager
@@ -42,6 +42,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.include_router(health.router, tags=["Health"])
 app.include_router(share.router, prefix="/v1/share", tags=["Share"])
 app.include_router(messages.router, prefix="/v1/messages", tags=["Messages"])
+app.include_router(updates.router, prefix="/v1/updates", tags=["Updates"])
 
 
 if __name__ == "__main__":

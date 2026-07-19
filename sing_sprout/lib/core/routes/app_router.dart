@@ -17,11 +17,11 @@ import '../constants/app_routes.dart';
 class AppRouter {
   AppRouter._();
 
-  static final _rootNavigatorKey = GlobalKey<NavigatorState>();
+  static final rootNavigatorKey = GlobalKey<NavigatorState>();
   static final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
   static final router = GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.hummingGarden,
     routes: [
       // ── 底部导航壳 ──
@@ -126,18 +126,18 @@ class _BottomNavBar extends StatelessWidget {
       onTap: (index) => _onTap(context, index),
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(Icons.music_note_rounded),
-          activeIcon: Icon(Icons.music_note_rounded),
+          icon: Icon(Icons.mic_none_rounded),
+          activeIcon: Icon(Icons.mic_rounded),
           label: '哼唱',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.favorite_outline_rounded),
-          activeIcon: Icon(Icons.favorite_rounded),
+          icon: Icon(Icons.sentiment_satisfied_outlined),
+          activeIcon: Icon(Icons.sentiment_satisfied_rounded),
           label: '心情',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.park_outlined),
-          activeIcon: Icon(Icons.park),
+          activeIcon: Icon(Icons.park_rounded),
           label: '音乐树',
         ),
         BottomNavigationBarItem(
