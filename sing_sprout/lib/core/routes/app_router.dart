@@ -126,28 +126,28 @@ class _BottomNavBar extends StatelessWidget {
       onTap: (index) => _onTap(context, index),
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(Icons.mic_none_rounded),
-          activeIcon: Icon(Icons.mic_rounded),
+          icon: Icon(Icons.mic_none),
+          activeIcon: Icon(Icons.mic),
           label: '哼唱',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.sentiment_satisfied_outlined),
-          activeIcon: Icon(Icons.sentiment_satisfied_rounded),
+          icon: Icon(Icons.sentiment_satisfied),
+          activeIcon: Icon(Icons.sentiment_satisfied),
           label: '心情',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.park_outlined),
-          activeIcon: Icon(Icons.park_rounded),
+          icon: Icon(Icons.park),
+          activeIcon: Icon(Icons.park),
           label: '音乐树',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.mail_outline_rounded),
-          activeIcon: Icon(Icons.mail_rounded),
+          icon: Icon(Icons.mail_outline),
+          activeIcon: Icon(Icons.mail),
           label: '邮局',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline_rounded),
-          activeIcon: Icon(Icons.person_rounded),
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
           label: '我的',
         ),
       ],
