@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
+import '../../core/constants/app_config.dart';
 import '../../shared/widgets/animal_avatar.dart';
+import '../../shared/widgets/update_dialog.dart';
+import '../../shared/services/update_service.dart';
 import '../../shared/models/user_profile.dart';
 
 /// 个人中心 — MVP P0 功能
@@ -112,11 +115,16 @@ class ProfilePage extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.info_outline_rounded,
                   label: '关于声芽',
-                  trailing: const Text(
-                    'V0.1.0',
-                    style: TextStyle(color: AppTheme.textSecondary),
+                  trailing: Text(
+                    'V${AppConfig.version}',
+                    style: const TextStyle(color: AppTheme.textSecondary),
                   ),
-                  onTap: () {},
+                  onTap: () async {
+                    final info = await UpdateService().checkForUpdate();
+                    if (info != null && context.mounted) {
+                      UpdateDialog.show(context, info);
+                    }
+                  },
                 ),
               ],
             ),

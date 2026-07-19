@@ -4,7 +4,7 @@ class AppConfig {
 
   static const String appName = '声芽';
   static const String appNameEn = 'SingSprout';
-  static const String version = '0.1.0';
+  static const String version = '0.2.0';
 
   // 功能开关（MVP 阶段仅开启 P0 功能）
   static const bool enableMoodRadio = true;      // P1: 完整心情收音机
@@ -19,6 +19,13 @@ class AppConfig {
   // API 配置
   static const String apiBaseUrl = 'https://api.singsprout.app/v1';
   static const int apiTimeoutSeconds = 30;
+
+  // 下载加速镜像（GitHub 在国内慢，自动加前缀）
+  static const List<String> downloadMirrors = [
+    '', // 先尝试直连
+    'https://ghproxy.com/',
+    'https://gh.con.sh/',
+  ];
 
   // 音频参数
   static const int maxRecordingDurationSec = 30;

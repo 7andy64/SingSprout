@@ -93,7 +93,7 @@ class AppTheme {
         ),
       ),
 
-      // 底部导航
+      // 底部导航 — 适配不同屏幕
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
         selectedItemColor: primaryGreen,
@@ -102,8 +102,8 @@ class AppTheme {
         elevation: 8,
         selectedIconTheme: IconThemeData(size: 28),
         unselectedIconTheme: IconThemeData(size: 26),
-        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontSize: 11),
+        selectedLabelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(fontSize: 13),
       ),
 
       // 输入框
