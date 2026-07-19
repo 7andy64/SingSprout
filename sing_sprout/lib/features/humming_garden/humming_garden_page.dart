@@ -105,7 +105,7 @@ class _RecentWorksSection extends StatelessWidget {
                   ),
                   child: const Center(
                     child: Icon(
-                      Icons.music_note_rounded,
+                      Icons.music_note,
                       color: AppTheme.primaryGreen,
                       size: 32,
                     ),

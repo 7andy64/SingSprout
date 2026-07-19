@@ -78,7 +78,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
         ),
         title: Row(
           children: [
-            const Icon(Icons.system_update_rounded,
+            const Icon(Icons.system_update,
                 color: AppTheme.primaryGreen),
             const SizedBox(width: 8),
             Text('发现新版本',

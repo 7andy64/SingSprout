@@ -55,12 +55,12 @@ class ProfilePage extends StatelessWidget {
               title: '创作',
               items: [
                 _MenuItem(
-                  icon: Icons.music_note_rounded,
+                  icon: Icons.music_note,
                   label: '我的作品集',
                   onTap: () {},
                 ),
                 _MenuItem(
-                  icon: Icons.library_music_outlined,
+                  icon: Icons.library_music,
                   label: '我的声音库',
                   onTap: () {},
                 ),
@@ -71,12 +71,12 @@ class ProfilePage extends StatelessWidget {
               title: '连接',
               items: [
                 _MenuItem(
-                  icon: Icons.mail_outline_rounded,
+                  icon: Icons.mail_outline,
                   label: '家庭音乐账本',
                   onTap: () {},
                 ),
                 _MenuItem(
-                  icon: Icons.people_outline_rounded,
+                  icon: Icons.people_outline,
                   label: '教师/家长观察窗',
                   onTap: () {},
                 ),
@@ -87,22 +87,22 @@ class ProfilePage extends StatelessWidget {
               title: '设置',
               items: [
                 _MenuItem(
-                  icon: Icons.pets_outlined,
+                  icon: Icons.pets,
                   label: '换一只守护动物',
                   onTap: () {},
                 ),
                 _MenuItem(
-                  icon: Icons.lock_outline_rounded,
+                  icon: Icons.lock_outline,
                   label: '隐私与安全',
                   onTap: () => context.push(AppRoutes.privacySettings),
                 ),
                 _MenuItem(
-                  icon: Icons.storage_rounded,
+                  icon: Icons.storage,
                   label: '存储管理',
                   onTap: () {},
                 ),
                 _MenuItem(
-                  icon: Icons.help_outline_rounded,
+                  icon: Icons.help_outline,
                   label: '帮助与反馈',
                   onTap: () {},
                 ),
@@ -113,7 +113,7 @@ class ProfilePage extends StatelessWidget {
               title: '',
               items: [
                 _MenuItem(
-                  icon: Icons.info_outline_rounded,
+                  icon: Icons.info_outline,
                   label: '关于声芽',
                   trailing: Text(
                     'V${AppConfig.version}',

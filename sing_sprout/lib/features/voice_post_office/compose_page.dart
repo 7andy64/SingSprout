@@ -87,7 +87,7 @@ class _ComposePageState extends State<ComposePage> {
                     );
                     context.pop();
                   },
-                  icon: const Icon(Icons.send_rounded),
+                  icon: const Icon(Icons.send),
                   label: const Text('生成明信片并分享'),
                 ),
               ),

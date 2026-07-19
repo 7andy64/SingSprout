@@ -118,39 +118,52 @@ class _BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
+    final screenWidth = MediaQuery.of(context).size.width;
+    // 设计稿 375dp → 实际屏幕等比缩放
+    final scale = screenWidth / 375;
+    final iconSize = (26 * scale).clamp(22.0, 30.0);
+    final labelFontSize = (12 * scale).clamp(11.0, 14.0);
 
-    // MVP 阶段显示 5 个 Tab：创作/表达/成长/连接/我的
-    // P1 阶段将"节奏部落"加入扩展菜单
-    return BottomNavigationBar(
-      currentIndex: _calculateIndex(location),
-      onTap: (index) => _onTap(context, index),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.mic_none),
-          activeIcon: Icon(Icons.mic),
-          label: '哼唱',
+    return Theme(
+      data: Theme.of(context).copyWith(
+        bottomNavigationBarTheme: Theme.of(context).bottomNavigationBarTheme.copyWith(
+          selectedIconTheme: IconThemeData(size: iconSize),
+          unselectedIconTheme: IconThemeData(size: iconSize),
+          selectedLabelStyle: TextStyle(fontSize: labelFontSize, fontWeight: FontWeight.w600),
+          unselectedLabelStyle: TextStyle(fontSize: labelFontSize),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.sentiment_satisfied),
-          activeIcon: Icon(Icons.sentiment_satisfied),
-          label: '心情',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.park),
-          activeIcon: Icon(Icons.park),
-          label: '音乐树',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.mail_outline),
-          activeIcon: Icon(Icons.mail),
-          label: '邮局',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
-          label: '我的',
-        ),
-      ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _calculateIndex(location),
+        onTap: (index) => _onTap(context, index),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.mic_none),
+            activeIcon: Icon(Icons.mic),
+            label: '哼唱',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.sentiment_satisfied),
+            activeIcon: Icon(Icons.sentiment_satisfied),
+            label: '心情',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.park),
+            activeIcon: Icon(Icons.park),
+            label: '音乐树',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.mail_outline),
+            activeIcon: Icon(Icons.mail),
+            label: '邮局',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: '我的',
+          ),
+        ],
+      ),
     );
   }
 

@@ -73,7 +73,7 @@ class _RecordButtonState extends State<RecordButton>
                 ],
               ),
               child: Icon(
-                _isPressed ? Icons.mic : Icons.mic_none_rounded,
+                _isPressed ? Icons.mic : Icons.mic_none,
                 color: Colors.white,
                 size: widget.size * 0.45,
               ),
