@@ -67,9 +67,14 @@ class UpdateService {
       }
       if (apkAsset == null) return null;
 
-      final downloadUrl =
+      var downloadUrl =
           apkAsset['browser_download_url'] as String? ?? '';
       if (downloadUrl.isEmpty) return null;
+
+      // 国内下载加速：自动加镜像前缀
+      if (downloadUrl.contains('github.com')) {
+        downloadUrl = 'https://ghproxy.com/$downloadUrl';
+      }
 
       final fileSize = apkAsset['size'] as int? ?? 0;
 

@@ -20,6 +20,13 @@ class AppConfig {
   static const String apiBaseUrl = 'https://api.singsprout.app/v1';
   static const int apiTimeoutSeconds = 30;
 
+  // 下载加速镜像（GitHub 在国内慢，自动加前缀）
+  static const List<String> downloadMirrors = [
+    '', // 先尝试直连
+    'https://ghproxy.com/',
+    'https://gh.con.sh/',
+  ];
+
   // 音频参数
   static const int maxRecordingDurationSec = 30;
   static const int hummingMinDurationSec = 3;
