@@ -123,13 +123,19 @@ class UpdateService {
   }
 
   /// 下载 APK，通过 [onProgress] 回调进度 (0.0 ~ 1.0)
+  /// 固定文件名，重试时覆盖旧文件
   Future<File> downloadApk(
     String url,
     void Function(double) onProgress,
   ) async {
     final dir = await getExternalStorageDirectory();
-    final savePath =
-        '${dir!.path}/update_${DateTime.now().millisecondsSinceEpoch}.apk';
+    final savePath = '${dir!.path}/singsprout_update.apk';
+
+    // 删除旧的部分下载文件
+    final oldFile = File(savePath);
+    if (await oldFile.exists()) {
+      await oldFile.delete();
+    }
 
     final client = HttpClient();
     try {
