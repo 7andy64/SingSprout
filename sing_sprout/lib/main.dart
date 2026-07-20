@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'app.dart';
 import 'core/theme/app_theme.dart';
 import 'shared/providers/app_state.dart';
@@ -8,9 +10,11 @@ import 'shared/providers/audio_provider.dart';
 import 'shared/providers/connectivity_provider.dart';
 import 'core/routes/app_router.dart';
 import 'shared/services/update_service.dart';
+import 'shared/services/encryption_service.dart';
+import 'shared/services/file_storage_service.dart';
 import 'shared/widgets/update_dialog.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 锁定竖屏，适配手机
@@ -25,6 +29,9 @@ void main() {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
+
+  // ── 初始化本地存储服务 ──
+  await _initServices();
 
   runApp(
     MultiProvider(
@@ -41,14 +48,47 @@ void main() {
   _checkForUpdate();
 }
 
+/// 初始化加密、文件存储等基础服务。
+Future<void> _initServices() async {
+  // 1. 文件存储（创建目录结构）
+  await FileStorageService().initialize();
+
+  // 2. 加密服务（从安全存储读取/生成 AES 密钥）
+  final fingerprint = await _getDeviceFingerprint();
+  await EncryptionService().initialize(fingerprint);
+
+  // 注意：DatabaseService 延迟初始化，首次调用 repository 时自动创建
+}
+
+/// 获取设备唯一标识作为加密种子。
+Future<String> _getDeviceFingerprint() async {
+  try {
+    const storage = FlutterSecureStorage();
+    const key = 'singsprout_device_id';
+
+    var id = await storage.read(key: key);
+    if (id == null || id.isEmpty) {
+      // 使用多种特征生成设备指纹
+      final parts = <String>[
+        Platform.operatingSystem,
+        Platform.operatingSystemVersion,
+        DateTime.now().millisecondsSinceEpoch.toRadixString(36),
+      ];
+      id = parts.join('|');
+      await storage.write(key: key, value: id);
+    }
+    return id;
+  } catch (_) {
+    return 'singsprout_device_fallback';
+  }
+}
+
 Future<void> _checkForUpdate() async {
-  // 延迟 3 秒，等首页渲染完毕
   await Future.delayed(const Duration(seconds: 3));
 
   final info = await UpdateService().checkForUpdate();
   if (info == null) return;
 
-  // 需要 root navigator context，通过全局 key 获取
   final context = AppRouter.rootNavigatorKey.currentContext;
   if (context == null) return;
 
