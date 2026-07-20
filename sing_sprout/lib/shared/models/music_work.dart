@@ -50,4 +50,34 @@ class MusicWork {
       updatedAt: now,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'audioPath': audioPath,
+        'coverPath': coverPath,
+        'styleSeed': styleSeed.name,
+        'moodSticker': moodSticker?.name,
+        'note': note,
+        'durationMs': duration.inMilliseconds,
+        'isEncrypted': isEncrypted,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+      };
+
+  factory MusicWork.fromJson(Map<String, dynamic> json) => MusicWork(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        audioPath: json['audioPath'] as String,
+        coverPath: json['coverPath'] as String?,
+        styleSeed: StyleSeed.values.byName(json['styleSeed'] as String),
+        moodSticker: json['moodSticker'] != null
+            ? MoodColor.values.byName(json['moodSticker'] as String)
+            : null,
+        note: json['note'] as String?,
+        duration: Duration(milliseconds: json['durationMs'] as int),
+        isEncrypted: json['isEncrypted'] as bool? ?? true,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        updatedAt: DateTime.parse(json['updatedAt'] as String),
+      );
 }
