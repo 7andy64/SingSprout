@@ -65,12 +65,12 @@ class AppRouter {
       // ── 独立子页面 ──
       GoRoute(
         path: AppRoutes.recording,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RecordingPage(),
       ),
       GoRoute(
         path: AppRoutes.editor,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final workId = state.uri.queryParameters['id'] ?? '';
           return EditorPage(workId: workId);
@@ -78,22 +78,22 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.composeCard,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ComposePage(),
       ),
       GoRoute(
         path: AppRoutes.privacySettings,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const PrivacySettingsPage(),
       ),
       GoRoute(
         path: AppRoutes.fieldSoundLab,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const FieldSoundLabPage(),
       ),
       GoRoute(
         path: AppRoutes.rhythmTribe,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RhythmTribePage(),
       ),
     ],
