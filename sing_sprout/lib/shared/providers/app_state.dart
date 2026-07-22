@@ -58,8 +58,16 @@ class AppState extends ChangeNotifier {
   // ── 初始化：从本地数据库加载所有数据 ──
 
   /// 从 SQLite 加载用户档案和所有本地数据。
+  /// Web 端 SQLite 不可用，跳过加载（使用空数据 + 显示引导页）。
   Future<void> loadLocalData() async {
     if (_dataLoaded) return;
+
+    if (kIsWeb) {
+      // Web 端：跳过数据库加载，显示空状态引导
+      _dataLoaded = true;
+      notifyListeners();
+      return;
+    }
 
     // 加载用户档案
     _userProfile = await _profileRepo.get();
@@ -93,23 +101,27 @@ class AppState extends ChangeNotifier {
 
   Future<void> setUserProfile(UserProfile profile) async {
     _userProfile = profile;
-    await _profileRepo.save(profile);
+    if (!kIsWeb) {
+      await _profileRepo.save(profile);
+    }
     notifyListeners();
   }
 
   Future<void> completeOnboarding() async {
     if (_userProfile != null) {
       _userProfile = _userProfile!.copyWith(hasCompletedOnboarding: true);
-      await _profileRepo.save(_userProfile!);
+      if (!kIsWeb) {
+        await _profileRepo.save(_userProfile!);
+      }
       notifyListeners();
     }
   }
 
   // ── 作品操作 ──
 
-  /// 添加/保存作品（写入 SQLite + 更新内存）。
+  /// 添加/保存作品（写入 SQLite + 更新内存，Web 端仅内存）。
   Future<void> addWork(MusicWork work) async {
-    await _workRepo.insert(work);
+    if (!kIsWeb) await _workRepo.insert(work);
     _works.insert(0, work);
     _updateTree();
     notifyListeners();
@@ -117,7 +129,7 @@ class AppState extends ChangeNotifier {
 
   /// 更新作品。
   Future<void> updateWork(MusicWork work) async {
-    await _workRepo.update(work);
+    if (!kIsWeb) await _workRepo.update(work);
     final index = _works.indexWhere((w) => w.id == work.id);
     if (index != -1) {
       _works[index] = work;
@@ -127,7 +139,7 @@ class AppState extends ChangeNotifier {
 
   /// 删除作品（同时删除关联文件）。
   Future<void> deleteWork(String id) async {
-    await _workRepo.delete(id);
+    if (!kIsWeb) await _workRepo.delete(id);
     _works.removeWhere((w) => w.id == id);
     _updateTree();
     notifyListeners();
@@ -135,7 +147,7 @@ class AppState extends ChangeNotifier {
 
   /// 切换作品收藏状态。
   Future<void> toggleFavorite(String id) async {
-    await _workRepo.toggleFavorite(id);
+    if (!kIsWeb) await _workRepo.toggleFavorite(id);
     final index = _works.indexWhere((w) => w.id == id);
     if (index != -1) {
       _works[index] = _works[index].copyWith(
@@ -147,7 +159,7 @@ class AppState extends ChangeNotifier {
 
   /// 重新从数据库加载作品列表。
   Future<void> refreshWorks() async {
-    _works = await _workRepo.getAll();
+    if (!kIsWeb) _works = await _workRepo.getAll();
     _updateTree();
     notifyListeners();
   }
@@ -155,13 +167,13 @@ class AppState extends ChangeNotifier {
   // ── 声音样本操作 ──
 
   Future<void> addSound(SoundSample sample) async {
-    await _soundRepo.insert(sample);
+    if (!kIsWeb) await _soundRepo.insert(sample);
     _sounds.insert(0, sample);
     notifyListeners();
   }
 
   Future<void> deleteSound(String id) async {
-    await _soundRepo.delete(id);
+    if (!kIsWeb) await _soundRepo.delete(id);
     _sounds.removeWhere((s) => s.id == id);
     notifyListeners();
   }
@@ -169,14 +181,14 @@ class AppState extends ChangeNotifier {
   // ── 明信片操作 ──
 
   Future<void> addVoiceCard(VoiceCard card) async {
-    await _cardRepo.insert(card);
+    if (!kIsWeb) await _cardRepo.insert(card);
     _cards.insert(0, card);
     _updateTree();
     notifyListeners();
   }
 
   Future<void> markCardAsRead(String id) async {
-    await _cardRepo.markAsRead(id);
+    if (!kIsWeb) await _cardRepo.markAsRead(id);
     notifyListeners();
   }
 

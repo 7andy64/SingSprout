@@ -17,6 +17,12 @@ import 'shared/widgets/update_dialog.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ── 全局错误捕获，防止 Web 端白屏 ──
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('[FlutterError] ${details.exception}');
+  };
+
   // Web 端跳过移动端专属配置
   if (!kIsWeb) {
     // 锁定竖屏，适配手机

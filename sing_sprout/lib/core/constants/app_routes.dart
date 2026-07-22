@@ -10,6 +10,11 @@ class AppRoutes {
   static const String profile = '/profile';
 
   // 子页面
+  static const String onboarding = '/onboarding';
+  static const String works = '/works';
+  static const String sounds = '/sounds';
+  static const String ledger = '/ledger';
+  static const String observation = '/observation';
   static const String recording = '/recording';
   static const String editor = '/editor';
   static const String composeCard = '/compose-card';

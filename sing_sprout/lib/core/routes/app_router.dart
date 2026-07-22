@@ -11,6 +11,11 @@ import '../../features/field_sound_lab/field_sound_lab_page.dart';
 import '../../features/rhythm_tribe/rhythm_tribe_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/profile/privacy_settings_page.dart';
+import '../../features/profile/works_page.dart';
+import '../../features/profile/sounds_page.dart';
+import '../../features/profile/ledger_page.dart';
+import '../../features/profile/observation_page.dart';
+import '../../features/onboarding/onboarding_page.dart';
 import '../constants/app_routes.dart';
 
 /// 声芽路由配置 — 底部导航(5项) + 子页面
@@ -63,6 +68,31 @@ class AppRouter {
       ),
 
       // ── 独立子页面 ──
+      GoRoute(
+        path: AppRoutes.onboarding,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const OnboardingPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.works,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const WorksPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.sounds,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SoundsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.ledger,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const LedgerPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.observation,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ObservationPage(),
+      ),
       GoRoute(
         path: AppRoutes.recording,
         parentNavigatorKey: rootNavigatorKey,
