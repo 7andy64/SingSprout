@@ -1,14 +1,16 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 
 /// 文件存储服务
 ///
 /// 管理应用内的文件目录结构，用于存储音频录音文件、
 /// AI 生成的音乐文件和封面图片。
 ///
-/// 目录结构：
+/// Web 端此服务为空实现，所有文件操作均返回安全默认值。
+///
+/// 目录结构（移动端）：
 /// ```
 /// app_documents/
 /// ├── recordings/     ← 原始录音文件 (.m4a / .wav)
@@ -25,14 +27,26 @@ class FileStorageService {
   String? _rootPath;
   bool _initialized = false;
 
+  /// 当前是否运行在 Web 平台。
+  bool get _isWeb => kIsWeb;
+
   // ── 初始化 ──
 
   /// 初始化存储目录结构，创建所有必需的子目录。
+  /// Web 端跳过文件系统操作。
   Future<void> initialize() async {
     if (_initialized) return;
+    if (_isWeb) {
+      _initialized = true;
+      debugPrint('[FileStorageService] Web 模式，跳过文件系统初始化');
+      return;
+    }
 
     final appDir = await getApplicationDocumentsDirectory();
     _rootPath = appDir.path;
+
+    // 先标记已初始化，否则目录 getter 中的 _ensureInit() 会报错
+    _initialized = true;
 
     // 确保所有子目录存在
     await _ensureDir(recordingsDir);
@@ -40,7 +54,6 @@ class FileStorageService {
     await _ensureDir(coversDir);
     await _ensureDir(exportsDir);
 
-    _initialized = true;
     debugPrint('[FileStorageService] 存储初始化完成: $_rootPath');
   }
 
@@ -48,18 +61,30 @@ class FileStorageService {
 
   String get rootPath {
     _ensureInit();
+    if (_isWeb) return '/web_storage';
     return _rootPath!;
   }
 
-  String get recordingsDir => p.join(_rootPath!, 'recordings');
-  String get generatedDir => p.join(_rootPath!, 'generated');
-  String get coversDir => p.join(_rootPath!, 'covers');
-  String get exportsDir => p.join(_rootPath!, 'exports');
+  String get recordingsDir {
+    _ensureInit();
+    return _isWeb ? '/web_storage/recordings' : p.join(_rootPath!, 'recordings');
+  }
+  String get generatedDir {
+    _ensureInit();
+    return _isWeb ? '/web_storage/generated' : p.join(_rootPath!, 'generated');
+  }
+  String get coversDir {
+    _ensureInit();
+    return _isWeb ? '/web_storage/covers' : p.join(_rootPath!, 'covers');
+  }
+  String get exportsDir {
+    _ensureInit();
+    return _isWeb ? '/web_storage/exports' : p.join(_rootPath!, 'exports');
+  }
 
   // ── 文件操作 ──
 
   /// 为新的录音文件生成路径。
-  /// 格式: recordings/yyyyMMdd_HHmmss_随机数.m4a
   String generateRecordingPath({String extension = 'm4a'}) {
     final timestamp = _timestamp();
     final random = DateTime.now().microsecondsSinceEpoch % 10000;
@@ -67,7 +92,6 @@ class FileStorageService {
   }
 
   /// 为 AI 生成的音乐文件生成路径。
-  /// 格式: generated/yyyyMMdd_HHmmss_风格种子.mp3
   String generateMusicPath({String styleSeed = '', String extension = 'mp3'}) {
     final timestamp = _timestamp();
     final seed = styleSeed.isNotEmpty ? '_$styleSeed' : '';
@@ -75,7 +99,6 @@ class FileStorageService {
   }
 
   /// 为封面图生成路径。
-  /// 格式: covers/yyyyMMdd_HHmmss_随机数.png
   String generateCoverPath({String extension = 'png'}) {
     final timestamp = _timestamp();
     final random = DateTime.now().microsecondsSinceEpoch % 10000;
@@ -83,43 +106,56 @@ class FileStorageService {
   }
 
   /// 保存字节数据到文件，返回文件路径。
+  /// Web 端始终返回传入的 path（不实际写入文件系统）。
   Future<String> saveBytes(String path, List<int> bytes) async {
+    if (_isWeb) return path;
+
     final file = File(path);
     await file.parent.create(recursive: true);
     await file.writeAsBytes(bytes);
     return path;
   }
 
-  /// 从文件读取字节数据。
+  /// 从文件读取字节数据。Web 端始终返回 null。
   Future<List<int>?> readBytes(String path) async {
+    if (_isWeb) return null;
+
     final file = File(path);
     if (!await file.exists()) return null;
     return file.readAsBytes();
   }
 
-  /// 删除文件，文件不存在时不报错。
+  /// 删除文件。Web 端为空操作。
   Future<void> deleteFile(String path) async {
+    if (_isWeb) return;
+
     final file = File(path);
     if (await file.exists()) {
       await file.delete();
     }
   }
 
-  /// 检查文件是否存在。
+  /// 检查文件是否存在。Web 端始终返回 false。
   Future<bool> fileExists(String path) async {
+    if (_isWeb) return false;
+
     return File(path).exists();
   }
 
-  /// 获取文件大小（字节），文件不存在返回 0。
+  /// 获取文件大小（字节）。Web 端始终返回 0。
   Future<int> fileSize(String path) async {
+    if (_isWeb) return 0;
+
     final file = File(path);
     if (!await file.exists()) return 0;
     return file.length();
   }
 
-  /// 计算存储目录总占用空间（字节）。
+  /// 计算存储目录总占用空间（字节）。Web 端始终返回 0。
   Future<int> totalStorageUsed() async {
     _ensureInit();
+    if (_isWeb) return 0;
+
     var total = 0;
     for (final dir in [recordingsDir, generatedDir, coversDir, exportsDir]) {
       total += await _dirSize(dir);
@@ -127,8 +163,10 @@ class FileStorageService {
     return total;
   }
 
-  /// 清理 exports 目录中的所有临时文件。
+  /// 清理 exports 目录中的所有临时文件。Web 端为空操作。
   Future<void> clearExports() async {
+    if (_isWeb) return;
+
     final dir = Directory(exportsDir);
     if (await dir.exists()) {
       await for (final entity in dir.list()) {
@@ -148,6 +186,8 @@ class FileStorageService {
   }
 
   Future<void> _ensureDir(String path) async {
+    if (_isWeb) return;
+
     final dir = Directory(path);
     if (!await dir.exists()) {
       await dir.create(recursive: true);
@@ -155,6 +195,8 @@ class FileStorageService {
   }
 
   Future<int> _dirSize(String path) async {
+    if (_isWeb) return 0;
+
     final dir = Directory(path);
     if (!await dir.exists()) return 0;
     var total = 0;

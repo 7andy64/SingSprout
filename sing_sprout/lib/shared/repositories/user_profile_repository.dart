@@ -35,6 +35,14 @@ class UserProfileRepository {
     return _fromRow(rows.first);
   }
 
+  // ── 删除 ──
+
+  /// 删除当前用户档案。
+  Future<void> delete() async {
+    final db = await _db.database;
+    await db.delete('user_profile');
+  }
+
   // ── 更新 ──
 
   /// 更新引导完成状态。

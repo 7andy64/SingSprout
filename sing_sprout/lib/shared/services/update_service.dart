@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -41,8 +42,11 @@ class UpdateService {
     'https://api.github.com/repos/nanbujiwanfeng/SingSprout/releases/latest',
   ];
 
-  /// 依次尝试 Gitee → GitHub，谁通用谁
+  /// 依次尝试 Gitee → GitHub，谁通用谁。
+  /// Web 端不支持 APK 更新，直接返回 null。
   Future<UpdateInfo?> checkForUpdate() async {
+    if (kIsWeb) return null;
+
     for (final url in _apiUrls) {
       final info = await _tryApi(url);
       if (info != null) return info;

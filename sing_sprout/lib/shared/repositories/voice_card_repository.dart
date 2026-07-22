@@ -54,6 +54,37 @@ class VoiceCardRepository {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
+  /// 按 ID 查询单张明信片。
+  Future<VoiceCard?> getById(String id) async {
+    final db = await _db.database;
+    final rows = await db.query('voice_cards', where: 'id = ?', whereArgs: [id]);
+    if (rows.isEmpty) return null;
+    return _fromRow(rows.first);
+  }
+
+  /// 获取某作品关联的所有明信片。
+  Future<List<VoiceCard>> getByWorkId(String workId) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'voice_cards',
+      where: 'work_id = ?',
+      whereArgs: [workId],
+      orderBy: 'created_at DESC',
+    );
+    return rows.map(_fromRow).toList();
+  }
+
+  /// 获取所有未读明信片。
+  Future<List<VoiceCard>> getUnread() async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'voice_cards',
+      where: 'read_at IS NULL',
+      orderBy: 'created_at DESC',
+    );
+    return rows.map(_fromRow).toList();
+  }
+
   // ── 更新 ──
 
   /// 标记明信片为已读。

@@ -50,26 +50,26 @@ class SoundSample {
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
-        'audioPath': audioPath,
+        'audio_path': audioPath,
         'type': type.name,
         'bpm': bpm,
-        'pitchSequence': pitchSequence,
-        'timbreFeature': timbreFeature,
-        'recommendedUse': recommendedUse,
-        'isPublic': isPublic,
-        'createdAt': createdAt.toIso8601String(),
+        'pitch_sequence': pitchSequence,
+        'timbre_feature': timbreFeature,
+        'recommended_use': recommendedUse,
+        'is_public': isPublic ? 1 : 0,
+        'created_at': createdAt.toIso8601String(),
       };
 
   factory SoundSample.fromJson(Map<String, dynamic> json) => SoundSample(
         id: json['id'] as String,
         name: json['name'] as String,
-        audioPath: json['audioPath'] as String,
+        audioPath: json['audio_path'] as String,
         type: SoundType.values.firstWhere((e) => e.name == json['type']),
         bpm: (json['bpm'] as num?)?.toDouble(),
-        pitchSequence: json['pitchSequence'] as String?,
-        timbreFeature: json['timbreFeature'] as String?,
-        recommendedUse: json['recommendedUse'] as String?,
-        isPublic: json['isPublic'] as bool? ?? false,
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        pitchSequence: json['pitch_sequence'] as String?,
+        timbreFeature: json['timbre_feature'] as String?,
+        recommendedUse: json['recommended_use'] as String?,
+        isPublic: (json['is_public'] as int? ?? 0) == 1,
+        createdAt: DateTime.parse(json['created_at'] as String),
       );
 }

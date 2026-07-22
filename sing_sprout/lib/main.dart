@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -17,18 +17,21 @@ import 'shared/widgets/update_dialog.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 锁定竖屏，适配手机
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  // Web 端跳过移动端专属配置
+  if (!kIsWeb) {
+    // 锁定竖屏，适配手机
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
 
-  // 沉浸式状态栏
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
-  );
+    // 沉浸式状态栏
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
+  }
 
   // ── 初始化本地存储服务 ──
   await _initServices();
@@ -44,18 +47,24 @@ void main() async {
     ),
   );
 
-  // 启动后静默检查更新
-  _checkForUpdate();
+  // 启动后静默检查更新（仅移动端）
+  if (!kIsWeb) {
+    _checkForUpdate();
+  }
 }
 
 /// 初始化加密、文件存储等基础服务。
 Future<void> _initServices() async {
-  // 1. 文件存储（创建目录结构）
-  await FileStorageService().initialize();
+  try {
+    // 1. 文件存储（创建目录结构，Web 端跳过）
+    await FileStorageService().initialize();
 
-  // 2. 加密服务（从安全存储读取/生成 AES 密钥）
-  final fingerprint = await _getDeviceFingerprint();
-  await EncryptionService().initialize(fingerprint);
+    // 2. 加密服务（从安全存储读取/生成 AES 密钥）
+    final fingerprint = await _getDeviceFingerprint();
+    await EncryptionService().initialize(fingerprint);
+  } catch (e) {
+    debugPrint('[main] 服务初始化失败: $e');
+  }
 
   // 注意：DatabaseService 延迟初始化，首次调用 repository 时自动创建
 }
@@ -68,10 +77,9 @@ Future<String> _getDeviceFingerprint() async {
 
     var id = await storage.read(key: key);
     if (id == null || id.isEmpty) {
-      // 使用多种特征生成设备指纹
+      // 生成设备指纹（Web 端使用简化版本）
       final parts = <String>[
-        Platform.operatingSystem,
-        Platform.operatingSystemVersion,
+        kIsWeb ? 'web' : 'mobile',
         DateTime.now().millisecondsSinceEpoch.toRadixString(36),
       ];
       id = parts.join('|');

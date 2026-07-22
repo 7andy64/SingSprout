@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -153,18 +154,10 @@ class EncryptionService {
   }
 
   /// 从设备指纹派生出 AES 密钥（安全存储不可用时的回退方案）。
+  /// 使用 SHA-256 将指纹哈希为 32 字节的 AES-256 密钥。
   encrypt.Key _deriveKeyFromFingerprint(String fingerprint) {
-    // 使用 SHA-256 将指纹哈希为 32 字节密钥
     final bytes = utf8.encode(fingerprint);
-    // 如果指纹太短，填充；如果太长，截断
-    final padded = List<int>.filled(_keyLength, 0);
-    for (var i = 0; i < bytes.length && i < _keyLength; i++) {
-      padded[i] = bytes[i];
-    }
-    // 添加一些变换使其分布更均匀
-    for (var i = 0; i < padded.length; i++) {
-      padded[i] = (padded[i] * 31 + i) & 0xFF;
-    }
-    return encrypt.Key(Uint8List.fromList(padded));
+    final digest = sha256.convert(bytes);
+    return encrypt.Key(Uint8List.fromList(digest.bytes));
   }
 }
