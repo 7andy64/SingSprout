@@ -26,7 +26,7 @@ class PostOfficePage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => context.push(AppRoutes.composeCard),
-                  icon: const Icon(Icons.edit_note_rounded, size: 22),
+                  icon: const Icon(Icons.edit_note, size: 22),
                   label: const Text('写一张音乐明信片'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryWarm,
@@ -80,7 +80,7 @@ class _InboxTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         _EmptyState(
-          icon: Icons.mail_outline_rounded,
+          icon: Icons.mail_outline,
           message: '还没有收到回信\n试试给爸妈发第一张明信片吧',
         ),
       ],
@@ -95,7 +95,7 @@ class _OutboxTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         _EmptyState(
-          icon: Icons.send_outlined,
+          icon: Icons.send,
           message: '还没有发送过明信片\n创作一首歌然后发给爸妈',
         ),
       ],

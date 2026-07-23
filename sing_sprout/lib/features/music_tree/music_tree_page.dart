@@ -1,16 +1,41 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/enums.dart';
+import '../../shared/models/music_tree_data.dart';
+import '../../shared/services/music_tree_service.dart';
 import '../../shared/widgets/tree_visual.dart';
 
 /// 我的音乐树 — 成长可视化系统
-class MusicTreePage extends StatelessWidget {
+class MusicTreePage extends StatefulWidget {
   const MusicTreePage({super.key});
 
   @override
+  State<MusicTreePage> createState() => _MusicTreePageState();
+}
+
+class _MusicTreePageState extends State<MusicTreePage> {
+  MusicTreeData? _treeData;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final data = await MusicTreeService.calculate();
+    if (!mounted) return;
+    setState(() {
+      _treeData = data;
+      _loading = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // TODO: 从 AppState 读取真实数据
-    const treeState = TreeState.growing;
+    final data = _treeData;
+    final state = data?.treeState ?? TreeState.sprouting;
 
     return Scaffold(
       appBar: AppBar(
@@ -18,68 +43,110 @@ class MusicTreePage extends StatelessWidget {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              // 树的可视化
-              const TreeVisual(
-                state: treeState,
-                height: 220,
-              ),
-
-              const SizedBox(height: 8),
-              Text(
-                treeState.label,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
+        child: RefreshIndicator(
+          onRefresh: _loadData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                // 树的可视化
+                TreeVisual(
+                  state: state,
+                  height: 220,
                 ),
-              ),
-              Text(
-                treeState.description,
-                style: const TextStyle(color: AppTheme.textSecondary),
-              ),
 
-              const SizedBox(height: 32),
-
-              // 成长数据卡片
-              _StatCard(
-                title: '创作统计',
-                children: [
-                  _StatItem(icon: '🎵', label: '作品总数', value: '0'),
-                  _StatItem(icon: '📅', label: '累计使用', value: '0 天'),
-                  _StatItem(icon: '🔥', label: '连续使用', value: '0 天'),
+                const SizedBox(height: 8),
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else ...[
+                  Text(
+                    state.label,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    state.description,
+                    style: const TextStyle(color: AppTheme.textSecondary),
+                  ),
                 ],
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 32),
 
-              _StatCard(
-                title: '连接统计',
-                children: [
-                  _StatItem(icon: '📮', label: '发送明信片', value: '0'),
-                  _StatItem(icon: '💌', label: '收到回信', value: '0'),
-                ],
-              ),
+                // 创作统计
+                _StatCard(
+                  title: '创作统计',
+                  children: [
+                    _StatItem(
+                      icon: '🎵',
+                      label: '作品总数',
+                      value: '${data?.totalWorks ?? 0}',
+                    ),
+                    _StatItem(
+                      icon: '📅',
+                      label: '累计使用',
+                      value: '${data?.totalDays ?? 0} 天',
+                    ),
+                    _StatItem(
+                      icon: '🔥',
+                      label: '连续使用',
+                      value: '${data?.streakDays ?? 0} 天',
+                    ),
+                  ],
+                ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // 根系：基础乐感
-              _StatCard(
-                title: '音乐根系',
-                children: [
-                  _ProgressBar(label: '节奏感', value: 0),
-                  const SizedBox(height: 10),
-                  _ProgressBar(label: '音准', value: 0),
-                  const SizedBox(height: 10),
-                  _ProgressBar(label: '听辨力', value: 0),
-                ],
-              ),
+                // 连接统计
+                _StatCard(
+                  title: '连接统计',
+                  children: [
+                    _StatItem(
+                      icon: '📮',
+                      label: '发送明信片',
+                      value: '${data?.sharedCards ?? 0}',
+                    ),
+                    _StatItem(
+                      icon: '💌',
+                      label: '收到回信',
+                      value: '${data?.receivedReplies ?? 0}',
+                    ),
+                  ],
+                ),
 
-              const SizedBox(height: 32),
-            ],
+                const SizedBox(height: 16),
+
+                // 音乐根系
+                _StatCard(
+                  title: '音乐根系',
+                  children: [
+                    _ProgressBar(
+                      label: '节奏感',
+                      value: (data?.rhythmScore ?? 0) / 100,
+                    ),
+                    const SizedBox(height: 10),
+                    _ProgressBar(
+                      label: '音准',
+                      value: (data?.pitchScore ?? 0) / 100,
+                    ),
+                    const SizedBox(height: 10),
+                    _ProgressBar(
+                      label: '听辨力',
+                      value: (data?.listeningScore ?? 0) / 100,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
@@ -173,9 +240,13 @@ class _ProgressBar extends StatelessWidget {
       children: [
         SizedBox(
           width: 48,
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary)),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppTheme.textSecondary,
+            ),
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -191,9 +262,13 @@ class _ProgressBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text('${(value * 100).round()}',
-            style: const TextStyle(
-                fontSize: 12, color: AppTheme.textSecondary)),
+        Text(
+          '${(value * 100).round()}',
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppTheme.textSecondary,
+          ),
+        ),
       ],
     );
   }

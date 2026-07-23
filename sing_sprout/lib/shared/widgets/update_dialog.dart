@@ -8,7 +8,6 @@ class UpdateDialog extends StatefulWidget {
 
   const UpdateDialog({super.key, required this.updateInfo});
 
-  /// 弹出更新对话框，返回 true 表示用户同意更新
   static Future<bool?> show(BuildContext context, UpdateInfo info) {
     return showDialog<bool>(
       context: context,
@@ -25,24 +24,23 @@ class _UpdateDialogState extends State<UpdateDialog> {
   bool _downloading = false;
   double _progress = 0;
   String? _error;
+  String? _downloadedPath;
 
-  Future<void> _startDownload() async {
+  Future<void> _startDownload({bool isRetry = false}) async {
     setState(() {
       _downloading = true;
       _error = null;
+      if (!isRetry) _progress = 0;
     });
 
     try {
       final file = await UpdateService().downloadApk(
         widget.updateInfo.downloadUrl,
         (progress) {
-          if (mounted) {
-            setState(() => _progress = progress);
-          }
+          if (mounted) setState(() => _progress = progress);
         },
       );
 
-      // 校验
       final valid = await UpdateService().verifySha256(
         file,
         widget.updateInfo.sha256,
@@ -52,22 +50,19 @@ class _UpdateDialogState extends State<UpdateDialog> {
         if (mounted) {
           setState(() {
             _downloading = false;
-            _error = '文件校验失败，请稍后重试';
+            _error = '文件校验不通过，请点击重试';
           });
         }
         return;
       }
 
-      // 安装
+      _downloadedPath = file.path;
       await UpdateService().installApk(file);
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
     } catch (e) {
       if (mounted) {
         setState(() {
           _downloading = false;
-          _error = '下载失败: ${e.toString()}';
+          _error = '网络不稳定，下载中断，请重试';
         });
       }
     }
@@ -83,12 +78,11 @@ class _UpdateDialogState extends State<UpdateDialog> {
         ),
         title: Row(
           children: [
-            const Icon(Icons.system_update_rounded, color: AppTheme.primaryGreen),
+            const Icon(Icons.system_update,
+                color: AppTheme.primaryGreen),
             const SizedBox(width: 8),
-            Text(
-              '发现新版本',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('发现新版本',
+                style: Theme.of(context).textTheme.titleLarge),
           ],
         ),
         content: SizedBox(
@@ -121,15 +115,19 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  _progress > 0 ? '${(_progress * 100).toStringAsFixed(0)}%' : '准备下载...',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  _progress > 0
+                      ? '${(_progress * 100).toStringAsFixed(0)}%'
+                      : '正在连接...',
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.textSecondary),
                 ),
               ],
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(
                   _error!,
-                  style: const TextStyle(fontSize: 13, color: AppTheme.error),
+                  style:
+                      const TextStyle(fontSize: 13, color: AppTheme.error),
                 ),
               ],
             ],
@@ -143,11 +141,14 @@ class _UpdateDialogState extends State<UpdateDialog> {
             ),
           if (!_downloading)
             FilledButton(
-              onPressed: _startDownload,
+              onPressed: () =>
+                  _startDownload(isRetry: _error != null),
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.primaryGreen,
+                backgroundColor: _error != null
+                    ? AppTheme.warning
+                    : AppTheme.primaryGreen,
               ),
-              child: const Text('立即更新'),
+              child: Text(_error != null ? '重新下载' : '立即更新'),
             ),
         ],
       ),

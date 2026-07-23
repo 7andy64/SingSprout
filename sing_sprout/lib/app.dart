@@ -27,6 +27,15 @@ class SingSproutApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          builder: (context, child) {
+            final mediaQuery = MediaQuery.of(context);
+            final scale = mediaQuery.textScaleFactor.clamp(1.0, 1.3);
+            // ignore: deprecated_member_use
+            return MediaQuery(
+              data: mediaQuery.copyWith(textScaleFactor: scale),
+              child: child!,
+            );
+          },
         );
       },
     );

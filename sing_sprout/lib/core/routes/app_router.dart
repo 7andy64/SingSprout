@@ -115,42 +115,43 @@ class _AppShell extends StatelessWidget {
 }
 
 class _BottomNavBar extends StatelessWidget {
+  static const _navItems = [
+    ('🎤', '哼唱'),
+    ('🌈', '心情'),
+    ('🌱', '音乐树'),
+    ('💌', '邮局'),
+    ('🐼', '我的'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scale = screenWidth / 375;
+    final iconFontSize = (24 * scale).clamp(20.0, 28.0);
+    final labelFontSize = (12 * scale).clamp(11.0, 14.0);
+    final index = _calculateIndex(location);
 
-    // MVP 阶段显示 5 个 Tab：创作/表达/成长/连接/我的
-    // P1 阶段将"节奏部落"加入扩展菜单
     return BottomNavigationBar(
-      currentIndex: _calculateIndex(location),
-      onTap: (index) => _onTap(context, index),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.mic_none_rounded),
-          activeIcon: Icon(Icons.mic_rounded),
-          label: '哼唱',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.sentiment_satisfied_outlined),
-          activeIcon: Icon(Icons.sentiment_satisfied_rounded),
-          label: '心情',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.park_outlined),
-          activeIcon: Icon(Icons.park_rounded),
-          label: '音乐树',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.mail_outline_rounded),
-          activeIcon: Icon(Icons.mail_rounded),
-          label: '邮局',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline_rounded),
-          activeIcon: Icon(Icons.person_rounded),
-          label: '我的',
-        ),
-      ],
+      currentIndex: index,
+      onTap: (i) => _onTap(context, i),
+      selectedIconTheme: IconThemeData(size: iconFontSize),
+      unselectedIconTheme: IconThemeData(size: iconFontSize),
+      selectedLabelStyle: TextStyle(fontSize: labelFontSize, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: TextStyle(fontSize: labelFontSize),
+      items: List.generate(_navItems.length, (i) {
+        return BottomNavigationBarItem(
+          icon: Text(
+            _navItems[i].$1,
+            style: TextStyle(fontSize: iconFontSize),
+          ),
+          activeIcon: Text(
+            _navItems[i].$1,
+            style: TextStyle(fontSize: iconFontSize),
+          ),
+          label: _navItems[i].$2,
+        );
+      }),
     );
   }
 

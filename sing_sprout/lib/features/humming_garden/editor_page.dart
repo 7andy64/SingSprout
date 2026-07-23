@@ -116,7 +116,7 @@ class _EditorPageState extends State<EditorPage> {
                         // TODO: 本地保存
                         context.pop();
                       },
-                      icon: const Icon(Icons.save_outlined),
+                      icon: const Icon(Icons.save),
                       label: const Text('保存'),
                     ),
                   ),
