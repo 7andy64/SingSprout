@@ -12,6 +12,7 @@ import '../../features/rhythm_tribe/rhythm_tribe_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/profile/privacy_settings_page.dart';
 import '../../features/profile/works_page.dart';
+import '../../features/profile/work_detail_page.dart';
 import '../../features/profile/sounds_page.dart';
 import '../../features/profile/ledger_page.dart';
 import '../../features/profile/observation_page.dart';
@@ -97,6 +98,15 @@ class AppRouter {
         path: AppRoutes.works,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const WorksPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.workDetail,
+        name: 'work-detail',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          final workId = state.uri.queryParameters['id'] ?? '';
+          return WorkDetailPage(workId: workId);
+        },
       ),
       GoRoute(
         path: AppRoutes.sounds,

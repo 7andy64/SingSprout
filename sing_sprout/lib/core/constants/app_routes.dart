@@ -12,6 +12,7 @@ class AppRoutes {
   // 子页面
   static const String onboarding = '/onboarding';
   static const String works = '/works';
+  static const String workDetail = '/work-detail';
   static const String sounds = '/sounds';
   static const String ledger = '/ledger';
   static const String observation = '/observation';

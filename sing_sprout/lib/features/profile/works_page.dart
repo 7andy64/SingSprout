@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/constants/app_routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/providers/app_state.dart';
@@ -31,14 +33,7 @@ class WorksPage extends StatelessWidget {
                         context.read<AppState>().toggleFavorite(works[i].id),
                     onDelete: () => _confirmDelete(context, works[i]),
                     onTap: () {
-                      // TODO: 跳转作品详情/播放页
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('作品详情页开发中...'),
-                          duration: Duration(seconds: 1),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      context.push('${AppRoutes.workDetail}?id=${works[i].id}');
                     },
                   ),
                 ),
