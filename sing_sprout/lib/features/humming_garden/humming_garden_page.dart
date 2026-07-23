@@ -39,7 +39,7 @@ class HummingGardenPage extends StatelessWidget {
               },
               onRecordingStop: () {
                 // TODO: 停止录音 → AI 分析 → 风格选择 → 生成
-                context.pushNamed('recording');
+                context.push(AppRoutes.recording);
               },
             ),
             const SizedBox(height: 12),

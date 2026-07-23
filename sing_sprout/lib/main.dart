@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
-import 'core/theme/app_theme.dart';
 import 'shared/providers/app_state.dart';
 import 'shared/providers/audio_provider.dart';
 import 'shared/providers/connectivity_provider.dart';

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 /// 本地数据加密服务 stub（web 预览模式）
 class EncryptionService {
