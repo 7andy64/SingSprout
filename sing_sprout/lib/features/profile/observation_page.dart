@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/models/voice_card.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/utils/formatters.dart';
 
 /// 教师/家长观察窗 — 孩子的音乐创作数据看板
 class ObservationPage extends StatelessWidget {
@@ -116,7 +117,7 @@ class ObservationPage extends StatelessWidget {
                   const SizedBox(width: 8),
                   _MetricTile(
                     icon: Icons.timer_outlined,
-                    value: _formatDuration(totalDuration),
+                    value: Formatters.formatDuration(totalDuration),
                     label: '创作时长',
                     color: const Color(0xFF7C4DFF),
                   ),
@@ -221,14 +222,9 @@ class ObservationPage extends StatelessWidget {
   }
 
   String _dateKey(DateTime date) =>
-      '${date.year}${date.month}${date.day}';
+      '${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}';
 
-  static String _formatDuration(Duration d) {
-    if (d.inHours > 0) {
-      return '${d.inHours}h${d.inMinutes % 60}m';
-    }
-    return '${d.inMinutes}m';
-  }
+  // 使用共享的 Formatters.formatDuration（见 shared/utils/formatters.dart）
 }
 
 /// 指标卡片
@@ -310,7 +306,7 @@ class _RecentWorkTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${work.styleSeed.label} · ${_formatDuration(work.duration)} · ${work.createdAt.month}/${work.createdAt.day}',
+                    '${work.styleSeed.label} · ${Formatters.formatDurationMinSec(work.duration)} · ${work.createdAt.month}/${work.createdAt.day}',
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppTheme.textSecondary,
@@ -327,7 +323,4 @@ class _RecentWorkTile extends StatelessWidget {
     );
   }
 
-  String _formatDuration(Duration d) {
-    return '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
-  }
 }

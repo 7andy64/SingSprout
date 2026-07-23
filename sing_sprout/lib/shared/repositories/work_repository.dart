@@ -66,10 +66,12 @@ class WorkRepository {
   /// 搜索作品（按标题模糊匹配）。
   Future<List<MusicWork>> search(String query) async {
     final db = await _db.database;
+    // 转义 LIKE 通配符，防止用户输入 % 或 _ 改变搜索语义
+    final escaped = query.replaceAll('%', r'\%').replaceAll('_', r'\_');
     final rows = await db.query(
       'works',
       where: 'title LIKE ?',
-      whereArgs: ['%$query%'],
+      whereArgs: ['%$escaped%'],
       orderBy: 'updated_at DESC',
     );
     return rows.map((r) => MusicWork.fromJson(r)).toList();
@@ -77,22 +79,26 @@ class WorkRepository {
 
   // ── 更新 ──
 
-  /// 更新作品（通过 copyWith 后的新对象保存）。
+  /// 更新作品（通过 copyWith 后的新对象保存），不覆盖创建时间。
   Future<void> update(MusicWork work) async {
     final db = await _db.database;
+    final row = work.toJson();
+    row.remove('created_at'); // 创建时间不可修改
     await db.update(
       'works',
-      work.toJson(),
+      row,
       where: 'id = ?',
       whereArgs: [work.id],
     );
   }
 
-  /// 切换收藏状态。
+  /// 切换收藏状态（原子操作，避免并发丢失更新）。
   Future<void> toggleFavorite(String id) async {
-    final work = await getById(id);
-    if (work == null) return;
-    await update(work.copyWith(isFavorite: !work.isFavorite));
+    final db = await _db.database;
+    await db.rawUpdate(
+      'UPDATE works SET is_favorite = 1 - is_favorite, updated_at = ? WHERE id = ?',
+      [DateTime.now().toIso8601String(), id],
+    );
   }
 
   // ── 删除 ──

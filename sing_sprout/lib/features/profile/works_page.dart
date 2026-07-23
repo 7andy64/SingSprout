@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/utils/formatters.dart';
 
 /// 我的作品集 — 展示所有创作的音乐作品
 class WorksPage extends StatelessWidget {
@@ -31,6 +32,13 @@ class WorksPage extends StatelessWidget {
                     onDelete: () => _confirmDelete(context, works[i]),
                     onTap: () {
                       // TODO: 跳转作品详情/播放页
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('作品详情页开发中...'),
+                          duration: Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -76,8 +84,8 @@ class WorksPage extends StatelessWidget {
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
-              context.read<AppState>().deleteWork(work.id);
+            onPressed: () async {
+              await context.read<AppState>().deleteWork(work.id);
               Navigator.pop(ctx);
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
@@ -105,9 +113,8 @@ class _WorkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durationStr = _formatDuration(work.duration);
-    final dateStr =
-        '${work.createdAt.month}/${work.createdAt.day} ${work.createdAt.hour}:${work.createdAt.minute.toString().padLeft(2, '0')}';
+    final durationStr = Formatters.formatDurationMinSec(work.duration);
+    final dateStr = Formatters.formatDateShort(work.createdAt);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -240,9 +247,4 @@ class _WorkCard extends StatelessWidget {
     );
   }
 
-  String _formatDuration(Duration d) {
-    final m = d.inMinutes;
-    final s = d.inSeconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
 }

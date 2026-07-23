@@ -9,6 +9,7 @@ import '../repositories/work_repository.dart';
 import '../repositories/sound_repository.dart';
 import '../repositories/voice_card_repository.dart';
 import '../repositories/user_profile_repository.dart';
+import '../services/file_storage_service.dart';
 
 /// 全局应用状态
 ///
@@ -69,16 +70,21 @@ class AppState extends ChangeNotifier {
       return;
     }
 
-    // 加载用户档案
-    _userProfile = await _profileRepo.get();
+    try {
+      // 加载用户档案
+      _userProfile = await _profileRepo.get();
 
-    // 加载所有作品、声音、明信片
-    _works = await _workRepo.getAll();
-    _sounds = await _soundRepo.getAll();
-    _cards = await _cardRepo.getAll();
+      // 加载所有作品、声音、明信片
+      _works = await _workRepo.getAll();
+      _sounds = await _soundRepo.getAll();
+      _cards = await _cardRepo.getAll();
 
-    // 根据数据重新计算音乐树状态
-    _treeData = _buildTreeData();
+      // 根据数据重新计算音乐树状态
+      _treeData = _buildTreeData();
+    } catch (e) {
+      debugPrint('[AppState] 加载本地数据失败: $e');
+      // 即使加载失败也标记为已完成，避免反复重试
+    }
 
     _dataLoaded = true;
     notifyListeners();
@@ -122,6 +128,8 @@ class AppState extends ChangeNotifier {
   /// 添加/保存作品（写入 SQLite + 更新内存，Web 端仅内存）。
   Future<void> addWork(MusicWork work) async {
     if (!kIsWeb) await _workRepo.insert(work);
+    // 内存去重：如果已存在同 ID 作品，先移除旧的
+    _works.removeWhere((w) => w.id == work.id);
     _works.insert(0, work);
     _updateTree();
     notifyListeners();
@@ -133,13 +141,29 @@ class AppState extends ChangeNotifier {
     final index = _works.indexWhere((w) => w.id == work.id);
     if (index != -1) {
       _works[index] = work;
+    } else {
+      // 作品不在内存中，从数据库重新加载
+      _works = await _workRepo.getAll();
     }
     notifyListeners();
   }
 
-  /// 删除作品（同时删除关联文件）。
+  /// 删除作品（同时删除数据库记录 + 关联磁盘文件）。
   Future<void> deleteWork(String id) async {
+    // 先获取要删除的作品信息，用于清理关联文件
+    final work = _works.where((w) => w.id == id).firstOrNull;
     if (!kIsWeb) await _workRepo.delete(id);
+
+    // 清理关联的磁盘文件，防止存储泄漏
+    if (work != null && !kIsWeb) {
+      final storage = FileStorageService();
+      // 忽略文件不存在的错误
+      try { await storage.deleteFile(work.audioPath); } catch (_) {}
+      if (work.coverPath != null) {
+        try { await storage.deleteFile(work.coverPath!); } catch (_) {}
+      }
+    }
+
     _works.removeWhere((w) => w.id == id);
     _updateTree();
     notifyListeners();
@@ -189,6 +213,10 @@ class AppState extends ChangeNotifier {
 
   Future<void> markCardAsRead(String id) async {
     if (!kIsWeb) await _cardRepo.markAsRead(id);
+    final index = _cards.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      _cards[index] = _cards[index].copyWith(readAt: DateTime.now());
+    }
     notifyListeners();
   }
 

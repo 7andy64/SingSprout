@@ -79,7 +79,7 @@ class _CardList extends StatelessWidget {
   final List<VoiceCard> cards;
   final String emptyLabel;
   final String emptyHint;
-  final ValueChanged<String> onMarkRead;
+  final Future<void> Function(String) onMarkRead;
 
   const _CardList({
     required this.cards,
@@ -120,7 +120,7 @@ class _CardList extends StatelessWidget {
       itemCount: cards.length,
       itemBuilder: (_, i) => _CardItem(
         card: cards[i],
-        onTap: () => onMarkRead(cards[i].id),
+        onTap: () async => onMarkRead(cards[i].id),
       ),
     );
   }

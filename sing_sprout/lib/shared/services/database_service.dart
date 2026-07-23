@@ -15,11 +15,14 @@ class DatabaseService {
   static const _dbVersion = 1;
 
   Database? _db;
+  Future<Database>? _dbFuture;
 
   /// 获取数据库实例（延迟初始化，首次调用时创建）。
+  /// 使用 Future 哨兵避免并发调用产生竞态条件。
   Future<Database> get database async {
     if (_db != null && _db!.isOpen) return _db!;
-    _db = await _initDatabase();
+    _dbFuture ??= _initDatabase();
+    _db = await _dbFuture;
     return _db!;
   }
 
@@ -39,83 +42,96 @@ class DatabaseService {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE works (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        audio_path TEXT NOT NULL,
-        cover_path TEXT,
-        style_seed TEXT NOT NULL DEFAULT 'morningDew',
-        mood_color TEXT,
-        note TEXT,
-        duration_ms INTEGER NOT NULL DEFAULT 0,
-        is_favorite INTEGER NOT NULL DEFAULT 0,
-        is_encrypted INTEGER NOT NULL DEFAULT 1,
-        source_module TEXT NOT NULL DEFAULT 'humming_garden',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      )
-    ''');
+    await db.execute('PRAGMA foreign_keys = ON');
 
-    await db.execute('''
-      CREATE TABLE sound_samples (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        audio_path TEXT NOT NULL,
-        type TEXT NOT NULL,
-        bpm REAL,
-        pitch_sequence TEXT,
-        timbre_feature TEXT,
-        recommended_use TEXT,
-        is_public INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL
-      )
-    ''');
+    await db.transaction((txn) async {
+      await txn.execute('''
+        CREATE TABLE works (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          audio_path TEXT NOT NULL,
+          cover_path TEXT,
+          style_seed TEXT NOT NULL DEFAULT 'morningDew',
+          mood_color TEXT,
+          note TEXT,
+          duration_ms INTEGER NOT NULL DEFAULT 0,
+          is_favorite INTEGER NOT NULL DEFAULT 0,
+          is_encrypted INTEGER NOT NULL DEFAULT 1,
+          source_module TEXT NOT NULL DEFAULT 'humming_garden',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
 
-    await db.execute('''
-      CREATE TABLE voice_cards (
-        id TEXT PRIMARY KEY,
-        work_id TEXT NOT NULL,
-        sender_id TEXT NOT NULL,
-        recipient_id TEXT,
-        audio_path TEXT,
-        text_content TEXT,
-        cover_url TEXT,
-        reply_to_id TEXT,
-        direction TEXT NOT NULL DEFAULT 'sent',
-        created_at TEXT NOT NULL,
-        read_at TEXT
-      )
-    ''');
+      await txn.execute('''
+        CREATE TABLE sound_samples (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          audio_path TEXT NOT NULL,
+          type TEXT NOT NULL,
+          bpm REAL,
+          pitch_sequence TEXT,
+          timbre_feature TEXT,
+          recommended_use TEXT,
+          is_public INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL
+        )
+      ''');
 
-    await db.execute('''
-      CREATE TABLE user_profile (
-        local_id TEXT PRIMARY KEY,
-        nickname TEXT NOT NULL,
-        voice_baseline_path TEXT NOT NULL DEFAULT '',
-        guardian_animal TEXT NOT NULL DEFAULT 'panda',
-        role TEXT NOT NULL DEFAULT 'student',
-        has_completed_onboarding INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL
-      )
-    ''');
+      await txn.execute('''
+        CREATE TABLE voice_cards (
+          id TEXT PRIMARY KEY,
+          work_id TEXT NOT NULL,
+          sender_id TEXT NOT NULL,
+          recipient_id TEXT,
+          audio_path TEXT,
+          text_content TEXT,
+          cover_url TEXT,
+          reply_to_id TEXT,
+          direction TEXT NOT NULL DEFAULT 'sent',
+          created_at TEXT NOT NULL,
+          read_at TEXT
+        )
+      ''');
 
-    // 索引：加速按时间排序和按模块查询
-    await db.execute(
-      'CREATE INDEX idx_works_created_at ON works(created_at DESC)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_works_source_module ON works(source_module)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_works_favorite ON works(is_favorite)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_sound_samples_created_at ON sound_samples(created_at DESC)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_voice_cards_created_at ON voice_cards(created_at DESC)',
-    );
+      await txn.execute('''
+        CREATE TABLE user_profile (
+          local_id TEXT PRIMARY KEY,
+          nickname TEXT NOT NULL,
+          voice_baseline_path TEXT NOT NULL DEFAULT '',
+          guardian_animal TEXT NOT NULL DEFAULT 'panda',
+          role TEXT NOT NULL DEFAULT 'student',
+          has_completed_onboarding INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL
+        )
+      ''');
+
+      // 索引：加速按时间排序和按模块查询
+      await txn.execute(
+        'CREATE INDEX idx_works_created_at ON works(created_at DESC)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_works_source_module ON works(source_module)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_works_favorite ON works(is_favorite)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_sound_samples_created_at ON sound_samples(created_at DESC)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_voice_cards_created_at ON voice_cards(created_at DESC)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_voice_cards_work_id ON voice_cards(work_id)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_voice_cards_read_at ON voice_cards(read_at)',
+      );
+      await txn.execute(
+        'CREATE INDEX idx_voice_cards_direction ON voice_cards(direction)',
+      );
+    });
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -130,10 +146,12 @@ class DatabaseService {
   /// 清空所有表（用于重置/退出登录）。
   Future<void> clearAll() async {
     final db = await database;
-    await db.delete('works');
-    await db.delete('sound_samples');
-    await db.delete('voice_cards');
-    await db.delete('user_profile');
+    await db.transaction((txn) async {
+      await txn.delete('works');
+      await txn.delete('sound_samples');
+      await txn.delete('voice_cards');
+      await txn.delete('user_profile');
+    });
   }
 
   /// 关闭数据库连接。
@@ -141,6 +159,7 @@ class DatabaseService {
     if (_db != null && _db!.isOpen) {
       await _db!.close();
       _db = null;
+      _dbFuture = null;
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'package:sqflite/sqflite.dart';
 import '../models/user_profile.dart';
 import '../services/database_service.dart';
 
@@ -7,22 +8,14 @@ class UserProfileRepository {
 
   // ── 保存 ──
 
-  /// 保存用户档案（单条记录，存在则更新）。
+  /// 保存用户档案（单条记录，存在则替换，避免 check-then-act 竞态条件）。
   Future<void> save(UserProfile profile) async {
     final db = await _db.database;
-
-    // 先查是否存在
-    final existing = await db.query('user_profile');
-    if (existing.isEmpty) {
-      await db.insert('user_profile', _toRow(profile));
-    } else {
-      await db.update(
-        'user_profile',
-        _toRow(profile),
-        where: 'local_id = ?',
-        whereArgs: [profile.localId],
-      );
-    }
+    await db.insert(
+      'user_profile',
+      _toRow(profile),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   // ── 读取 ──
@@ -48,9 +41,13 @@ class UserProfileRepository {
   /// 更新引导完成状态。
   Future<void> setOnboardingCompleted(bool completed) async {
     final db = await _db.database;
+    final profile = await get();
+    if (profile == null) return;
     await db.update(
       'user_profile',
       {'has_completed_onboarding': completed ? 1 : 0},
+      where: 'local_id = ?',
+      whereArgs: [profile.localId],
     );
   }
 

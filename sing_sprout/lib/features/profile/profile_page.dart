@@ -296,13 +296,15 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         );
       },
-    ).then((selectedAnimal) {
+    ).then((selectedAnimal) async {
+      // 从 AppState 读取最新 profile，避免闭包时效问题
+      final currentProfile = context.read<AppState>().userProfile;
       if (selectedAnimal != null &&
-          profile != null &&
-          selectedAnimal != profile.guardianAnimal) {
-        context
+          currentProfile != null &&
+          selectedAnimal != currentProfile.guardianAnimal) {
+        await context
             .read<AppState>()
-            .setUserProfile(profile.copyWith(guardianAnimal: selectedAnimal));
+            .setUserProfile(currentProfile.copyWith(guardianAnimal: selectedAnimal));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -322,6 +324,15 @@ class _ProfilePageState extends State<ProfilePage> {
     if (profile == null) return;
 
     final controller = TextEditingController(text: profile.nickname);
+    var disposed = false;
+
+    void disposeController() {
+      if (!disposed) {
+        controller.dispose();
+        disposed = true;
+      }
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -337,29 +348,33 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              disposeController();
+              Navigator.pop(ctx);
+            },
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               final newName = controller.text.trim();
               if (newName.isNotEmpty && newName != profile.nickname) {
-                context
+                await context
                     .read<AppState>()
                     .setUserProfile(profile.copyWith(nickname: newName));
               }
+              disposeController();
               Navigator.pop(ctx);
             },
             child: const Text('保存'),
           ),
         ],
       ),
-    );
+    ).then((_) => disposeController());
   }
 
   // ── 存储管理弹窗 ──
 
-  void _showStorageManagement() async {
+  Future<void> _showStorageManagement() async {
     final storage = FileStorageService();
     final totalBytes = await storage.totalStorageUsed();
     final mb = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
@@ -394,8 +409,8 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              storage.clearExports();
+            onPressed: () async {
+              await storage.clearExports();
               Navigator.pop(ctx);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

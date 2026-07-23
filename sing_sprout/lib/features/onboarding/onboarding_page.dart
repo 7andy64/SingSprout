@@ -72,8 +72,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
       role: _selectedRole,
     );
 
-    // 持久化
-    await context.read<AppState>().setUserProfile(profile);
+    // 持久化用户档案并标记引导完成
+    final appState = context.read<AppState>();
+    await appState.setUserProfile(profile);
+    await appState.completeOnboarding();
 
     if (mounted) {
       // 返回主页（自动刷新"我的"页面）

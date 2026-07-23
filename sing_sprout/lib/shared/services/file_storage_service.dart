@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
@@ -53,6 +54,7 @@ class FileStorageService {
     await _ensureDir(generatedDir);
     await _ensureDir(coversDir);
     await _ensureDir(exportsDir);
+    await _ensureDir(modelsDir);
 
     debugPrint('[FileStorageService] 存储初始化完成: $_rootPath');
   }
@@ -81,28 +83,27 @@ class FileStorageService {
     _ensureInit();
     return _isWeb ? '/web_storage/exports' : p.join(_rootPath!, 'exports');
   }
+  String get modelsDir {
+    _ensureInit();
+    return _isWeb ? '/web_storage/models' : p.join(_rootPath!, 'models');
+  }
 
   // ── 文件操作 ──
 
   /// 为新的录音文件生成路径。
   String generateRecordingPath({String extension = 'm4a'}) {
-    final timestamp = _timestamp();
-    final random = DateTime.now().microsecondsSinceEpoch % 10000;
-    return p.join(recordingsDir, 'rec_${timestamp}_$random.$extension');
+    return p.join(recordingsDir, 'rec_${_timestamp()}_${_randomSeed()}.$extension');
   }
 
   /// 为 AI 生成的音乐文件生成路径。
   String generateMusicPath({String styleSeed = '', String extension = 'mp3'}) {
-    final timestamp = _timestamp();
-    final seed = styleSeed.isNotEmpty ? '_$styleSeed' : '';
-    return p.join(generatedDir, 'gen_$timestamp$seed.$extension');
+    final seed = styleSeed.isNotEmpty ? '_${_sanitizeFileName(styleSeed)}' : '';
+    return p.join(generatedDir, 'gen_${_timestamp()}${seed}_${_randomSeed()}.$extension');
   }
 
   /// 为封面图生成路径。
   String generateCoverPath({String extension = 'png'}) {
-    final timestamp = _timestamp();
-    final random = DateTime.now().microsecondsSinceEpoch % 10000;
-    return p.join(coversDir, 'cover_${timestamp}_$random.$extension');
+    return p.join(coversDir, 'cover_${_timestamp()}_${_randomSeed()}.$extension');
   }
 
   /// 保存字节数据到文件，返回文件路径。
@@ -110,17 +111,19 @@ class FileStorageService {
   Future<String> saveBytes(String path, List<int> bytes) async {
     if (_isWeb) return path;
 
-    final file = File(path);
+    final safePath = _validatePath(path);
+    final file = File(safePath);
     await file.parent.create(recursive: true);
     await file.writeAsBytes(bytes);
-    return path;
+    return safePath;
   }
 
   /// 从文件读取字节数据。Web 端始终返回 null。
   Future<List<int>?> readBytes(String path) async {
     if (_isWeb) return null;
 
-    final file = File(path);
+    final safePath = _validatePath(path);
+    final file = File(safePath);
     if (!await file.exists()) return null;
     return file.readAsBytes();
   }
@@ -129,7 +132,8 @@ class FileStorageService {
   Future<void> deleteFile(String path) async {
     if (_isWeb) return;
 
-    final file = File(path);
+    final safePath = _validatePath(path);
+    final file = File(safePath);
     if (await file.exists()) {
       await file.delete();
     }
@@ -139,14 +143,15 @@ class FileStorageService {
   Future<bool> fileExists(String path) async {
     if (_isWeb) return false;
 
-    return File(path).exists();
+    return File(_validatePath(path)).exists();
   }
 
   /// 获取文件大小（字节）。Web 端始终返回 0。
   Future<int> fileSize(String path) async {
     if (_isWeb) return 0;
 
-    final file = File(path);
+    final safePath = _validatePath(path);
+    final file = File(safePath);
     if (!await file.exists()) return 0;
     return file.length();
   }
@@ -185,6 +190,19 @@ class FileStorageService {
     }
   }
 
+  /// 验证路径在应用存储目录内，防止路径遍历攻击。
+  String _validatePath(String filePath) {
+    if (_isWeb) return filePath;
+
+    final resolved = p.normalize(p.absolute(filePath));
+    final root = p.normalize(p.absolute(_rootPath!));
+
+    if (!resolved.startsWith(root + p.separator) && resolved != root) {
+      throw ArgumentError('非法路径: $filePath（不允许访问应用目录以外的路径）');
+    }
+    return resolved;
+  }
+
   Future<void> _ensureDir(String path) async {
     if (_isWeb) return;
 
@@ -200,18 +218,37 @@ class FileStorageService {
     final dir = Directory(path);
     if (!await dir.exists()) return 0;
     var total = 0;
-    await for (final entity in dir.list(recursive: true)) {
-      if (entity is File) {
-        total += await entity.length();
+    try {
+      await for (final entity in dir.list(recursive: true)) {
+        if (entity is File) {
+          try {
+            total += await entity.length();
+          } catch (_) {
+            // 文件可能在迭代期间被删除
+          }
+        }
       }
+    } catch (_) {
+      // 目录可能在迭代期间被删除
     }
     return total;
+  }
+
+  /// 生成安全的随机文件名后缀，避免基于时间的碰撞。
+  String _randomSeed() {
+    final rng = Random.secure();
+    return rng.nextInt(99999).toString().padLeft(5, '0');
   }
 
   String _timestamp() {
     final now = DateTime.now();
     return '${now.year}${_pad(now.month)}${_pad(now.day)}_'
         '${_pad(now.hour)}${_pad(now.minute)}${_pad(now.second)}';
+  }
+
+  /// 清理文件名中的路径分隔符和特殊字符。
+  String _sanitizeFileName(String name) {
+    return name.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
   }
 
   String _pad(int n) => n.toString().padLeft(2, '0');

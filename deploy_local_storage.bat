@@ -2,6 +2,15 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
+:: 切换到 Flutter 项目目录
+cd /d "%~dp0sing_sprout"
+
+if not exist "lib\main.dart" (
+  echo [错误] 未找到 sing_sprout\lib\main.dart，请确认脚本位于仓库根目录
+  pause
+  exit /b 1
+)
+
 echo ========================================
 echo   声芽 SingSprout - 本地存储层部署脚本
 echo ========================================

@@ -154,10 +154,14 @@ class EncryptionService {
   }
 
   /// 从设备指纹派生出 AES 密钥（安全存储不可用时的回退方案）。
-  /// 使用 SHA-256 将指纹哈希为 32 字节的 AES-256 密钥。
+  /// 使用多次 SHA-256 迭代模拟 PBKDF2，增加暴力破解成本。
+  /// 注意：这仍是降级方案，密钥强度取决于指纹的熵值。
   encrypt.Key _deriveKeyFromFingerprint(String fingerprint) {
-    final bytes = utf8.encode(fingerprint);
-    final digest = sha256.convert(bytes);
-    return encrypt.Key(Uint8List.fromList(digest.bytes));
+    var digest = sha256.convert(utf8.encode(fingerprint)).bytes;
+    // 多次迭代增加派生成本
+    for (var i = 0; i < 1000; i++) {
+      digest = sha256.convert(digest).bytes;
+    }
+    return encrypt.Key(Uint8List.fromList(digest));
   }
 }

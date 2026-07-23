@@ -1,3 +1,4 @@
+import 'package:uuid/uuid.dart';
 import '../../core/constants/enums.dart';
 
 /// 音乐作品模型
@@ -42,7 +43,7 @@ class MusicWork {
     String sourceModule = 'humming_garden',
   }) {
     final now = DateTime.now();
-    final id = '${now.millisecondsSinceEpoch}_${now.microsecondsSinceEpoch % 100000}';
+    final id = const Uuid().v4();
     return MusicWork(
       id: id,
       title: title,

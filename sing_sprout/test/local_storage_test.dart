@@ -49,6 +49,17 @@ class _FakePathProvider extends PathProviderPlatform {
 
   @override
   Future<String?> getLibraryPath() async => _tempDir;
+
+  // 以下方法为兼容性预留，非 override
+  Future<String?> getApplicationCachePath() async => _tempDir;
+
+  Future<String?> getExternalCachePath() async => _tempDir;
+
+  void dispose() {
+    try {
+      Directory(_tempDir).deleteSync(recursive: true);
+    } catch (_) {}
+  }
 }
 
 void main() {
@@ -73,8 +84,30 @@ void main() {
     // 每个测试后清理数据库
     try {
       await DatabaseService().clearAll();
-    } catch (_) {
-      // 数据库可能已关闭
+    } catch (e) {
+      // 数据库已关闭（如 close 测试后），关闭数据库后重新打开以清理
+      try {
+        final db = await DatabaseService().database;
+        await db.transaction((txn) async {
+          await txn.delete('works');
+          await txn.delete('sound_samples');
+          await txn.delete('voice_cards');
+          await txn.delete('user_profile');
+        });
+      } catch (_) {
+        // 无法清理，可能数据库文件不可用
+      }
+    }
+  });
+
+  tearDownAll(() async {
+    // 测试结束后关闭数据库连接
+    try {
+      await DatabaseService().close();
+    } catch (_) {}
+    // 清理 FakePathProvider 创建的临时目录
+    if (PathProviderPlatform.instance is _FakePathProvider) {
+      (PathProviderPlatform.instance as _FakePathProvider).dispose();
     }
   });
 
@@ -155,7 +188,7 @@ void main() {
       }
     });
 
-    test('5 个索引全部创建', () async {
+    test('8 个索引全部创建', () async {
       final db = await DatabaseService().database;
       final indexes = await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='index' ORDER BY name",
@@ -167,6 +200,10 @@ void main() {
       expect(names, contains('idx_works_favorite'));
       expect(names, contains('idx_sound_samples_created_at'));
       expect(names, contains('idx_voice_cards_created_at'));
+      expect(names, contains('idx_voice_cards_work_id'));
+      expect(names, contains('idx_voice_cards_read_at'));
+      expect(names, contains('idx_voice_cards_direction'));
+      expect(names.length, greaterThanOrEqualTo(8));
     });
 
     test('clearAll 清空所有表', () async {
@@ -251,8 +288,8 @@ void main() {
           'bGVnYWN5X2RhdGE='; // base64("legacy_data")
       // 未初始化就直接 base64 解码
       final decrypted = EncryptionService().decryptText(base64Only);
-      // 应该能解出原文或返回原文
-      expect(decrypted, isNotEmpty);
+      // 应该正确还原原文
+      expect(decrypted, equals(plain));
     });
   });
 

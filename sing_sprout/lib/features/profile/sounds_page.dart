@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/enums.dart';
 import '../../shared/models/sound_sample.dart';
+import '../../shared/utils/formatters.dart';
 import '../../shared/providers/app_state.dart';
 
 /// 我的声音库 — 展示田野声音实验室采集的声音样本
@@ -72,8 +73,8 @@ class SoundsPage extends StatelessWidget {
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
-              context.read<AppState>().deleteSound(sound.id);
+            onPressed: () async {
+              await context.read<AppState>().deleteSound(sound.id);
               Navigator.pop(ctx);
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
@@ -157,7 +158,7 @@ class _SoundCard extends StatelessWidget {
                       if (sound.bpm != null) ...[
                         const SizedBox(width: 8),
                         Text(
-                          'BPM ${sound.bpm!.round()}',
+                          'BPM ${sound.bpm!.round()}', // bpm is checked non-null in the if guard above
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppTheme.textSecondary,
@@ -202,7 +203,7 @@ class _SoundCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 4),
                   Text(
-                    _formatDate(sound.createdAt),
+                    Formatters.formatDateShort(sound.createdAt),
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppTheme.textSecondary,
@@ -227,36 +228,23 @@ class _SoundCard extends StatelessWidget {
   }
 
   Color _typeColor(SoundType type) {
-    switch (type) {
-      case SoundType.humanVoice:
-        return const Color(0xFFFF6B6B);
-      case SoundType.animal:
-        return const Color(0xFFFFB347);
-      case SoundType.nature:
-        return AppTheme.primaryGreen;
-      case SoundType.mechanical:
-        return const Color(0xFF7C4DFF);
-      case SoundType.unknown:
-        return AppTheme.textSecondary;
-    }
+    return switch (type) {
+      SoundType.humanVoice => const Color(0xFFFF6B6B),
+      SoundType.animal => const Color(0xFFFFB347),
+      SoundType.nature => AppTheme.primaryGreen,
+      SoundType.mechanical => const Color(0xFF7C4DFF),
+      SoundType.unknown => AppTheme.textSecondary,
+    };
   }
 
   String _typeEmoji(SoundType type) {
-    switch (type) {
-      case SoundType.humanVoice:
-        return '🗣️';
-      case SoundType.animal:
-        return '🐾';
-      case SoundType.nature:
-        return '🌿';
-      case SoundType.mechanical:
-        return '⚙️';
-      case SoundType.unknown:
-        return '❓';
-    }
+    return switch (type) {
+      SoundType.humanVoice => '🗣️',
+      SoundType.animal => '🐾',
+      SoundType.nature => '🌿',
+      SoundType.mechanical => '⚙️',
+      SoundType.unknown => '❓',
+    };
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.month}/${date.day} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
 }

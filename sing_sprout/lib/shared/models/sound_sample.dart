@@ -64,7 +64,10 @@ class SoundSample {
         id: json['id'] as String,
         name: json['name'] as String,
         audioPath: json['audio_path'] as String,
-        type: SoundType.values.firstWhere((e) => e.name == json['type']),
+        type: SoundType.values.firstWhere(
+          (e) => e.name == json['type'],
+          orElse: () => SoundType.unknown,
+        ),
         bpm: (json['bpm'] as num?)?.toDouble(),
         pitchSequence: json['pitch_sequence'] as String?,
         timbreFeature: json['timbre_feature'] as String?,

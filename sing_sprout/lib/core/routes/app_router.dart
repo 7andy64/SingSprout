@@ -28,6 +28,26 @@ class AppRouter {
   static final router = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.hummingGarden,
+    errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(title: const Text('页面未找到')),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text('无法找到页面', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(state.error.toString(), style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: () => GoRouter.of(context).go(AppRoutes.hummingGarden),
+              child: const Text('返回首页'),
+            ),
+          ],
+        ),
+      ),
+    ),
     routes: [
       // ── 底部导航壳 ──
       ShellRoute(
@@ -95,6 +115,7 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.recording,
+        name: 'recording',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RecordingPage(),
       ),

@@ -87,13 +87,13 @@ class VoiceCardRepository {
 
   // ── 更新 ──
 
-  /// 标记明信片为已读。
+  /// 标记明信片为已读（仅当尚未标记时，避免重复更新覆盖首次阅读时间）。
   Future<void> markAsRead(String id) async {
     final db = await _db.database;
     await db.update(
       'voice_cards',
       {'read_at': DateTime.now().toIso8601String()},
-      where: 'id = ?',
+      where: 'id = ? AND read_at IS NULL',
       whereArgs: [id],
     );
   }

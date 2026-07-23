@@ -41,9 +41,11 @@ class SoundRepository {
 
   Future<void> update(SoundSample sample) async {
     final db = await _db.database;
+    final row = sample.toJson();
+    row.remove('created_at'); // 创建时间不可修改
     await db.update(
       'sound_samples',
-      sample.toJson(),
+      row,
       where: 'id = ?',
       whereArgs: [sample.id],
     );
