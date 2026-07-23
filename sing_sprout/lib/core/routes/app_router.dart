@@ -11,6 +11,11 @@ import '../../features/field_sound_lab/field_sound_lab_page.dart';
 import '../../features/rhythm_tribe/rhythm_tribe_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/profile/privacy_settings_page.dart';
+import '../../features/profile/works_page.dart';
+import '../../features/profile/sounds_page.dart';
+import '../../features/profile/ledger_page.dart';
+import '../../features/profile/observation_page.dart';
+import '../../features/onboarding/onboarding_page.dart';
 import '../constants/app_routes.dart';
 
 /// 声芽路由配置 — 底部导航(5项) + 子页面
@@ -23,6 +28,26 @@ class AppRouter {
   static final router = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.hummingGarden,
+    errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(title: const Text('页面未找到')),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text('无法找到页面', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(state.error.toString(), style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: () => GoRouter.of(context).go(AppRoutes.hummingGarden),
+              child: const Text('返回首页'),
+            ),
+          ],
+        ),
+      ),
+    ),
     routes: [
       // ── 底部导航壳 ──
       ShellRoute(
@@ -64,7 +89,33 @@ class AppRouter {
 
       // ── 独立子页面 ──
       GoRoute(
+        path: AppRoutes.onboarding,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const OnboardingPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.works,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const WorksPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.sounds,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SoundsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.ledger,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const LedgerPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.observation,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ObservationPage(),
+      ),
+      GoRoute(
         path: AppRoutes.recording,
+        name: 'recording',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RecordingPage(),
       ),

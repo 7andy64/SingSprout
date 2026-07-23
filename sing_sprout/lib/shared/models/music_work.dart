@@ -1,3 +1,4 @@
+import 'package:uuid/uuid.dart';
 import '../../core/constants/enums.dart';
 
 /// 音乐作品模型
@@ -10,7 +11,9 @@ class MusicWork {
   final MoodColor? moodSticker;
   final String? note;
   final Duration duration;
+  final bool isFavorite;
   final bool isEncrypted;
+  final String sourceModule; // humming_garden / mood_radio / field_lab
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -23,7 +26,9 @@ class MusicWork {
     this.moodSticker,
     this.note,
     required this.duration,
+    this.isFavorite = false,
     this.isEncrypted = true,
+    this.sourceModule = 'humming_garden',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -35,9 +40,10 @@ class MusicWork {
     MoodColor? moodSticker,
     String? note,
     required Duration duration,
+    String sourceModule = 'humming_garden',
   }) {
     final now = DateTime.now();
-    final id = now.millisecondsSinceEpoch.toString();
+    final id = const Uuid().v4();
     return MusicWork(
       id: id,
       title: title,
@@ -46,38 +52,78 @@ class MusicWork {
       moodSticker: moodSticker,
       note: note,
       duration: duration,
+      sourceModule: sourceModule,
       createdAt: now,
       updatedAt: now,
     );
   }
 
+  // ── 序列化 ──
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,
-        'audioPath': audioPath,
-        'coverPath': coverPath,
-        'styleSeed': styleSeed.name,
-        'moodSticker': moodSticker?.name,
+        'audio_path': audioPath,
+        'cover_path': coverPath,
+        'style_seed': styleSeed.name,
+        'mood_color': moodSticker?.name,
         'note': note,
-        'durationMs': duration.inMilliseconds,
-        'isEncrypted': isEncrypted,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
+        'duration_ms': duration.inMilliseconds,
+        'is_favorite': isFavorite ? 1 : 0,
+        'is_encrypted': isEncrypted ? 1 : 0,
+        'source_module': sourceModule,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
       };
 
   factory MusicWork.fromJson(Map<String, dynamic> json) => MusicWork(
         id: json['id'] as String,
         title: json['title'] as String,
-        audioPath: json['audioPath'] as String,
-        coverPath: json['coverPath'] as String?,
-        styleSeed: StyleSeed.values.byName(json['styleSeed'] as String),
-        moodSticker: json['moodSticker'] != null
-            ? MoodColor.values.byName(json['moodSticker'] as String)
-            : null,
+        audioPath: json['audio_path'] as String,
+        coverPath: json['cover_path'] as String?,
+        styleSeed: _parseEnum(StyleSeed.values, json['style_seed'] as String?),
+        moodSticker:
+            json['mood_color'] != null ? _parseEnum(MoodColor.values, json['mood_color'] as String?) : null,
         note: json['note'] as String?,
-        duration: Duration(milliseconds: json['durationMs'] as int),
-        isEncrypted: json['isEncrypted'] as bool? ?? true,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
+        duration: Duration(milliseconds: json['duration_ms'] as int? ?? 0),
+        isFavorite: (json['is_favorite'] as int? ?? 0) == 1,
+        isEncrypted: (json['is_encrypted'] as int? ?? 1) == 1,
+        sourceModule: json['source_module'] as String? ?? 'humming_garden',
+        createdAt: DateTime.parse(json['created_at'] as String),
+        updatedAt: DateTime.parse(json['updated_at'] as String),
       );
+
+  MusicWork copyWith({
+    String? title,
+    String? audioPath,
+    String? coverPath,
+    StyleSeed? styleSeed,
+    MoodColor? moodSticker,
+    String? note,
+    Duration? duration,
+    bool? isFavorite,
+    bool? isEncrypted,
+    String? sourceModule,
+  }) {
+    return MusicWork(
+      id: id,
+      title: title ?? this.title,
+      audioPath: audioPath ?? this.audioPath,
+      coverPath: coverPath ?? this.coverPath,
+      styleSeed: styleSeed ?? this.styleSeed,
+      moodSticker: moodSticker ?? this.moodSticker,
+      note: note ?? this.note,
+      duration: duration ?? this.duration,
+      isFavorite: isFavorite ?? this.isFavorite,
+      isEncrypted: isEncrypted ?? this.isEncrypted,
+      sourceModule: sourceModule ?? this.sourceModule,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  static T _parseEnum<T extends Enum>(List<T> values, String? name) {
+    if (name == null) return values.first;
+    return values.firstWhere((e) => e.name == name, orElse: () => values.first);
+  }
 }
