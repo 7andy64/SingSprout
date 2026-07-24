@@ -62,9 +62,12 @@ void main() async {
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: () {
-                      // 尝试重启
+                      // 简单重启：退出 app 让用户手动重开
+                      if (!kIsWeb) {
+                        SystemNavigator.pop();
+                      }
                     },
-                    child: const Text('重试'),
+                    child: const Text('退出应用'),
                   ),
                 ],
               ),

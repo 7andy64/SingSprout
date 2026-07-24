@@ -1,18 +1,109 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_routes.dart';
+import '../../shared/models/music_work.dart';
+import '../../shared/models/voice_card.dart';
+import '../../shared/providers/app_state.dart';
+import '../../shared/utils/postcard_generator.dart';
 
 /// 撰写音乐明信片 — 选择作品 + 写一句话 → 生成卡片 → 微信分享
 class ComposePage extends StatefulWidget {
-  const ComposePage({super.key});
+  final String? initialWorkId;
+  const ComposePage({super.key, this.initialWorkId});
 
   @override
   State<ComposePage> createState() => _ComposePageState();
 }
 
 class _ComposePageState extends State<ComposePage> {
-  String _message = '';
-  String? _selectedWorkId;
+  final _messageController = TextEditingController();
+  MusicWork? _selectedWork;
+  bool _generating = false;
+
+  List<MusicWork> get _works {
+    final appState = context.read<AppState>();
+    return appState.works;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialWorkId != null) {
+      // 从路由参数预选作品
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final appState = context.read<AppState>();
+        final work = appState.works
+            .where((w) => w.id == widget.initialWorkId)
+            .firstOrNull;
+        if (work != null && mounted) {
+          setState(() => _selectedWork = work);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _generateAndShare() async {
+    if (_selectedWork == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先选择一首作品')),
+      );
+      return;
+    }
+
+    setState(() => _generating = true);
+    try {
+      final appState = context.read<AppState>();
+      final profile = appState.userProfile;
+      final senderName = profile?.nickname ?? '声芽用户';
+
+      // 1. 生成明信片图片
+      final imagePath = await PostcardGenerator.generate(
+        work: _selectedWork!,
+        message: _messageController.text.trim(),
+        senderName: senderName,
+      );
+
+      // 2. 保存明信片记录到数据库
+      final card = VoiceCard.send(
+        senderId: profile?.localId ?? 'anonymous',
+        workId: _selectedWork!.id,
+        audioPath: _selectedWork!.audioPath,
+        textContent: _messageController.text.trim(),
+        coverUrl: imagePath,
+      );
+      await appState.addVoiceCard(card);
+
+      if (!mounted) return;
+
+      // 3. 分享到微信/系统分享
+      await Share.shareXFiles(
+        [XFile(imagePath)],
+        text: '🎵 ${_selectedWork!.title} — ${_messageController.text.trim()}',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('明信片已生成，可通过微信分享给家人')),
+      );
+      context.pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('生成失败: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +128,11 @@ class _ComposePageState extends State<ComposePage> {
                 ),
               ),
               const SizedBox(height: 12),
-              Container(
+              _works.isNotEmpty ? _WorkSelector(
+                works: _works,
+                selected: _selectedWork,
+                onSelected: (w) => setState(() => _selectedWork = w),
+              ) : Container(
                 height: 80,
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -58,7 +153,7 @@ class _ComposePageState extends State<ComposePage> {
                 ),
                 child: const Center(
                   child: Text(
-                    '从哼唱花园选择一首作品',
+                    '还没有作品，先去哼唱花园创作吧',
                     style: TextStyle(color: AppTheme.textSecondary),
                   ),
                 ),
@@ -77,12 +172,12 @@ class _ComposePageState extends State<ComposePage> {
               ),
               const SizedBox(height: 12),
               TextField(
+                controller: _messageController,
                 maxLength: 100,
                 maxLines: 3,
                 decoration: const InputDecoration(
                   hintText: '比如：妈妈我好想你...',
                 ),
-                onChanged: (v) => _message = v,
               ),
 
               const Spacer(),
@@ -91,15 +186,15 @@ class _ComposePageState extends State<ComposePage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO: AI 生成封面 → 生成微信分享卡片
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('明信片已生成，已复制分享链接')),
-                    );
-                    context.pop();
-                  },
-                  icon: const Icon(Icons.send_rounded),
-                  label: const Text('生成明信片并分享'),
+                  onPressed: _generating ? null : _generateAndShare,
+                  icon: _generating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send_rounded),
+                  label: Text(_generating ? '生成中...' : '生成明信片并分享'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -118,5 +213,83 @@ class _ComposePageState extends State<ComposePage> {
         ),
       ),
     );
+  }
+}
+
+/// 作品选择器 — 横向滚动的作品卡片列表
+class _WorkSelector extends StatelessWidget {
+  final List<MusicWork> works;
+  final MusicWork? selected;
+  final ValueChanged<MusicWork> onSelected;
+
+  const _WorkSelector({
+    required this.works,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 80,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: works.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final work = works[index];
+          final isSelected = work.id == selected?.id;
+          return GestureDetector(
+            onTap: () => onSelected(work),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 160,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.primaryGreen.withOpacity(0.1)
+                    : AppTheme.primaryGreen.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? AppTheme.primaryGreen : AppTheme.divider,
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    work.title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color: AppTheme.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${work.styleSeed.label} · ${_formatShort(work.duration)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatShort(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds.remainder(60);
+    return '$m:${s.toString().padLeft(2, '0')}';
   }
 }
