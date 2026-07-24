@@ -148,7 +148,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.composeCard,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const ComposePage(),
+        builder: (context, state) {
+          final workId = state.uri.queryParameters['workId'];
+          return ComposePage(initialWorkId: workId);
+        },
       ),
       GoRoute(
         path: AppRoutes.privacySettings,

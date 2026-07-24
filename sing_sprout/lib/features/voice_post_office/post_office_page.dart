@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
+import '../../shared/models/voice_card.dart';
+import '../../shared/models/music_work.dart';
+import '../../shared/providers/app_state.dart';
 
-/// 声音邮局 — MVP P0 功能：亲子通信
+/// 声音邮局 — 亲子音乐明信片收发
 class PostOfficePage extends StatelessWidget {
   const PostOfficePage({super.key});
 
@@ -39,7 +44,7 @@ class PostOfficePage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Tab 切换：收件箱 / 发件箱
+            // Tab 切换：发件箱 / 收件箱
             DefaultTabController(
               length: 2,
               child: Expanded(
@@ -50,15 +55,15 @@ class PostOfficePage extends StatelessWidget {
                       unselectedLabelColor: AppTheme.textSecondary,
                       indicatorColor: AppTheme.primaryGreen,
                       tabs: [
-                        Tab(text: '收件箱'),
                         Tab(text: '发件箱'),
+                        Tab(text: '收件箱'),
                       ],
                     ),
                     Expanded(
                       child: TabBarView(
                         children: [
-                          _InboxTab(),
-                          _OutboxTab(),
+                          _CardList(direction: VoiceCardDirection.sent),
+                          _CardList(direction: VoiceCardDirection.received),
                         ],
                       ),
                     ),
@@ -73,33 +78,112 @@ class PostOfficePage extends StatelessWidget {
   }
 }
 
-class _InboxTab extends StatelessWidget {
+/// 明信片列表
+class _CardList extends StatelessWidget {
+  final VoiceCardDirection direction;
+  const _CardList({required this.direction});
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    final appState = context.watch<AppState>();
+    final cards = appState.cards
+        .where((c) => c.direction == direction)
+        .toList();
+
+    if (cards.isEmpty) {
+      return _EmptyState(
+        icon: direction == VoiceCardDirection.sent
+            ? Icons.send_outlined
+            : Icons.mail_outline_rounded,
+        message: direction == VoiceCardDirection.sent
+            ? '还没有发送过明信片\n创作一首歌然后发给爸妈'
+            : '还没有收到回信\n试试给爸妈发第一张明信片吧',
+      );
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        _EmptyState(
-          icon: Icons.mail_outline_rounded,
-          message: '还没有收到回信\n试试给爸妈发第一张明信片吧',
-        ),
-      ],
+      itemCount: cards.length,
+      itemBuilder: (context, index) {
+        return _CardItem(card: cards[index]);
+      },
     );
   }
 }
 
-class _OutboxTab extends StatelessWidget {
+/// 单张明信片
+class _CardItem extends StatelessWidget {
+  final VoiceCard card;
+  const _CardItem({required this.card});
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _EmptyState(
-          icon: Icons.send_outlined,
-          message: '还没有发送过明信片\n创作一首歌然后发给爸妈',
+    final appState = context.read<AppState>();
+    final work = appState.works
+        .where((w) => w.id == card.workId)
+        .firstOrNull;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+          child: Text(
+            work?.styleSeed.icon ?? '🎵',
+            style: const TextStyle(fontSize: 20),
+          ),
         ),
-      ],
+        title: Text(
+          work?.title ?? '未知作品',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (card.textContent != null && card.textContent!.isNotEmpty)
+              Text(
+                card.textContent!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppTheme.textSecondary.withOpacity(0.8),
+                  fontSize: 13,
+                ),
+              ),
+            Text(
+              _formatDate(card.createdAt),
+              style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.ios_share, size: 20),
+          onPressed: () => _shareCard(context),
+          tooltip: '再次分享',
+        ),
+        onTap: () => _shareCard(context),
+      ),
     );
+  }
+
+  Future<void> _shareCard(BuildContext context) async {
+    if (card.coverUrl != null && card.coverUrl!.isNotEmpty) {
+      try {
+        await Share.shareXFiles(
+          [XFile(card.coverUrl!)],
+          text: '🎵 ${card.textContent ?? "分享一首音乐给你"}',
+        );
+      } catch (_) {
+        // 文件不存在时静默
+      }
+    }
+  }
+
+  String _formatDate(DateTime d) {
+    return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')} '
+        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
   }
 }
 

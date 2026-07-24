@@ -206,8 +206,10 @@ class _EditorPageState extends State<EditorPage> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // TODO: 跳转声音邮局
-                        context.push(AppRoutes.composeCard);
+                        // 带着当前作品 ID 跳转声音邮局
+                        context.push(
+                          '${AppRoutes.composeCard}?workId=${_work.id}',
+                        );
                       },
                       icon: const Icon(Icons.mail_outline),
                       label: const Text('发给爸妈'),
