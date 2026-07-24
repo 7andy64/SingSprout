@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/humming_garden/humming_garden_page.dart';
+import '../../features/humming_garden/creative_flow_page.dart';
 import '../../features/humming_garden/recording_page.dart';
 import '../../features/humming_garden/editor_page.dart';
 import '../../shared/models/music_work.dart';
 import '../../features/voice_post_office/post_office_page.dart';
 import '../../features/voice_post_office/compose_page.dart';
-import '../../features/music_tree/music_tree_page.dart';
 import '../../features/mood_radio/mood_radio_page.dart';
 import '../../features/field_sound_lab/field_sound_lab_page.dart';
 import '../../features/rhythm_tribe/rhythm_tribe_page.dart';
@@ -20,8 +20,9 @@ import '../../features/profile/observation_page.dart';
 import '../../features/profile/storage_page.dart';
 import '../../features/onboarding/onboarding_page.dart';
 import '../constants/app_routes.dart';
+import '../theme/app_theme.dart';
 
-/// 声芽路由配置 — 底部导航(5项) + 子页面
+/// 声芽路由配置 — 底部导航 3+1（花园 / 邮局 / 我的 + 浮动录音按钮）
 class AppRouter {
   AppRouter._();
 
@@ -30,7 +31,7 @@ class AppRouter {
 
   static final router = GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: AppRoutes.hummingGarden,
+    initialLocation: AppRoutes.garden,
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('页面未找到')),
       body: Center(
@@ -44,35 +45,23 @@ class AppRouter {
             Text(state.error.toString(), style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: () => GoRouter.of(context).go(AppRoutes.hummingGarden),
-              child: const Text('返回首页'),
+              onPressed: () => GoRouter.of(context).go(AppRoutes.garden),
+              child: const Text('返回花园'),
             ),
           ],
         ),
       ),
     ),
     routes: [
-      // ── 底部导航壳 ──
+      // ── 底部导航壳（3 Tab） ──
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) => _AppShell(child: child),
         routes: [
           GoRoute(
-            path: AppRoutes.hummingGarden,
+            path: AppRoutes.garden,
             pageBuilder: (context, state) => const NoTransitionPage(
               child: HummingGardenPage(),
-            ),
-          ),
-          GoRoute(
-            path: AppRoutes.moodRadio,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: MoodRadioPage(),
-            ),
-          ),
-          GoRoute(
-            path: AppRoutes.musicTree,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: MusicTreePage(),
             ),
           ),
           GoRoute(
@@ -95,6 +84,11 @@ class AppRouter {
         path: AppRoutes.onboarding,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const OnboardingPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.creativeFlow,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const CreativeFlowPage(),
       ),
       GoRoute(
         path: AppRoutes.works,
@@ -132,7 +126,6 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.recording,
-        name: 'recording',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RecordingPage(),
       ),
@@ -165,6 +158,11 @@ class AppRouter {
         builder: (context, state) => const PrivacySettingsPage(),
       ),
       GoRoute(
+        path: AppRoutes.moodRadio,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const MoodRadioPage(),
+      ),
+      GoRoute(
         path: AppRoutes.fieldSoundLab,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const FieldSoundLabPage(),
@@ -178,7 +176,7 @@ class AppRouter {
   );
 }
 
-/// 底部导航壳 — 5 个花瓣入口
+/// 底部导航壳 — 3 花瓣 + 中央浮动录音按钮
 class _AppShell extends StatelessWidget {
   final Widget child;
   const _AppShell({required this.child});
@@ -188,35 +186,55 @@ class _AppShell extends StatelessWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: _BottomNavBar(),
+      floatingActionButton: _FloatingRecordFab(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
 
+/// 中央浮动录音按钮
+class _FloatingRecordFab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: FloatingActionButton(
+        onPressed: () {
+          // 直接进入创作魔法流水线
+          GoRouter.of(context).push(AppRoutes.creativeFlow);
+        },
+        backgroundColor: AppTheme.primaryGreen,
+        elevation: 4,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.mic, color: Colors.white, size: 28),
+      ),
+    );
+  }
+}
+
+/// 底部导航栏（3 项）
 class _BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
 
-    // MVP 阶段显示 5 个 Tab：创作/表达/成长/连接/我的
-    // P1 阶段将"节奏部落"加入扩展菜单
     return BottomNavigationBar(
       currentIndex: _calculateIndex(location),
       onTap: (index) => _onTap(context, index),
+      type: BottomNavigationBarType.fixed,
+      elevation: 8,
+      selectedItemColor: AppTheme.primaryGreen,
+      unselectedItemColor: AppTheme.textSecondary,
+      selectedIconTheme: const IconThemeData(size: 28),
+      unselectedIconTheme: const IconThemeData(size: 26),
+      selectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: const TextStyle(fontSize: 13),
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(Icons.mic_none),
-          activeIcon: Icon(Icons.mic),
-          label: '哼唱',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.sentiment_satisfied),
-          activeIcon: Icon(Icons.sentiment_satisfied),
-          label: '心情',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.park),
-          activeIcon: Icon(Icons.park),
-          label: '音乐树',
+          icon: Icon(Icons.eco_outlined),
+          activeIcon: Icon(Icons.eco),
+          label: '花园',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.mail_outline),
@@ -233,19 +251,15 @@ class _BottomNavBar extends StatelessWidget {
   }
 
   int _calculateIndex(String location) {
-    if (location.startsWith(AppRoutes.hummingGarden)) return 0;
-    if (location.startsWith(AppRoutes.moodRadio)) return 1;
-    if (location.startsWith(AppRoutes.musicTree)) return 2;
-    if (location.startsWith(AppRoutes.postOffice)) return 3;
-    if (location.startsWith(AppRoutes.profile)) return 4;
+    if (location.startsWith(AppRoutes.garden)) return 0;
+    if (location.startsWith(AppRoutes.postOffice)) return 1;
+    if (location.startsWith(AppRoutes.profile)) return 2;
     return 0;
   }
 
   void _onTap(BuildContext context, int index) {
     final routes = [
-      AppRoutes.hummingGarden,
-      AppRoutes.moodRadio,
-      AppRoutes.musicTree,
+      AppRoutes.garden,
       AppRoutes.postOffice,
       AppRoutes.profile,
     ];
