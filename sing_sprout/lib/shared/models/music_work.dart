@@ -13,6 +13,7 @@ class MusicWork {
   final Duration duration;
   final bool isFavorite;
   final bool isEncrypted;
+  final bool isPrivate;    // 私密作品，需密码访问
   final String sourceModule; // humming_garden / mood_radio / field_lab
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -28,6 +29,7 @@ class MusicWork {
     required this.duration,
     this.isFavorite = false,
     this.isEncrypted = true,
+    this.isPrivate = false,
     this.sourceModule = 'humming_garden',
     required this.createdAt,
     required this.updatedAt,
@@ -71,6 +73,7 @@ class MusicWork {
         'duration_ms': duration.inMilliseconds,
         'is_favorite': isFavorite ? 1 : 0,
         'is_encrypted': isEncrypted ? 1 : 0,
+        'is_private': isPrivate ? 1 : 0,
         'source_module': sourceModule,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -88,6 +91,7 @@ class MusicWork {
         duration: Duration(milliseconds: json['duration_ms'] as int? ?? 0),
         isFavorite: (json['is_favorite'] as int? ?? 0) == 1,
         isEncrypted: (json['is_encrypted'] as int? ?? 1) == 1,
+        isPrivate: (json['is_private'] as int? ?? 0) == 1,
         sourceModule: json['source_module'] as String? ?? 'humming_garden',
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -103,6 +107,7 @@ class MusicWork {
     Duration? duration,
     bool? isFavorite,
     bool? isEncrypted,
+    bool? isPrivate,
     String? sourceModule,
   }) {
     return MusicWork(
@@ -116,6 +121,7 @@ class MusicWork {
       duration: duration ?? this.duration,
       isFavorite: isFavorite ?? this.isFavorite,
       isEncrypted: isEncrypted ?? this.isEncrypted,
+      isPrivate: isPrivate ?? this.isPrivate,
       sourceModule: sourceModule ?? this.sourceModule,
       createdAt: createdAt,
       updatedAt: DateTime.now(),

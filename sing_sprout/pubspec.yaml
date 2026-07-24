@@ -25,6 +25,7 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   just_audio: ^0.9.40
   share_plus: ^9.0.0
+  archive: ^3.6.1
 
 dev_dependencies:
   flutter_test:
