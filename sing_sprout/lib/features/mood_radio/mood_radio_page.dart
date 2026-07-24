@@ -101,7 +101,7 @@ class _MoodRadioPageState extends State<MoodRadioPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
-                    color: _moodToColor(_selectedMood!).withOpacity(0.1),
+                    color: AppTheme.moodToColor(_selectedMood!).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -168,22 +168,6 @@ class _MoodRadioPageState extends State<MoodRadioPage> {
     );
   }
 
-  Color _moodToColor(MoodColor mood) {
-    switch (mood) {
-      case MoodColor.red:
-        return AppTheme.moodRed;
-      case MoodColor.yellow:
-        return AppTheme.moodYellow;
-      case MoodColor.green:
-        return AppTheme.moodGreen;
-      case MoodColor.blue:
-        return AppTheme.moodBlue;
-      case MoodColor.purple:
-        return AppTheme.moodPurple;
-      case MoodColor.grey:
-        return AppTheme.moodGrey;
-    }
-  }
 }
 
 /// 最近 7 天心情历史色卡
@@ -199,7 +183,7 @@ class _MoodHistoryRow extends StatelessWidget {
       children: List.generate(7, (i) {
         // history 已按日期降序排列
         final record = i < history.length ? history[i] : null;
-        final color = record != null ? _moodToColor(record.mood) : AppTheme.divider;
+        final color = record != null ? AppTheme.moodToColor(record.mood) : AppTheme.divider;
         final emoji = record?.mood.emoji ?? '';
 
         return Container(
@@ -221,22 +205,5 @@ class _MoodHistoryRow extends StatelessWidget {
         );
       }),
     );
-  }
-
-  Color _moodToColor(MoodColor mood) {
-    switch (mood) {
-      case MoodColor.red:
-        return AppTheme.moodRed;
-      case MoodColor.yellow:
-        return AppTheme.moodYellow;
-      case MoodColor.green:
-        return AppTheme.moodGreen;
-      case MoodColor.blue:
-        return AppTheme.moodBlue;
-      case MoodColor.purple:
-        return AppTheme.moodPurple;
-      case MoodColor.grey:
-        return AppTheme.moodGrey;
-    }
   }
 }

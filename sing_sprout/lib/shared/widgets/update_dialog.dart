@@ -24,7 +24,6 @@ class _UpdateDialogState extends State<UpdateDialog> {
   bool _downloading = false;
   double _progress = 0;
   String? _error;
-  String? _downloadedPath;
 
   Future<void> _startDownload({bool isRetry = false}) async {
     setState(() {
@@ -56,7 +55,6 @@ class _UpdateDialogState extends State<UpdateDialog> {
         return;
       }
 
-      _downloadedPath = file.path;
       await UpdateService().installApk(file);
     } catch (e) {
       if (mounted) {

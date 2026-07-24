@@ -54,7 +54,7 @@ class _TreePainter extends CustomPainter {
     double canopyRadius;
     switch (state) {
       case TreeState.blooming:
-        canopyColor = const Color(0xFF5B9A4B);
+        canopyColor = AppTheme.primaryGreen;
         canopyRadius = 50;
         break;
       case TreeState.growing:
@@ -62,7 +62,7 @@ class _TreePainter extends CustomPainter {
         canopyRadius = 38;
         break;
       case TreeState.quiet:
-        canopyColor = const Color(0xFFC4A45A);
+        canopyColor = AppTheme.primarySoil;
         canopyRadius = 32;
         break;
       case TreeState.thinking:
@@ -70,7 +70,7 @@ class _TreePainter extends CustomPainter {
         canopyRadius = 30;
         break;
       case TreeState.sprouting:
-        canopyColor = const Color(0xFFA8D5A2);
+        canopyColor = AppTheme.moodGreen;
         canopyRadius = 22;
         break;
     }

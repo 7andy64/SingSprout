@@ -20,7 +20,7 @@ class MoodColorPicker extends StatelessWidget {
       runSpacing: 12,
       children: MoodColor.values.map((mood) {
         final isSelected = mood == selected;
-        final color = _moodToColor(mood);
+        final color = AppTheme.moodToColor(mood);
 
         return GestureDetector(
           onTap: () => onSelected(mood),
@@ -49,22 +49,5 @@ class MoodColorPicker extends StatelessWidget {
         );
       }).toList(),
     );
-  }
-
-  Color _moodToColor(MoodColor mood) {
-    switch (mood) {
-      case MoodColor.red:
-        return AppTheme.moodRed;
-      case MoodColor.yellow:
-        return AppTheme.moodYellow;
-      case MoodColor.green:
-        return AppTheme.moodGreen;
-      case MoodColor.blue:
-        return AppTheme.moodBlue;
-      case MoodColor.purple:
-        return AppTheme.moodPurple;
-      case MoodColor.grey:
-        return AppTheme.moodGrey;
-    }
   }
 }

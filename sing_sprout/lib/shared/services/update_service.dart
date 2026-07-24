@@ -129,7 +129,8 @@ class UpdateService {
     void Function(double) onProgress,
   ) async {
     final dir = await getExternalStorageDirectory();
-    final savePath = '${dir!.path}/singsprout_update.apk';
+    if (dir == null) throw Exception('无法访问外部存储');
+    final savePath = '${dir.path}/singsprout_update.apk';
 
     // 删除旧的部分下载文件
     final oldFile = File(savePath);

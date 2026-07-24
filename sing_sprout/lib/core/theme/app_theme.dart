@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/enums.dart';
 
 /// 声芽设计系统 — 以自然、温暖、童趣为核心
 class AppTheme {
@@ -16,6 +17,24 @@ class AppTheme {
   static const Color moodBlue = Color(0xFF4D96FF);     // 想念
   static const Color moodPurple = Color(0xFF9B59B6);   // 不开心
   static const Color moodGrey = Color(0xFFB0B0B0);     // 说不清
+
+  /// 根据心情枚举返回对应颜色
+  static Color moodToColor(MoodColor mood) {
+    switch (mood) {
+      case MoodColor.red:
+        return moodRed;
+      case MoodColor.yellow:
+        return moodYellow;
+      case MoodColor.green:
+        return moodGreen;
+      case MoodColor.blue:
+        return moodBlue;
+      case MoodColor.purple:
+        return moodPurple;
+      case MoodColor.grey:
+        return moodGrey;
+    }
+  }
 
   // ── 中性色 ──
   static const Color bgWarm = Color(0xFFFAF7F2);
