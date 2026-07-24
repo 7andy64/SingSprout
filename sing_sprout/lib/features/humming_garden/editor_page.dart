@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
@@ -17,16 +19,58 @@ class EditorPage extends StatefulWidget {
 
 class _EditorPageState extends State<EditorPage> {
   late MusicWork _work;
+  final _player = AudioPlayer();
   double _temperature = 0.5;  // 音乐温度
   double _speed = 1.0;        // 速度
   double _instrumentMix = 0.5; // 乐器比重
   bool _isPlaying = false;
   bool _saving = false;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
 
   @override
   void initState() {
     super.initState();
     _work = widget.work;
+    _initPlayer();
+  }
+
+  void _initPlayer() {
+    _player.positionStream.listen((p) {
+      if (mounted) setState(() => _position = p);
+    });
+    _player.durationStream.listen((d) {
+      if (mounted) setState(() => _duration = d ?? Duration.zero);
+    });
+    _player.playerStateStream.listen((state) {
+      if (mounted) setState(() => _isPlaying = state.playing);
+    });
+    _player.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed) {
+        _player.seek(Duration.zero);
+        _player.pause();
+      }
+    });
+    // 加载音频文件
+    try {
+      _player.setFilePath(_work.audioPath);
+    } catch (e) {
+      debugPrint('[EditorPage] 音频加载失败: $e');
+    }
+  }
+
+  void _togglePlayPause() {
+    if (_isPlaying) {
+      _player.pause();
+    } else {
+      _player.play();
+    }
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
   }
 
   Future<void> _saveWork() async {
@@ -54,6 +98,12 @@ class _EditorPageState extends State<EditorPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds.remainder(60);
+    return '$m:${s.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -97,14 +147,11 @@ class _EditorPageState extends State<EditorPage> {
                         size: 56,
                         color: AppTheme.primaryGreen,
                       ),
-                      onPressed: () {
-                        setState(() => _isPlaying = !_isPlaying);
-                        // TODO: 播放/暂停音频
-                      },
+                      onPressed: _togglePlayPause,
                     ),
-                    const Text(
-                      '00:00 / 00:30',
-                      style: TextStyle(color: AppTheme.textSecondary),
+                    Text(
+                      '${_formatDuration(_position)} / ${_formatDuration(_duration)}',
+                      style: const TextStyle(color: AppTheme.textSecondary),
                     ),
                   ],
                 ),
