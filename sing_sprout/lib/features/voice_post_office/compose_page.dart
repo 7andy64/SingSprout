@@ -41,9 +41,20 @@ class _ComposePageState extends State<ComposePage> {
                 height: 80,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.divider),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.primaryGreen.withOpacity(0.06),
+                      AppTheme.primaryWarm.withOpacity(0.03),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryGreen.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: const Center(
                   child: Text(
