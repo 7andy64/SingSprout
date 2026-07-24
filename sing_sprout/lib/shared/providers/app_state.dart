@@ -34,6 +34,7 @@ class AppState extends ChangeNotifier {
   List<VoiceCard> _cards = [];
 
   bool _dataLoaded = false;
+  String? _loadError; // 加载失败时的错误信息
 
   // ── Getters ──
 
@@ -44,6 +45,7 @@ class AppState extends ChangeNotifier {
   bool get hasCompletedOnboarding =>
       _userProfile?.hasCompletedOnboarding ?? false;
   bool get dataLoaded => _dataLoaded;
+  String? get loadError => _loadError;
 
   List<MusicWork> get works => List.unmodifiable(_works);
   List<SoundSample> get sounds => List.unmodifiable(_sounds);
@@ -83,6 +85,7 @@ class AppState extends ChangeNotifier {
       _treeData = _buildTreeData();
     } catch (e) {
       debugPrint('[AppState] 加载本地数据失败: $e');
+      _loadError = '数据加载失败，请检查存储空间后重启应用：$e';
       // 即使加载失败也标记为已完成，避免反复重试
     }
 

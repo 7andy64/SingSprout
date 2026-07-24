@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// 本地数据加密服务
 ///
@@ -19,6 +21,7 @@ class EncryptionService {
   EncryptionService._();
 
   static const _keyAlias = 'singsprout_aes_key';
+  static const _fallbackKeyFile = 'singsprout_fallback.key';
   static const _keyLength = 32; // 256 bits
   final _storage = const FlutterSecureStorage();
 
@@ -45,10 +48,11 @@ class EncryptionService {
       _aesKey = encrypt.Key.fromBase64(keyBase64);
       _initialized = true;
     } catch (e) {
-      // 安全存储不可用时（如 Web 预览），回退到派生密钥
-      _aesKey = _deriveKeyFromFingerprint(deviceFingerprint);
+      // 安全存储不可用时（如 Web 预览、部分 Android 设备），回退到派生密钥。
+      // 将派生密钥持久化到文件，确保每次启动使用相同的密钥，避免数据丢失。
+      _aesKey = await _loadOrCreateFallbackKey(deviceFingerprint);
       _initialized = true;
-      debugPrint('[EncryptionService] 安全存储不可用，使用派生密钥');
+      debugPrint('[EncryptionService] 安全存储不可用，使用文件持久化的派生密钥');
     }
   }
 
@@ -145,6 +149,31 @@ class EncryptionService {
   bool get isInitialized => _initialized;
 
   // ── 内部方法 ──
+
+  /// 从文件加载已有的降级密钥，不存在则创建新的并持久化。
+  /// 确保 FlutterSecureStorage 不可用时也不会丢失加密数据。
+  Future<encrypt.Key> _loadOrCreateFallbackKey(String deviceFingerprint) async {
+    try {
+      final docsDir = await getApplicationDocumentsDirectory();
+      final keyFile = File('${docsDir.path}/$_fallbackKeyFile');
+
+      if (await keyFile.exists()) {
+        final keyBase64 = await keyFile.readAsString();
+        if (keyBase64.trim().isNotEmpty) {
+          return encrypt.Key.fromBase64(keyBase64.trim());
+        }
+      }
+
+      // 不存在或为空：派生新密钥并持久化
+      final key = _deriveKeyFromFingerprint(deviceFingerprint);
+      await keyFile.writeAsString(key.base64);
+      return key;
+    } catch (e) {
+      // 文件系统也不可用时的最后降级
+      debugPrint('[EncryptionService] 无法持久化降级密钥: $e');
+      return _deriveKeyFromFingerprint(deviceFingerprint);
+    }
+  }
 
   /// 生成随机的 256-bit AES 密钥，返回 Base64 编码。
   String _generateKeyBase64() {
