@@ -17,6 +17,7 @@ import '../../features/profile/work_detail_page.dart';
 import '../../features/profile/sounds_page.dart';
 import '../../features/profile/ledger_page.dart';
 import '../../features/profile/observation_page.dart';
+import '../../features/profile/storage_page.dart';
 import '../../features/onboarding/onboarding_page.dart';
 import '../constants/app_routes.dart';
 
@@ -123,6 +124,11 @@ class AppRouter {
         path: AppRoutes.observation,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ObservationPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.storage,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const StoragePage(),
       ),
       GoRoute(
         path: AppRoutes.recording,
