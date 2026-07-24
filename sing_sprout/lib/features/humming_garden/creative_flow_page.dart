@@ -130,14 +130,14 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   Widget _buildIdleStage() {
     return Column(
       key: const ValueKey('idle'),
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const SizedBox(height: 20),
         const AnimalAvatar(
           animal: GuardianAnimal.panda,
           size: 72,
           speechBubble: '来，对着手机\n哼一段旋律吧～',
         ),
-        const Spacer(),
+        const SizedBox(height: 48),
         GestureDetector(
           onLongPressStart: (_) => _goToStage(_CreativeStage.recording),
           onLongPressEnd: (_) => _goToStage(_CreativeStage.stylePick),
@@ -160,7 +160,6 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         ),
         const SizedBox(height: 12),
         const Text('长按开始哼唱', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
-        const Spacer(flex: 2),
         const SizedBox(height: 40),
       ],
     );
