@@ -73,6 +73,15 @@ class _ComposePageState extends State<ComposePage> {
                 ),
                 onChanged: (v) => _message = v,
               ),
+              if (_message.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '预览: ${_message.length > 30 ? '${_message.substring(0, 30)}...' : _message}',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                ),
 
               const Spacer(),
 
@@ -81,9 +90,14 @@ class _ComposePageState extends State<ComposePage> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    final hasWork = _selectedWorkId != null;
                     // TODO: AI 生成封面 → 生成微信分享卡片
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('明信片已生成，已复制分享链接')),
+                      SnackBar(
+                        content: Text(hasWork
+                            ? '明信片已生成，已复制分享链接'
+                            : '请先选择一首作品再发送'),
+                      ),
                     );
                     context.pop();
                   },

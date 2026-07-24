@@ -6,11 +6,101 @@ import '../../core/constants/app_config.dart';
 import '../../shared/widgets/animal_avatar.dart';
 import '../../shared/widgets/update_dialog.dart';
 import '../../shared/services/update_service.dart';
+import '../../shared/services/local_storage_service.dart';
 import '../../shared/models/user_profile.dart';
 
 /// 个人中心 — MVP P0 功能
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  static const _updateMetaFile = 'update_meta.json';
+
+  bool _hasUpdate = false;
+  bool _checking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUpdateOnInit();
+  }
+
+  Future<void> _checkUpdateOnInit() async {
+    final meta = await LocalStorageService().readJson(_updateMetaFile);
+    final skippedVersion = meta?['skippedVersion'] as String?;
+    final remindAfter = meta?['remindAfter'] as String?;
+
+    if (remindAfter != null) {
+      final remindTime = DateTime.tryParse(remindAfter);
+      if (remindTime != null && DateTime.now().isBefore(remindTime)) return;
+    }
+
+    final info = await UpdateService().checkForUpdate();
+    if (info == null || !mounted) return;
+    if (info.latestVersion == skippedVersion) return;
+    setState(() => _hasUpdate = true);
+  }
+
+  Future<void> _handleCheckUpdate() async {
+    if (_checking) return;
+    setState(() => _checking = true);
+
+    try {
+      final meta = await LocalStorageService().readJson(_updateMetaFile);
+      final skippedVersion = meta?['skippedVersion'] as String?;
+
+      final info = await UpdateService().checkForUpdate();
+      if (info == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('已是最新版本'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+        return;
+      }
+      if (info.latestVersion == skippedVersion) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已跳过 v${info.latestVersion}，长按可重新检查'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (!mounted) return;
+      final choice = await UpdateDialog.show(context, info);
+      if (!mounted) return;
+
+      switch (choice) {
+        case UpdateChoice.skip:
+          await LocalStorageService().writeJson(_updateMetaFile, {
+            'skippedVersion': info.latestVersion,
+          });
+          setState(() => _hasUpdate = false);
+        case UpdateChoice.remindLater:
+          await LocalStorageService().writeJson(_updateMetaFile, {
+            'remindAfter':
+                DateTime.now().add(const Duration(hours: 6)).toIso8601String(),
+          });
+          setState(() => _hasUpdate = false);
+        case UpdateChoice.update:
+        case null:
+          break;
+      }
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,16 +205,32 @@ class ProfilePage extends StatelessWidget {
                 _MenuItem(
                   icon: Icons.info_outline,
                   label: '关于声芽',
-                  trailing: Text(
-                    'V${AppConfig.version}',
-                    style: const TextStyle(color: AppTheme.textSecondary),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_hasUpdate)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.error,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('新',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white)),
+                        ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'V${AppConfig.version}',
+                        style:
+                            const TextStyle(color: AppTheme.textSecondary),
+                      ),
+                    ],
                   ),
-                  onTap: () async {
-                    final info = await UpdateService().checkForUpdate();
-                    if (info != null && context.mounted) {
-                      UpdateDialog.show(context, info);
-                    }
-                  },
+                  onTap: _handleCheckUpdate,
                 ),
               ],
             ),
