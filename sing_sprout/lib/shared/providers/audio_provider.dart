@@ -10,15 +10,21 @@ class AudioProvider extends ChangeNotifier {
   Duration _totalDuration = Duration.zero;
   List<double>? _waveformData;
 
+  /// 来电等中断时自动保存的片段路径
+  String? _savedFragmentPath;
+
   AudioStatus get status => _status;
   Duration get currentPosition => _currentPosition;
   Duration get totalDuration => _totalDuration;
   List<double>? get waveformData => _waveformData;
   bool get isRecording => _status == AudioStatus.recording;
+  String? get savedFragmentPath => _savedFragmentPath;
+  bool get hasSavedFragment => _savedFragmentPath != null;
 
   void startRecording() {
     _status = AudioStatus.recording;
     _currentPosition = Duration.zero;
+    _savedFragmentPath = null;
     notifyListeners();
   }
 
@@ -29,6 +35,20 @@ class AudioProvider extends ChangeNotifier {
 
   void processingComplete() {
     _status = AudioStatus.idle;
+    notifyListeners();
+  }
+
+  /// 来电中断时调用 — 记录已保存的片段路径
+  void recordingInterrupted(String savedPath) {
+    _savedFragmentPath = savedPath;
+    _status = AudioStatus.processing;
+    debugPrint('[AudioProvider] 录制被中断，片段已保存: $savedPath');
+    notifyListeners();
+  }
+
+  /// 清除已保存的片段（用户确认放弃时调用）
+  void clearSavedFragment() {
+    _savedFragmentPath = null;
     notifyListeners();
   }
 
