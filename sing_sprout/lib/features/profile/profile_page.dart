@@ -20,13 +20,30 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  int _totalStorageBytes = 0;
+  bool _storageChecked = false;
+
   @override
   void initState() {
     super.initState();
     // 进入页面时从本地数据库加载用户数据
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().loadLocalData();
+      _checkStorage();
     });
+  }
+
+  Future<void> _checkStorage() async {
+    try {
+      final storage = FileStorageService();
+      final bytes = await storage.totalStorageUsed();
+      if (mounted) setState(() {
+        _totalStorageBytes = bytes;
+        _storageChecked = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _storageChecked = true);
+    }
   }
 
   @override
@@ -57,6 +74,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         _StatsSection(appState: appState),
                         const SizedBox(height: 16),
                       ],
+
+                      // 低存储警告
+                      if (_storageChecked && _totalStorageBytes > 100 * 1024 * 1024)
+                        _LowStorageBanner(
+                          totalBytes: _totalStorageBytes,
+                          onTap: () => context.push(AppRoutes.storage),
+                        ),
 
                       // 菜单列表
                       _MenuSection(
@@ -372,64 +396,10 @@ class _ProfilePageState extends State<ProfilePage> {
     ).then((_) => disposeController());
   }
 
-  // ── 存储管理弹窗 ──
+  // ── 存储管理 ──
 
-  Future<void> _showStorageManagement() async {
-    final storage = FileStorageService();
-    final totalBytes = await storage.totalStorageUsed();
-    final mb = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
-
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('存储管理'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '当前占用: $mb MB',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              '包含录音文件、AI 生成的音乐、封面图等。\n可通过清理导出文件释放空间。',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await storage.clearExports();
-              Navigator.pop(ctx);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('导出文件已清理'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-            child: const Text('清理导出文件'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
-    );
+  void _showStorageManagement() {
+    context.push(AppRoutes.storage);
   }
 
   // ── 帮助与反馈弹窗 ──
@@ -695,6 +665,60 @@ class _MenuSection extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 低存储警告横幅
+class _LowStorageBanner extends StatelessWidget {
+  final int totalBytes;
+  final VoidCallback onTap;
+
+  const _LowStorageBanner({required this.totalBytes, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final mb = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF3CD),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFFC107).withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.storage_rounded, size: 20, color: Color(0xFFE67E22)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '存储空间已使用 $mb MB',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF856404),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      '点击管理存储，不会自动删除你的作品',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF856404)),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Color(0xFF856404), size: 20),
+            ],
+          ),
+        ),
       ),
     );
   }

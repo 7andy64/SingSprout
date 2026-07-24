@@ -1,6 +1,6 @@
 import '../models/music_tree_data.dart';
 import '../models/mood_record.dart';
-import 'work_repository.dart';
+import '../repositories/work_repository.dart';
 import 'local_storage_service.dart';
 
 /// 音乐树数据聚合服务 — 极简 MVP 版
@@ -18,7 +18,7 @@ class MusicTreeService {
   /// 聚合计算 MusicTreeData（含心情维度）
   static Future<MusicTreeData> calculate() async {
     final repo = WorkRepository();
-    final works = await repo.getWorks();
+    final works = await repo.getAll();
     final moods = await _readMoodHistory();
 
     final now = DateTime.now();

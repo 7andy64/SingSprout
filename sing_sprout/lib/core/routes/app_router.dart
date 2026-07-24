@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/humming_garden/humming_garden_page.dart';
 import '../../features/humming_garden/recording_page.dart';
 import '../../features/humming_garden/editor_page.dart';
+import '../../shared/models/music_work.dart';
 import '../../features/voice_post_office/post_office_page.dart';
 import '../../features/voice_post_office/compose_page.dart';
 import '../../features/music_tree/music_tree_page.dart';
@@ -12,9 +13,11 @@ import '../../features/rhythm_tribe/rhythm_tribe_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/profile/privacy_settings_page.dart';
 import '../../features/profile/works_page.dart';
+import '../../features/profile/work_detail_page.dart';
 import '../../features/profile/sounds_page.dart';
 import '../../features/profile/ledger_page.dart';
 import '../../features/profile/observation_page.dart';
+import '../../features/profile/storage_page.dart';
 import '../../features/onboarding/onboarding_page.dart';
 import '../constants/app_routes.dart';
 
@@ -99,6 +102,15 @@ class AppRouter {
         builder: (context, state) => const WorksPage(),
       ),
       GoRoute(
+        path: AppRoutes.workDetail,
+        name: 'work-detail',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          final workId = state.uri.queryParameters['id'] ?? '';
+          return WorkDetailPage(workId: workId);
+        },
+      ),
+      GoRoute(
         path: AppRoutes.sounds,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const SoundsPage(),
@@ -114,6 +126,11 @@ class AppRouter {
         builder: (context, state) => const ObservationPage(),
       ),
       GoRoute(
+        path: AppRoutes.storage,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const StoragePage(),
+      ),
+      GoRoute(
         path: AppRoutes.recording,
         name: 'recording',
         parentNavigatorKey: rootNavigatorKey,
@@ -123,14 +140,24 @@ class AppRouter {
         path: AppRoutes.editor,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
-          final workId = state.uri.queryParameters['id'] ?? '';
-          return EditorPage(workId: workId);
+          final work =
+              state.extra is MusicWork ? state.extra as MusicWork : null;
+          if (work == null) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('错误')),
+              body: const Center(child: Text('未找到作品数据，请返回重试')),
+            );
+          }
+          return EditorPage(work: work);
         },
       ),
       GoRoute(
         path: AppRoutes.composeCard,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const ComposePage(),
+        builder: (context, state) {
+          final workId = state.uri.queryParameters['workId'];
+          return ComposePage(initialWorkId: workId);
+        },
       ),
       GoRoute(
         path: AppRoutes.privacySettings,
