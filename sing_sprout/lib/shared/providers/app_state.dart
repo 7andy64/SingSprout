@@ -172,6 +172,26 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 切换作品私密状态。
+  Future<void> togglePrivate(String id) async {
+    if (!kIsWeb) await _workRepo.togglePrivate(id);
+    final index = _works.indexWhere((w) => w.id == id);
+    if (index != -1) {
+      _works[index] = _works[index].copyWith(
+        isPrivate: !_works[index].isPrivate,
+      );
+    }
+    notifyListeners();
+  }
+
+  /// 非私密作品（公开作品列表）。
+  List<MusicWork> get publicWorks =>
+      _works.where((w) => !w.isPrivate).toList();
+
+  /// 私密作品列表（需密码访问）。
+  List<MusicWork> get privateWorks =>
+      _works.where((w) => w.isPrivate).toList();
+
   /// 切换作品收藏状态。
   Future<void> toggleFavorite(String id) async {
     if (!kIsWeb) await _workRepo.toggleFavorite(id);

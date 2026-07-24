@@ -12,7 +12,7 @@ class DatabaseService {
   DatabaseService._();
 
   static const _dbName = 'singsprout.db';
-  static const _dbVersion = 1;
+  static const _dbVersion = 2;
 
   Database? _db;
   Future<Database>? _dbFuture;
@@ -57,6 +57,7 @@ class DatabaseService {
           duration_ms INTEGER NOT NULL DEFAULT 0,
           is_favorite INTEGER NOT NULL DEFAULT 0,
           is_encrypted INTEGER NOT NULL DEFAULT 1,
+          is_private INTEGER NOT NULL DEFAULT 0,
           source_module TEXT NOT NULL DEFAULT 'humming_garden',
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
@@ -135,10 +136,13 @@ class DatabaseService {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // 未来版本迁移在此追加
-    debugPrint(
-      '[DatabaseService] 数据库升级: v$oldVersion -> v$newVersion（暂无迁移）',
-    );
+    debugPrint('[DatabaseService] 数据库升级: v$oldVersion -> v$newVersion');
+    if (oldVersion < 2) {
+      // v1 → v2: 添加私密作品字段
+      await db.execute(
+        "ALTER TABLE works ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0",
+      );
+    }
   }
 
   // ── 工具方法 ──

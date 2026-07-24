@@ -92,6 +92,15 @@ class WorkRepository {
     );
   }
 
+  /// 切换私密状态。
+  Future<void> togglePrivate(String id) async {
+    final db = await _db.database;
+    await db.rawUpdate(
+      'UPDATE works SET is_private = 1 - is_private, updated_at = ? WHERE id = ?',
+      [DateTime.now().toIso8601String(), id],
+    );
+  }
+
   /// 切换收藏状态（原子操作，避免并发丢失更新）。
   Future<void> toggleFavorite(String id) async {
     final db = await _db.database;
