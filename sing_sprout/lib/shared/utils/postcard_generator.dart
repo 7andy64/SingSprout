@@ -30,6 +30,7 @@ class PostcardGenerator {
         const ui.Offset(0, 0),
         ui.Offset(width.toDouble(), height.toDouble()),
         bgColors,
+        _stopsFor(bgColors),
       );
     canvas.drawRect(
       ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
@@ -147,6 +148,13 @@ class PostcardGenerator {
 
     debugPrint('[PostcardGenerator] 明信片已生成: ${file.path}');
     return file.path;
+  }
+
+  /// 为 n 个颜色生成均匀分布的 colorStops
+  static List<double> _stopsFor(List<ui.Color> colors) {
+    if (colors.length <= 2) return [0.0, 1.0];
+    final step = 1.0 / (colors.length - 1);
+    return List.generate(colors.length, (i) => (i * step).toDouble());
   }
 
   // ── 背景色 ──
