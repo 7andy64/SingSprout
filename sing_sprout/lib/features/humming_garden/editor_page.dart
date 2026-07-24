@@ -1,22 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
+import '../../shared/models/music_work.dart';
+import '../../shared/providers/app_state.dart';
 
 /// 作品编辑器 — 播放预览、微调、保存/分享
 class EditorPage extends StatefulWidget {
-  final String workId;
-  const EditorPage({super.key, required this.workId});
+  final MusicWork work;
+  const EditorPage({super.key, required this.work});
 
   @override
   State<EditorPage> createState() => _EditorPageState();
 }
 
 class _EditorPageState extends State<EditorPage> {
+  late MusicWork _work;
   double _temperature = 0.5;  // 音乐温度
   double _speed = 1.0;        // 速度
   double _instrumentMix = 0.5; // 乐器比重
   bool _isPlaying = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _work = widget.work;
+  }
+
+  Future<void> _saveWork() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      // 将编辑参数写入作品的 note 字段（MVP 阶段简单序列化）
+      final params =
+          '温度:${_temperature.toStringAsFixed(2)}|速度:${_speed.toStringAsFixed(2)}|乐器比重:${_instrumentMix.toStringAsFixed(2)}';
+      final saved = _work.copyWith(
+        title: _work.title,
+        note: _work.note != null ? '${_work.note}\n$params' : params,
+      );
+      await context.read<AppState>().addWork(saved);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('作品已保存到本地')),
+      );
+      context.pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('保存失败: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,14 +64,14 @@ class _EditorPageState extends State<EditorPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: () {
-              // TODO: 保存作品
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('作品已保存')),
-              );
-              context.pop();
-            },
+            icon: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            onPressed: _saving ? null : _saveWork,
           ),
         ],
       ),
@@ -112,10 +150,7 @@ class _EditorPageState extends State<EditorPage> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: 本地保存
-                        context.pop();
-                      },
+                      onPressed: _saving ? null : _saveWork,
                       icon: const Icon(Icons.save_outlined),
                       label: const Text('保存'),
                     ),

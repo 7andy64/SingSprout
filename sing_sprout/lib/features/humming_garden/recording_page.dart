@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/enums.dart';
 import '../../core/constants/app_routes.dart';
+import '../../shared/models/music_work.dart';
+import '../../shared/services/file_storage_service.dart';
 import '../../shared/widgets/mood_color_picker.dart';
 
 /// 录音与 AI 生成页面
@@ -90,10 +92,20 @@ class _RecordingPageState extends State<RecordingPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    // TODO: 调用 AI 生成 → 跳转编辑器
-                    context.go(
-                      '${AppRoutes.editor}?id=new',
+                    // 创建作品对象（MVP 阶段使用占位音频路径，后续接入真实 AI 生成）
+                    final storage = FileStorageService();
+                    final audioPath = storage.generateMusicPath(
+                      styleSeed: _selectedStyle.name,
                     );
+                    final work = MusicWork.create(
+                      title: '哼唱作品',
+                      audioPath: audioPath,
+                      styleSeed: _selectedStyle,
+                      moodSticker: _selectedMood,
+                      duration: const Duration(seconds: 30),
+                      sourceModule: 'humming_garden',
+                    );
+                    context.go(AppRoutes.editor, extra: work);
                   },
                   child: const Text('✨ AI 生成音乐'),
                 ),

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/humming_garden/humming_garden_page.dart';
 import '../../features/humming_garden/recording_page.dart';
 import '../../features/humming_garden/editor_page.dart';
+import '../../shared/models/music_work.dart';
 import '../../features/voice_post_office/post_office_page.dart';
 import '../../features/voice_post_office/compose_page.dart';
 import '../../features/music_tree/music_tree_page.dart';
@@ -133,8 +134,15 @@ class AppRouter {
         path: AppRoutes.editor,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
-          final workId = state.uri.queryParameters['id'] ?? '';
-          return EditorPage(workId: workId);
+          final work =
+              state.extra is MusicWork ? state.extra as MusicWork : null;
+          if (work == null) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('错误')),
+              body: const Center(child: Text('未找到作品数据，请返回重试')),
+            );
+          }
+          return EditorPage(work: work);
         },
       ),
       GoRoute(
