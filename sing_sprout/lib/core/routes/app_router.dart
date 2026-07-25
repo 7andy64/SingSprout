@@ -8,6 +8,7 @@ import '../../shared/models/music_work.dart';
 import '../../features/voice_post_office/post_office_page.dart';
 import '../../features/voice_post_office/compose_page.dart';
 import '../../features/mood_radio/mood_radio_page.dart';
+import '../../features/music_tree/music_tree_page.dart';
 import '../../features/field_sound_lab/field_sound_lab_page.dart';
 import '../../features/rhythm_tribe/rhythm_tribe_page.dart';
 import '../../features/profile/profile_page.dart';
@@ -22,7 +23,7 @@ import '../../features/onboarding/onboarding_page.dart';
 import '../constants/app_routes.dart';
 import '../theme/app_theme.dart';
 
-/// 声芽路由配置 — 底部导航 3+1（花园 / 邮局 / 我的 + 浮动录音按钮）
+/// 声芽路由配置 — 底部导航 5 花瓣（哼唱 / 心情 / 音乐树 / 邮局 / 我的）
 class AppRouter {
   AppRouter._();
 
@@ -31,7 +32,7 @@ class AppRouter {
 
   static final router = GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: AppRoutes.garden,
+    initialLocation: AppRoutes.hummingGarden,
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('页面未找到')),
       body: Center(
@@ -45,7 +46,7 @@ class AppRouter {
             Text(state.error.toString(), style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: () => GoRouter.of(context).go(AppRoutes.garden),
+              onPressed: () => GoRouter.of(context).go(AppRoutes.hummingGarden),
               child: const Text('返回花园'),
             ),
           ],
@@ -53,15 +54,27 @@ class AppRouter {
       ),
     ),
     routes: [
-      // ── 底部导航壳（3 Tab） ──
+      // ── 底部导航壳（5 Tab） ──
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) => _AppShell(child: child),
         routes: [
           GoRoute(
-            path: AppRoutes.garden,
+            path: AppRoutes.hummingGarden,
             pageBuilder: (context, state) => const NoTransitionPage(
               child: HummingGardenPage(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.moodRadio,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: MoodRadioPage(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.musicTree,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: MusicTreePage(),
             ),
           ),
           GoRoute(
@@ -158,11 +171,6 @@ class AppRouter {
         builder: (context, state) => const PrivacySettingsPage(),
       ),
       GoRoute(
-        path: AppRoutes.moodRadio,
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const MoodRadioPage(),
-      ),
-      GoRoute(
         path: AppRoutes.fieldSoundLab,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const FieldSoundLabPage(),
@@ -176,7 +184,7 @@ class AppRouter {
   );
 }
 
-/// 底部导航壳 — 3 花瓣 + 中央浮动录音按钮
+/// 底部导航壳 — 5 花瓣
 class _AppShell extends StatelessWidget {
   final Widget child;
   const _AppShell({required this.child});
@@ -186,34 +194,11 @@ class _AppShell extends StatelessWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: _BottomNavBar(),
-      floatingActionButton: _FloatingRecordFab(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
 
-/// 中央浮动录音按钮
-class _FloatingRecordFab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 56,
-      height: 56,
-      child: FloatingActionButton(
-        onPressed: () {
-          // 直接进入创作魔法流水线
-          GoRouter.of(context).push(AppRoutes.creativeFlow);
-        },
-        backgroundColor: AppTheme.primaryGreen,
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.mic, color: Colors.white, size: 28),
-      ),
-    );
-  }
-}
-
-/// 底部导航栏（3 项）
+/// 底部导航栏（5 项）
 class _BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -226,24 +211,34 @@ class _BottomNavBar extends StatelessWidget {
       elevation: 8,
       selectedItemColor: AppTheme.primaryGreen,
       unselectedItemColor: AppTheme.textSecondary,
-      selectedIconTheme: const IconThemeData(size: 28),
-      unselectedIconTheme: const IconThemeData(size: 26),
-      selectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: const TextStyle(fontSize: 13),
+      selectedIconTheme: const IconThemeData(size: 26),
+      unselectedIconTheme: const IconThemeData(size: 24),
+      selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: const TextStyle(fontSize: 12),
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(Icons.eco_outlined),
-          activeIcon: Icon(Icons.eco),
-          label: '花园',
+          icon: Icon(Icons.mic_none_rounded),
+          activeIcon: Icon(Icons.mic_rounded),
+          label: '哼唱',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.mail_outline),
-          activeIcon: Icon(Icons.mail),
+          icon: Icon(Icons.sentiment_satisfied_outlined),
+          activeIcon: Icon(Icons.sentiment_satisfied_rounded),
+          label: '心情',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.park_outlined),
+          activeIcon: Icon(Icons.park_rounded),
+          label: '音乐树',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.mail_outline_rounded),
+          activeIcon: Icon(Icons.mail_rounded),
           label: '邮局',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
+          icon: Icon(Icons.person_outline_rounded),
+          activeIcon: Icon(Icons.person_rounded),
           label: '我的',
         ),
       ],
@@ -251,15 +246,19 @@ class _BottomNavBar extends StatelessWidget {
   }
 
   int _calculateIndex(String location) {
-    if (location.startsWith(AppRoutes.garden)) return 0;
-    if (location.startsWith(AppRoutes.postOffice)) return 1;
-    if (location.startsWith(AppRoutes.profile)) return 2;
+    if (location.startsWith(AppRoutes.hummingGarden)) return 0;
+    if (location.startsWith(AppRoutes.moodRadio)) return 1;
+    if (location.startsWith(AppRoutes.musicTree)) return 2;
+    if (location.startsWith(AppRoutes.postOffice)) return 3;
+    if (location.startsWith(AppRoutes.profile)) return 4;
     return 0;
   }
 
   void _onTap(BuildContext context, int index) {
     final routes = [
-      AppRoutes.garden,
+      AppRoutes.hummingGarden,
+      AppRoutes.moodRadio,
+      AppRoutes.musicTree,
       AppRoutes.postOffice,
       AppRoutes.profile,
     ];
