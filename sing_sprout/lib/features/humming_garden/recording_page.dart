@@ -59,7 +59,7 @@ class _RecordingPageState extends State<RecordingPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      context.go(AppRoutes.editor, extra: work);
+      context.push(AppRoutes.editor, extra: work);
     }
   }
 
@@ -171,7 +171,7 @@ class _RecordingPageState extends State<RecordingPage> {
                       sourceModule: 'humming_garden',
                     );
                     if (!context.mounted) return;
-                    context.go(AppRoutes.editor, extra: work);
+                    context.push(AppRoutes.editor, extra: work);
                   },
                   child: const Text('✨ AI 生成音乐'),
                 ),

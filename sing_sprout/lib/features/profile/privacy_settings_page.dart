@@ -390,7 +390,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       }
       // 刷新状态
       if (mounted) {
-        await context.read<AppState>().loadLocalData();
+        await context.read<AppState>().loadLocalData(force: true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('所有数据已清除'), behavior: SnackBarBehavior.floating),
         );

@@ -62,8 +62,13 @@ class AppState extends ChangeNotifier {
 
   /// 从 SQLite 加载用户档案和所有本地数据。
   /// Web 端 SQLite 不可用，跳过加载（使用空数据 + 显示引导页）。
-  Future<void> loadLocalData() async {
-    if (_dataLoaded) return;
+  Future<void> loadLocalData({bool force = false}) async {
+    if (_dataLoaded && !force) return;
+
+    if (force) {
+      _dataLoaded = false;
+      _loadError = null;
+    }
 
     if (kIsWeb) {
       // Web 端：跳过数据库加载，显示空状态引导

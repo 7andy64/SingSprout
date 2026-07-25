@@ -386,7 +386,7 @@ class _RecentWorksSection extends StatelessWidget {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () => context.push(AppRoutes.works),
                 child: const Text('查看全部'),
               ),
             ],

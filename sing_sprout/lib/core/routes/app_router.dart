@@ -202,7 +202,7 @@ class _FloatingRecordFab extends StatelessWidget {
       child: FloatingActionButton(
         onPressed: () {
           // 直接进入创作魔法流水线
-          GoRouter.of(context).push(AppRoutes.creativeFlow);
+          context.push(AppRoutes.creativeFlow);
         },
         backgroundColor: AppTheme.primaryGreen,
         elevation: 4,
