@@ -127,6 +127,8 @@ class _MoodRadioPageState extends State<MoodRadioPage> {
     } catch (_) {
       // Silently handle persistence errors
     }
+    // 保存后进入创作界面
+    if (mounted) context.push(AppRoutes.creativeFlow);
   }
 
   void _dismissSafetyPrompt() {
@@ -137,6 +139,10 @@ class _MoodRadioPageState extends State<MoodRadioPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('心情收音机'),
         centerTitle: true,
       ),
@@ -144,6 +150,7 @@ class _MoodRadioPageState extends State<MoodRadioPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (_showSafetyPrompt) _SafetyPrompt(onDismiss: _dismissSafetyPrompt),
 
@@ -370,7 +377,7 @@ class _SafetyPrompt extends StatelessWidget {
           ),
           GestureDetector(
             onTap: onDismiss,
-            child: const Icon(Icons.close, size: 18, color: AppTheme.textSecondary),
+            child: const Text('✕', style: TextStyle(fontSize: 18, color: AppTheme.textSecondary)),
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:record/record.dart' show AudioRecorder, RecordConfig, AudioEncoder, Amplitude;
 import 'package:permission_handler/permission_handler.dart';
 import '../services/file_storage_service.dart';
@@ -17,6 +18,7 @@ class AudioService {
 
   final _audioRecorder = AudioRecorder();
   final _fileStorage = FileStorageService();
+  final _player = AudioPlayer();
 
   bool _isRecording = false;
   bool _isPlaying = false;
@@ -273,6 +275,18 @@ class AudioService {
   Stream<Amplitude> get amplitudeStream =>
       _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 100));
 
+  /// 播放位置流
+  Stream<Duration> get position =>
+      _player.positionStream.where((d) => d != null).cast<Duration>();
+
+  /// 音频时长流
+  Stream<Duration> get duration =>
+      _player.durationStream.where((d) => d != null).cast<Duration>();
+
+  /// 播放状态流
+  Stream<PlayerState> get playerState =>
+      _player.playerStateStream.where((s) => s != null).cast<PlayerState>();
+
   // ── 中断处理 ──
 
   /// 被电话等中断时自动保存片段。
@@ -358,10 +372,11 @@ class AudioService {
 
   // ── 播放 ──
 
-  /// 播放音频文件（预留接口，由 just_audio 调用方实现）。
+  /// 播放音频文件。
   Future<void> playAudio(String filePath) async {
     try {
-      await _player.play(DeviceFileSource(filePath));
+      await _player.setFilePath(filePath);
+      await _player.play();
       _isPlaying = true;
     } catch (e) {
       debugPrint('[AudioService] playAudio error: $e');
@@ -388,7 +403,7 @@ class AudioService {
 
   Future<void> resumePlayback() async {
     try {
-      await _player.resume();
+      await _player.play();
     } catch (e) {
       debugPrint('[AudioService] resumePlayback error: $e');
     }

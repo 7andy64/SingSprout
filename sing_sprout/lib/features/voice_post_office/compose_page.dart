@@ -109,6 +109,10 @@ class _ComposePageState extends State<ComposePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('写音乐明信片'),
         centerTitle: true,
       ),
@@ -179,11 +183,11 @@ class _ComposePageState extends State<ComposePage> {
                   hintText: '比如：妈妈我好想你...',
                 ),
               ),
-              if (_message.isNotEmpty)
+              if (_messageController.text.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    '预览: ${_message.length > 30 ? '${_message.substring(0, 30)}...' : _message}',
+                    '预览: ${_messageController.text.length > 30 ? '${_messageController.text.substring(0, 30)}...' : _messageController.text}',
                     style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                   ),
                 ),
@@ -201,7 +205,7 @@ class _ComposePageState extends State<ComposePage> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.send_rounded),
+                      : const Text('📤', style: TextStyle(fontSize: 20)),
                   label: Text(_generating ? '生成中...' : '生成明信片并分享'),
                 ),
               ),
