@@ -7,6 +7,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/widgets/temperature_dial.dart';
+import '../../shared/widgets/speed_race_track.dart';
+import '../../shared/widgets/instrument_mixer.dart';
 
 /// 作品编辑器 — 播放预览 + 具象化微调 + 保存/分享
 ///

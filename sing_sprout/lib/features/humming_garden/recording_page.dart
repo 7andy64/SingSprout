@@ -7,6 +7,7 @@ import '../../core/constants/app_routes.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/providers/audio_provider.dart';
 import '../../shared/services/audio_service.dart';
+import '../../shared/providers/app_state.dart';
 import '../../shared/utils/audio_generator.dart';
 import '../../shared/widgets/mood_color_picker.dart';
 
@@ -59,7 +60,7 @@ class _RecordingPageState extends State<RecordingPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      context.go(AppRoutes.editor, extra: work);
+      context.push(AppRoutes.editor, extra: work);
     }
   }
 
@@ -157,21 +158,33 @@ class _RecordingPageState extends State<RecordingPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // MVP 阶段：生成测试音频（后续接入真实 AI 生成）
-                    final audioPath = await AudioGenerator.generateTestTone(
+                    // 如果正在录音则停止，获取真实录音文件
+                    String? audioPath;
+                    if (context.read<AudioProvider>().isRecording) {
+                      audioPath = await AudioService().stopRecording();
+                      context.read<AudioProvider>().stopRecording();
+                    }
+                    // 没有录音则用测试音频兜底
+                    audioPath ??= await AudioGenerator.generateTestTone(
                       styleSeed: _selectedStyle.name,
                       durationSec: 3.0,
                     );
+
+                    final duration = AudioService().lastDuration ??
+                        AudioService().recordingDuration ??
+                        const Duration(seconds: 3);
                     final work = MusicWork.create(
                       title: '${_selectedStyle.label}作品',
                       audioPath: audioPath,
                       styleSeed: _selectedStyle,
                       moodSticker: _selectedMood,
-                      duration: const Duration(seconds: 3),
+                      duration: duration,
                       sourceModule: 'humming_garden',
                     );
                     if (!context.mounted) return;
-                    context.go(AppRoutes.editor, extra: work);
+                    await context.read<AppState>().addWork(work);
+                    if (!context.mounted) return;
+                    context.push(AppRoutes.editor, extra: work);
                   },
                   child: const Text('✨ AI 生成音乐'),
                 ),

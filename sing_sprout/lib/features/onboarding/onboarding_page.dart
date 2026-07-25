@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/user_profile.dart';
@@ -26,6 +27,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
   UserRole _selectedRole = UserRole.student;
 
   static const _totalSteps = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _nicknameController.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -79,7 +86,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     if (mounted) {
       // 返回主页（自动刷新"我的"页面）
-      Navigator.of(context).pop();
+      context.pop();
     }
   }
 

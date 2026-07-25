@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
+import '../../core/constants/app_routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/providers/app_state.dart';
@@ -156,7 +158,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
             onPressed: () async {
               await context.read<AppState>().deleteWork(_work!.id);
               if (mounted) Navigator.pop(ctx); // 关闭对话框
-              if (mounted) Navigator.pop(context); // 返回列表
+              if (mounted) context.pop(); // 返回列表
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('删除'),
@@ -169,10 +171,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
   void _shareAsCard() {
     if (_work == null) return;
     // 跳转到明信片编辑页，预填作品信息
-    Navigator.of(context).pushNamed(
-      'compose-card',
-      arguments: {'workId': _work!.id},
-    );
+    context.push('${AppRoutes.composeCard}?workId=${_work!.id}');
   }
 
   // ── UI ──

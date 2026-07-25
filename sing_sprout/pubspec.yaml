@@ -26,6 +26,11 @@ dependencies:
   just_audio: ^0.9.40
   share_plus: ^9.0.0
   archive: ^3.6.1
+  record: ^5.1.0
+  permission_handler: ^11.3.0
+
+dependency_overrides:
+  record_linux: ^1.2.0
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:just_audio/just_audio.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/constants/enums.dart';
 import '../../core/theme/app_theme.dart';
@@ -426,7 +427,10 @@ class _MenuEntry {
 }
 
 /// 作品卡片
-class _WorkCard extends StatelessWidget {
+///
+/// 包含：可辨识的圆形播放/暂停按钮（根据播放状态切换）、真实录音时长、
+/// 收藏状态高亮。收藏作品以金色左边框 + 星标徽章区分。
+class _WorkCard extends StatefulWidget {
   final MusicWork work;
   final bool selected;
   final bool selectMode;
@@ -448,78 +452,232 @@ class _WorkCard extends StatelessWidget {
   });
 
   @override
+  State<_WorkCard> createState() => _WorkCardState();
+}
+
+class _WorkCardState extends State<_WorkCard>
+    with SingleTickerProviderStateMixin {
+  final _player = AudioPlayer();
+  bool _isPlaying = false;
+  double _progress = 0.0;
+
+  /// 脉冲动画控制器 — 播放时按钮有呼吸效果
+  late final AnimationController _pulseCtrl;
+
+  /// 全局唯一活跃播放器
+  static _WorkCardState? _activePlayer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _player.positionStream.listen((pos) {
+      final dur = _player.duration ?? Duration.zero;
+      if (dur.inMilliseconds > 0 && mounted) {
+        setState(() => _progress = pos.inMilliseconds / dur.inMilliseconds);
+      }
+    });
+
+    _player.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        _player.seek(Duration.zero);
+        _player.pause();
+        if (mounted) {
+          setState(() {
+            _isPlaying = false;
+            _progress = 0;
+          });
+          _pulseCtrl.reverse();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_activePlayer == this) _activePlayer = null;
+    _pulseCtrl.dispose();
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePlayPause() async {
+    if (_activePlayer != null && _activePlayer != this) {
+      await _activePlayer!._stop();
+    }
+    if (_isPlaying) {
+      await _stop();
+    } else {
+      await _play();
+    }
+  }
+
+  Future<void> _play() async {
+    try {
+      await _player.setFilePath(widget.work.audioPath);
+      await _player.play();
+      if (mounted) {
+        setState(() => _isPlaying = true);
+        _pulseCtrl.repeat(reverse: true);
+      }
+      _activePlayer = this;
+    } catch (e) {
+      debugPrint('[WorkCard] 播放失败: $e');
+    }
+  }
+
+  Future<void> _stop() async {
+    try {
+      await _player.pause();
+      await _player.seek(Duration.zero);
+    } catch (_) {}
+    if (mounted) {
+      setState(() {
+        _isPlaying = false;
+        _progress = 0;
+      });
+      _pulseCtrl.reverse();
+    }
+    if (_activePlayer == this) _activePlayer = null;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final durationStr = Formatters.formatDurationMinSec(work.duration);
-    final dateStr = Formatters.formatDateShort(work.createdAt);
+    final durationStr = _formatDuration(widget.work.duration);
+    final dateStr = Formatters.formatDateShort(widget.work.createdAt);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      color: selected ? AppTheme.primaryGreen.withOpacity(0.06) : null,
+      color: widget.selected
+          ? AppTheme.primaryGreen.withOpacity(0.06)
+          : (widget.work.isFavorite ? const Color(0xFFFFF8E1) : null),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: selected
+        side: widget.selected
             ? const BorderSide(color: AppTheme.primaryGreen, width: 1.5)
-            : BorderSide.none,
+            : (widget.work.isFavorite
+                ? const BorderSide(color: Color(0xFFFFB300), width: 1.2)
+                : BorderSide.none),
       ),
       child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              // 选择模式下显示 checkbox
-              if (selectMode) ...[
+              // 选择模式：checkbox
+              if (widget.selectMode) ...[
                 GestureDetector(
-                  onTap: onToggleSelect,
+                  onTap: widget.onToggleSelect,
                   child: Container(
                     width: 24,
                     height: 24,
                     margin: const EdgeInsets.only(right: 10),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected
+                      color: widget.selected
                           ? AppTheme.primaryGreen
                           : Colors.transparent,
                       border: Border.all(
-                        color: selected ? AppTheme.primaryGreen : AppTheme.divider,
+                        color: widget.selected ? AppTheme.primaryGreen : AppTheme.divider,
                         width: 2,
                       ),
                     ),
-                    child: selected
+                    child: widget.selected
                         ? const Icon(Icons.check, size: 16, color: Colors.white)
                         : null,
                   ),
                 ),
               ],
-              // 左侧封面
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    work.styleSeed.icon,
-                    style: const TextStyle(fontSize: 26),
-                  ),
+
+              // ── 左侧：圆形播放/暂停按钮（带进度环 + 脉冲呼吸） ──
+              GestureDetector(
+                onTap: _togglePlayPause,
+                child: AnimatedBuilder(
+                  animation: _pulseCtrl,
+                  builder: (context, _) {
+                    final pulseScale = _isPlaying ? 1.0 + _pulseCtrl.value * 0.06 : 1.0;
+                    return Transform.scale(
+                      scale: pulseScale,
+                      child: SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // 进度环（仅播放时可见）
+                            if (_isPlaying)
+                              SizedBox(
+                                width: 56,
+                                height: 56,
+                                child: CircularProgressIndicator(
+                                  value: _progress.clamp(0.0, 1.0),
+                                  strokeWidth: 3,
+                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  valueColor: const AlwaysStoppedAnimation<Color>(
+                                    Color(0xFFFF6B6B),
+                                  ),
+                                ),
+                              ),
+                            // 按钮本体
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeInOut,
+                              width: _isPlaying ? 48 : 56,
+                              height: _isPlaying ? 48 : 56,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: _isPlaying
+                                      ? const [Color(0xFFFF6B6B), Color(0xFFD32F2F)]
+                                      : const [Color(0xFF7BC67E), Color(0xFF4A8A3B)],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (_isPlaying
+                                            ? const Color(0xFFFF6B6B)
+                                            : const Color(0xFF6BAF4B))
+                                        .withOpacity(_isPlaying ? 0.4 : 0.3),
+                                    blurRadius: _isPlaying ? 16 : 10,
+                                    spreadRadius: _isPlaying ? 2 : 0,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: _isPlaying ? 26 : 30,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
 
-              // 中间信息
+              // ── 中间信息 ──
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 标题行 + 收藏星标
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                            work.title,
+                            widget.work.title,
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -529,32 +687,58 @@ class _WorkCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (work.isFavorite)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 4),
-                            child: Icon(Icons.favorite, size: 14, color: AppTheme.moodRed),
+                        // 收藏星标
+                        if (widget.work.isFavorite)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFB300).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.star_rounded, size: 14, color: Color(0xFFFF8F00)),
+                                SizedBox(width: 2),
+                                Text(
+                                  '已收藏',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Color(0xFFFF8F00),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 6),
+
+                    // 信息行：风格 + 心情 + 时长 + 日期
                     Row(
                       children: [
                         Text(
-                          '${work.styleSeed.icon} ${work.styleSeed.label}',
+                          '${widget.work.styleSeed.icon} ${widget.work.styleSeed.label}',
                           style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                         ),
-                        if (work.moodSticker != null) ...[
+                        if (widget.work.moodSticker != null) ...[
                           const SizedBox(width: 6),
-                          Text(work.moodSticker!.emoji, style: const TextStyle(fontSize: 12)),
+                          Text(widget.work.moodSticker!.emoji, style: const TextStyle(fontSize: 12)),
                         ],
-                        const SizedBox(width: 8),
-                        Icon(Icons.access_time, size: 12, color: AppTheme.textSecondary.withOpacity(0.6)),
-                        const SizedBox(width: 2),
+                        const SizedBox(width: 10),
+                        Icon(Icons.access_time_filled,
+                            size: 12, color: AppTheme.textSecondary.withOpacity(0.6)),
+                        const SizedBox(width: 3),
                         Text(
                           durationStr,
-                          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary.withOpacity(0.8)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary.withOpacity(0.6),
+                          ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 10),
                         Text(
                           dateStr,
                           style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
@@ -565,15 +749,15 @@ class _WorkCard extends StatelessWidget {
                 ),
               ),
 
-              // 右侧操作（非选择模式）
-              if (!selectMode) ...[
+              // ── 右侧操作 ──
+              if (!widget.selectMode) ...[
                 const SizedBox(width: 4),
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 20, color: AppTheme.textSecondary),
                   padding: EdgeInsets.zero,
                   onSelected: (action) {
-                    if (action == 'favorite') onFavorite();
-                    if (action == 'delete') onDelete();
+                    if (action == 'favorite') widget.onFavorite();
+                    if (action == 'delete') widget.onDelete();
                   },
                   itemBuilder: (_) => [
                     PopupMenuItem(
@@ -581,12 +765,14 @@ class _WorkCard extends StatelessWidget {
                       child: Row(
                         children: [
                           Icon(
-                            work.isFavorite ? Icons.favorite : Icons.favorite_border,
+                            widget.work.isFavorite ? Icons.star : Icons.star_border,
                             size: 18,
-                            color: work.isFavorite ? AppTheme.moodRed : AppTheme.textSecondary,
+                            color: widget.work.isFavorite
+                                ? const Color(0xFFFF8F00)
+                                : AppTheme.textSecondary,
                           ),
                           const SizedBox(width: 8),
-                          Text(work.isFavorite ? '取消收藏' : '收藏'),
+                          Text(widget.work.isFavorite ? '取消收藏' : '收藏'),
                         ],
                       ),
                     ),
@@ -608,5 +794,13 @@ class _WorkCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDuration(Duration d) {
+    final totalSec = d.inSeconds;
+    if (totalSec <= 0) return '0:01';
+    final m = totalSec ~/ 60;
+    final s = totalSec % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
   }
 }

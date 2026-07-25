@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/enums.dart';
 import '../../shared/widgets/animal_avatar.dart';
@@ -10,6 +11,10 @@ import '../../shared/widgets/temperature_dial.dart';
 import '../../shared/widgets/speed_race_track.dart';
 import '../../shared/widgets/instrument_mixer.dart';
 import '../../shared/models/user_profile.dart';
+import '../../shared/models/music_work.dart';
+import '../../shared/services/audio_service.dart';
+import '../../shared/providers/app_state.dart';
+import '../../shared/utils/audio_generator.dart';
 
 /// 创作魔法流水线 — 录音→风格→生成→编辑 连续动线
 enum _CreativeStage {
@@ -38,6 +43,9 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   double _instrumentMix = 0.5;
   bool _isPlaying = false;
 
+  /// 真实录音产生的文件路径（停止录音后赋值）
+  String? _recordedFilePath;
+
   @override
   void initState() {
     super.initState();
@@ -58,9 +66,39 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     super.dispose();
   }
 
-  void _goToStage(_CreativeStage stage) {
-    if (stage == _CreativeStage.recording) _waveController.repeat();
-    if (_stage == _CreativeStage.recording && stage != _CreativeStage.recording) _waveController.stop();
+  void _goToStage(_CreativeStage stage) async {
+    // ── 开始录音 ──
+    if (stage == _CreativeStage.recording) {
+      _waveController.repeat();
+      try {
+        final path = await AudioService().startRecording();
+        _recordedFilePath = path;
+        debugPrint('[CreativeFlow] 开始录音: $path');
+      } catch (e) {
+        debugPrint('[CreativeFlow] 启动录音失败: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('录音失败: $e'), behavior: SnackBarBehavior.floating),
+          );
+        }
+        return; // 不进入录制阶段
+      }
+    }
+
+    // ── 停止录音 ──
+    if (_stage == _CreativeStage.recording && stage != _CreativeStage.recording) {
+      _waveController.stop();
+      final path = await AudioService().stopRecording();
+      _recordedFilePath = path;
+      debugPrint('[CreativeFlow] 停止录音: $path');
+      if (path == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('录音未保存，请重试'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    }
+
+    // ── 生成动画 ──
     if (stage == _CreativeStage.generating) {
       _growthController.forward(from: 0);
       _growthController.addStatusListener((status) {
@@ -69,12 +107,48 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         }
       });
     }
+
     _transitionController.forward(from: 0).then((_) {
       if (mounted) {
         setState(() => _stage = stage);
         _transitionController.value = 0;
       }
     });
+  }
+
+  /// 保存作品到本地数据库并关闭创作页。
+  ///
+  /// 使用真实录音文件路径，如果录音失败则用 generateTestTone 生成临时音频。
+  Future<void> _saveWork({required bool thenShare}) async {
+    final audioPath = _recordedFilePath ??
+        await AudioGenerator.generateTestTone(
+          styleSeed: _selectedStyle.name,
+          durationSec: 3.0,
+        );
+
+    final work = MusicWork.create(
+      title: '${_selectedStyle.label}作品',
+      audioPath: audioPath,
+      styleSeed: _selectedStyle,
+      moodSticker: _selectedMood,
+      duration: AudioService().lastDuration ?? const Duration(seconds: 3),
+      sourceModule: 'humming_garden',
+    );
+
+    if (!mounted) return;
+    await context.read<AppState>().addWork(work);
+
+    if (!mounted) return;
+    if (thenShare) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('作品已保存！去邮局寄给爸妈吧 📮')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('作品已保存到本地')),
+      );
+    }
+    context.pop();
   }
 
   Color _styleAccentColor() {
@@ -424,7 +498,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => context.pop(),
+                  onPressed: () => _saveWork(thenShare: false),
                   icon: const Icon(Icons.save_outlined),
                   label: const Text('保存'),
                   style: OutlinedButton.styleFrom(
@@ -437,12 +511,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    context.pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('作品已保存！去邮局寄给爸妈吧 📮')),
-                    );
-                  },
+                  onPressed: () => _saveWork(thenShare: true),
                   icon: const Icon(Icons.mail_outline),
                   label: const Text('发给爸妈'),
                 ),
