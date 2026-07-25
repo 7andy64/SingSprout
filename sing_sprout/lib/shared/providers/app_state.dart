@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import '../models/music_work.dart';
 import '../models/user_profile.dart';
 import '../models/music_tree_data.dart';
 import '../models/music_work.dart';
@@ -27,6 +28,7 @@ class AppState extends ChangeNotifier {
   MusicTreeData? _treeData;
   bool _isOnline = false;
   final _locale = const Locale('zh', 'CN');
+  final List<MusicWork> _works = [];
 
   // 作品列表（缓存，避免频繁读库）
   List<MusicWork> _works = [];

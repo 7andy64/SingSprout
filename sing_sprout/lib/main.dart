@@ -146,7 +146,7 @@ Future<void> _checkForUpdate() async {
   if (info == null) return;
 
   final context = AppRouter.rootNavigatorKey.currentContext;
-  if (context == null) return;
+  if (context == null || !context.mounted) return;
 
   UpdateDialog.show(context, info);
 }

@@ -4,7 +4,7 @@ class AppConfig {
 
   static const String appName = '声芽';
   static const String appNameEn = 'SingSprout';
-  static const String version = '0.2.0';
+  static const String version = '0.4.0';
 
   // 功能开关（MVP 阶段仅开启 P0 功能）
   static const bool enableMoodRadio = true;      // P1: 完整心情收音机

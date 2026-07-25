@@ -31,7 +31,7 @@ class PostOfficePage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => context.push(AppRoutes.composeCard),
-                  icon: const Icon(Icons.edit_note_rounded, size: 22),
+                  icon: const Icon(Icons.edit_note, size: 22),
                   label: const Text('写一张音乐明信片'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryWarm,
@@ -198,7 +198,7 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          Icon(icon, size: 56, color: AppTheme.textSecondary.withOpacity(0.3)),
+          Icon(icon, size: 56, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           Text(
             message,

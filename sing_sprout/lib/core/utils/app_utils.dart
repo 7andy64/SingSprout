@@ -1,5 +1,5 @@
-/// 通用工具函数
 import 'dart:math';
+import 'package:flutter/widgets.dart';
 
 class AppUtils {
   AppUtils._();
@@ -29,5 +29,39 @@ class AppUtils {
   static String truncate(String text, int maxLength) {
     if (text.length <= maxLength) return text;
     return '${text.substring(0, maxLength)}...';
+  }
+}
+
+/// 屏幕适配工具 — 基于设计稿 375dp 宽度等比缩放
+class ScreenAdapter {
+  ScreenAdapter._();
+
+  static const double designWidth = 375;
+
+  static double w(BuildContext context, double dp) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    return dp * (screenWidth / designWidth);
+  }
+
+  static double h(BuildContext context, double dp) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    return dp * (screenHeight / 812); // iPhone X 高度
+  }
+
+  static double r(BuildContext context, double radius) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    return radius * (screenWidth / designWidth);
+  }
+
+  /// 字体大小自适应
+  static double sp(BuildContext context, double fontSize) {
+    final scale = MediaQuery.of(context).textScaler.scale(1.0).clamp(1.0, 1.3);
+    final screenWidth = MediaQuery.of(context).size.width;
+    return fontSize * scale * (screenWidth / designWidth);
+  }
+
+  /// 限制文字缩放倍率
+  static double textScale(BuildContext context) {
+    return MediaQuery.of(context).textScaler.scale(1.0).clamp(1.0, 1.3);
   }
 }

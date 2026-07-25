@@ -61,32 +61,32 @@ class AppRouter {
         routes: [
           GoRoute(
             path: AppRoutes.hummingGarden,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: HummingGardenPage(),
+            pageBuilder: (context, state) => _buildTabPage(
+              const HummingGardenPage(),
             ),
           ),
           GoRoute(
             path: AppRoutes.moodRadio,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: MoodRadioPage(),
+            pageBuilder: (context, state) => _buildTabPage(
+              const MoodRadioPage(),
             ),
           ),
           GoRoute(
             path: AppRoutes.musicTree,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: MusicTreePage(),
+            pageBuilder: (context, state) => _buildTabPage(
+              const MusicTreePage(),
             ),
           ),
           GoRoute(
             path: AppRoutes.postOffice,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: PostOfficePage(),
+            pageBuilder: (context, state) => _buildTabPage(
+              const PostOfficePage(),
             ),
           ),
           GoRoute(
             path: AppRoutes.profile,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProfilePage(),
+            pageBuilder: (context, state) => _buildTabPage(
+              const ProfilePage(),
             ),
           ),
         ],
@@ -182,6 +182,33 @@ class AppRouter {
       ),
     ],
   );
+
+  static Page<dynamic> _buildTabPage(Widget child) {
+    return CustomTransitionPage(
+      child: child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeInOut,
+          ).drive(Tween(begin: 0.0, end: 1.0)),
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.0, 0.04),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              ),
+            ),
+            child: child,
+          ),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 250),
+    );
+  }
 }
 
 /// 底部导航壳 — 5 花瓣
@@ -193,7 +220,7 @@ class _AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      bottomNavigationBar: _BottomNavBar(),
+      bottomNavigationBar: const _BottomNavBar(),
     );
   }
 }
@@ -203,6 +230,11 @@ class _BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scale = screenWidth / 375;
+    final iconFontSize = (24 * scale).clamp(20.0, 28.0);
+    final labelFontSize = (12 * scale).clamp(11.0, 14.0);
+    final index = _calculateIndex(location);
 
     return BottomNavigationBar(
       currentIndex: _calculateIndex(location),
@@ -241,7 +273,7 @@ class _BottomNavBar extends StatelessWidget {
           activeIcon: Icon(Icons.person_rounded),
           label: '我的',
         ),
-      ],
+      ),
     );
   }
 
@@ -263,5 +295,80 @@ class _BottomNavBar extends StatelessWidget {
       AppRoutes.profile,
     ];
     GoRouter.of(context).go(routes[index]);
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final double fontSize;
+  final double labelFontSize;
+  final bool isSelected;
+  final Animation<double> scaleAnimation;
+  final bool showBadge;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.emoji,
+    required this.label,
+    required this.fontSize,
+    required this.labelFontSize,
+    required this.isSelected,
+    required this.scaleAnimation,
+    required this.showBadge,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedBuilder(
+        animation: scaleAnimation,
+        builder: (context, child) => Transform.scale(
+          scale: scaleAnimation.value,
+          child: child,
+        ),
+        child: SizedBox(
+          width: 56,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Text(emoji, style: TextStyle(fontSize: fontSize)),
+                  if (showBadge)
+                    Positioned(
+                      right: -4,
+                      top: -2,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppTheme.error,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: labelFontSize,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected
+                      ? AppTheme.primaryGreen
+                      : AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

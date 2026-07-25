@@ -11,7 +11,6 @@ import '../../shared/providers/app_state.dart';
 import '../../shared/utils/audio_generator.dart';
 import '../../shared/widgets/mood_color_picker.dart';
 
-/// 录音与 AI 生成页面
 class RecordingPage extends StatefulWidget {
   const RecordingPage({super.key});
 
@@ -79,6 +78,8 @@ class _RecordingPageState extends State<RecordingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final audioProvider = context.watch<AudioProvider>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('创作'),
@@ -115,7 +116,7 @@ class _RecordingPageState extends State<RecordingPage> {
                         TextStyle(color: AppTheme.textSecondary, fontSize: 14),
                   ),
                 ),
-              ),
+              ],
 
               const SizedBox(height: 32),
 
@@ -136,7 +137,7 @@ class _RecordingPageState extends State<RecordingPage> {
 
               const SizedBox(height: 24),
 
-              // 心情贴纸（可跳过）
+              // 心情贴纸
               const Text(
                 '今天的心情（可选）',
                 style: TextStyle(
@@ -192,6 +193,171 @@ class _RecordingPageState extends State<RecordingPage> {
               const SizedBox(height: 16),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _generateMusic(BuildContext context) {
+    final path = context.read<AudioProvider>().currentRecordingPath;
+    if (path == null) return;
+
+    final work = MusicWork.create(
+      title: '未命名作品',
+      audioPath: path,
+      styleSeed: _selectedStyle,
+      moodSticker: _selectedMood,
+      duration: Duration.zero,
+    );
+
+    context.read<AppState>().addWork(work);
+    context.push('${AppRoutes.editor}?id=${work.id}');
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+}
+
+class _WaveformDisplay extends StatelessWidget {
+  final bool isRecording;
+  final bool hasRecording;
+  final double amplitude;
+  final List<double>? waveformData;
+
+  const _WaveformDisplay({
+    required this.isRecording,
+    required this.hasRecording,
+    required this.amplitude,
+    required this.waveformData,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 120,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppTheme.primaryGreen.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.primaryGreen.withValues(alpha: 0.15),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: isRecording
+            ? CustomPaint(
+                painter: _WaveformPainter(
+                  amplitude: amplitude.clamp(-60, 0),
+                  color: AppTheme.primaryGreen,
+                ),
+              )
+            : hasRecording
+                ? CustomPaint(
+                    painter: _WaveformPainter(
+                      amplitude: -20,
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.5),
+                      frozen: true,
+                    ),
+                  )
+                : const Center(
+                    child: Text(
+                      '🎵 点击下方按钮开始录制',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+      ),
+    );
+  }
+}
+
+class _WaveformPainter extends CustomPainter {
+  final double amplitude;
+  final Color color;
+  final bool frozen;
+
+  _WaveformPainter({
+    required this.amplitude,
+    required this.color,
+    this.frozen = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final centerY = size.height / 2;
+    const barCount = 30;
+    final barWidth = size.width / (barCount * 1.5);
+    final gap = barWidth * 0.5;
+
+    for (var i = 0; i < barCount; i++) {
+      final normalizedAmp = (amplitude + 60) / 60;
+      final barHeight = frozen
+          ? (10 + (i % 5) * 4).toDouble()
+          : normalizedAmp * size.height * 0.8 + 4;
+      final x = i * (barWidth + gap);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(x + barWidth / 2, centerY),
+            width: barWidth,
+            height: barHeight.clamp(4, size.height - 8),
+          ),
+          Radius.circular(barWidth / 2),
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WaveformPainter oldDelegate) =>
+      oldDelegate.amplitude != amplitude || oldDelegate.frozen != frozen;
+}
+
+class _RecordButton extends StatelessWidget {
+  final bool isRecording;
+  final VoidCallback onStart;
+  final VoidCallback onStop;
+
+  const _RecordButton({
+    required this.isRecording,
+    required this.onStart,
+    required this.onStop,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isRecording ? onStop : onStart,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: isRecording ? 96 : 80,
+        height: isRecording ? 96 : 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isRecording ? AppTheme.error : AppTheme.primaryGreen,
+          boxShadow: [
+            BoxShadow(
+              color: (isRecording ? AppTheme.error : AppTheme.primaryGreen)
+                  .withValues(alpha: 0.35),
+              blurRadius: isRecording ? 24 : 12,
+              spreadRadius: isRecording ? 6 : 0,
+            ),
+          ],
+        ),
+        child: Icon(
+          isRecording ? Icons.stop : Icons.mic,
+          color: Colors.white,
+          size: 40,
         ),
       ),
     );
@@ -276,7 +442,7 @@ class _StyleSeedGrid extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppTheme.primaryGreen.withOpacity(0.1)
+                      ? AppTheme.primaryGreen.withValues(alpha: 0.1)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(

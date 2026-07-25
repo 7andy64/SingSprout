@@ -108,7 +108,7 @@ class _TreePainter extends CustomPainter {
     final canopyRadius = baseCanopyRadius * (0.7 + growthEnergy * 0.6);
 
     final canopyPaint = Paint()
-      ..color = canopyColor.withOpacity(0.8)
+      ..color = canopyColor.withValues(alpha: 0.8)
       ..style = PaintingStyle.fill;
 
     // 树冠：多个圆叠加（能量高 → 更多圆）

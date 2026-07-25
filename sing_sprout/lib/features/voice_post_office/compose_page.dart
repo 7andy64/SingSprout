@@ -179,6 +179,14 @@ class _ComposePageState extends State<ComposePage> {
                   hintText: '比如：妈妈我好想你...',
                 ),
               ),
+              if (_message.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '预览: ${_message.length > 30 ? '${_message.substring(0, 30)}...' : _message}',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                ),
 
               const Spacer(),
 
@@ -203,7 +211,7 @@ class _ComposePageState extends State<ComposePage> {
                   '将通过微信发送给爸爸妈妈',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.textSecondary.withOpacity(0.7),
+                    color: AppTheme.textSecondary.withValues(alpha: 0.7),
                   ),
                 ),
               ),

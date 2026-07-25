@@ -604,6 +604,45 @@ class _DestChip extends StatelessWidget {
       ),
     );
   }
+
+}
+
+/// 最近 7 天心情历史色卡
+class _MoodHistoryRow extends StatelessWidget {
+  final List<MoodRecord> history;
+
+  const _MoodHistoryRow({required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(7, (i) {
+        // history 已按日期降序排列
+        final record = i < history.length ? history[i] : null;
+        final color = record != null ? AppTheme.moodToColor(record.mood) : AppTheme.divider;
+        final emoji = record?.mood.emoji ?? '';
+
+        return Container(
+          width: 32,
+          height: 32,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: record != null ? 1 : 0.3),
+            shape: BoxShape.circle,
+          ),
+          child: record != null
+              ? Center(
+                  child: Text(
+                    emoji,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                )
+              : null,
+        );
+      }),
+    );
+  }
 }
 
 // ────────────────────────────────────────────────────────────

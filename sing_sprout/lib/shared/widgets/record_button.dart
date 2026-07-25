@@ -49,34 +49,61 @@ class _RecordButtonState extends State<RecordButton>
         setState(() => _isPressed = false);
         widget.onRecordingStop();
       },
+      onLongPressCancel: () {
+        setState(() => _isPressed = false);
+      },
       child: AnimatedBuilder(
         animation: _pulseController,
         builder: (context, child) {
-          final scale = _isPressed ? 1.0 + _pulseController.value * 0.1 : 1.0;
-          return Transform.scale(
-            scale: scale,
-            child: Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _isPressed
-                    ? AppTheme.error
-                    : AppTheme.primaryGreen,
-                boxShadow: [
-                  BoxShadow(
-                    color: (_isPressed ? AppTheme.error : AppTheme.primaryGreen)
-                        .withOpacity(0.3),
-                    blurRadius: _isPressed ? 16 : 8,
-                    spreadRadius: _isPressed ? 4 : 0,
+          final pulseVal = _pulseController.value;
+          final scale = _isPressed ? 1.0 + pulseVal * 0.08 : 1.0;
+          final activeColor =
+              _isPressed ? AppTheme.error : AppTheme.primaryGreen;
+
+          return SizedBox(
+            width: widget.size + (_isPressed ? 32 : 0),
+            height: widget.size + (_isPressed ? 32 : 0),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // 外圈波纹
+                if (_isPressed)
+                  Container(
+                    width: (widget.size + 16) * (1.0 + pulseVal * 0.3),
+                    height: (widget.size + 16) * (1.0 + pulseVal * 0.3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: activeColor.withValues(alpha: 0.3 - pulseVal * 0.2),
+                        width: 2,
+                      ),
+                    ),
                   ),
-                ],
-              ),
-              child: Icon(
-                _isPressed ? Icons.mic : Icons.mic_none_rounded,
-                color: Colors.white,
-                size: widget.size * 0.45,
-              ),
+                // 按钮主体
+                Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: widget.size,
+                    height: widget.size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: activeColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: activeColor.withValues(alpha: 0.35),
+                          blurRadius: _isPressed ? 20 : 10,
+                          spreadRadius: _isPressed ? 4 : 0,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      _isPressed ? Icons.mic : Icons.mic_none,
+                      color: Colors.white,
+                      size: widget.size * 0.45,
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },

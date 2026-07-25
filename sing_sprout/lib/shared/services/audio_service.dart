@@ -360,11 +360,76 @@ class AudioService {
 
   /// 播放音频文件（预留接口，由 just_audio 调用方实现）。
   Future<void> playAudio(String filePath) async {
-    _isPlaying = true;
+    try {
+      await _player.play(DeviceFileSource(filePath));
+      _isPlaying = true;
+    } catch (e) {
+      debugPrint('[AudioService] playAudio error: $e');
+      _isPlaying = false;
+    }
   }
 
   Future<void> stopPlayback() async {
-    _isPlaying = false;
+    try {
+      await _player.stop();
+      _isPlaying = false;
+    } catch (e) {
+      debugPrint('[AudioService] stopPlayback error: $e');
+    }
+  }
+
+  Future<void> pausePlayback() async {
+    try {
+      await _player.pause();
+    } catch (e) {
+      debugPrint('[AudioService] pausePlayback error: $e');
+    }
+  }
+
+  Future<void> resumePlayback() async {
+    try {
+      await _player.resume();
+    } catch (e) {
+      debugPrint('[AudioService] resumePlayback error: $e');
+    }
+  }
+
+  Future<void> seek(Duration position) async {
+    try {
+      await _player.seek(position);
+    } catch (e) {
+      debugPrint('[AudioService] seek error: $e');
+    }
+  }
+
+  Future<bool> deleteRecording(String path) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[AudioService] deleteRecording error: $e');
+      return false;
+    }
+  }
+
+  Future<List<String>> listRecordings() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final recordingsDir = Directory('${dir.path}/singsprout/recordings');
+      if (!await recordingsDir.exists()) return [];
+      return recordingsDir
+          .listSync()
+          .whereType<File>()
+          .map((f) => f.path)
+          .toList();
+    } catch (e) {
+      debugPrint('[AudioService] listRecordings error: $e');
+      return [];
+    }
   }
 
   /// 释放录音器资源。

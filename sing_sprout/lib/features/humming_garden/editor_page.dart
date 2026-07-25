@@ -140,7 +140,7 @@ class _EditorPageState extends State<EditorPage> {
                 height: 160,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
