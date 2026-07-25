@@ -426,6 +426,9 @@ class _MenuEntry {
 }
 
 /// 作品卡片
+///
+/// 包含：可辨识的圆形播放按钮、真实录音时长、收藏状态高亮。
+/// 收藏作品以金色左边框 + 星标徽章区分。
 class _WorkCard extends StatelessWidget {
   final MusicWork work;
   final bool selected;
@@ -449,17 +452,21 @@ class _WorkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durationStr = Formatters.formatDurationMinSec(work.duration);
+    final durationStr = _formatDuration(work.duration);
     final dateStr = Formatters.formatDateShort(work.createdAt);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      color: selected ? AppTheme.primaryGreen.withOpacity(0.06) : null,
+      color: selected
+          ? AppTheme.primaryGreen.withOpacity(0.06)
+          : (work.isFavorite ? const Color(0xFFFFF8E1) : null),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: selected
             ? const BorderSide(color: AppTheme.primaryGreen, width: 1.5)
-            : BorderSide.none,
+            : (work.isFavorite
+                ? const BorderSide(color: Color(0xFFFFB300), width: 1.2)
+                : BorderSide.none),
       ),
       child: InkWell(
         onTap: onTap,
@@ -469,7 +476,7 @@ class _WorkCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              // 选择模式下显示 checkbox
+              // 选择模式：checkbox
               if (selectMode) ...[
                 GestureDetector(
                   onTap: onToggleSelect,
@@ -493,28 +500,43 @@ class _WorkCard extends StatelessWidget {
                   ),
                 ),
               ],
-              // 左侧封面
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    work.styleSeed.icon,
-                    style: const TextStyle(fontSize: 26),
+
+              // ── 左侧：圆形播放按钮 ──
+              GestureDetector(
+                onTap: onTap,
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryGreen.withOpacity(0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 30,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
 
-              // 中间信息
+              // ── 中间信息 ──
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 标题行 + 收藏星标
                     Row(
                       children: [
                         Expanded(
@@ -529,14 +551,35 @@ class _WorkCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        // 收藏星标：收藏时显示金色实心星，否则不可见
                         if (work.isFavorite)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 4),
-                            child: Icon(Icons.favorite, size: 14, color: AppTheme.moodRed),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFB300).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.star_rounded, size: 14, color: Color(0xFFFF8F00)),
+                                SizedBox(width: 2),
+                                Text(
+                                  '已收藏',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Color(0xFFFF8F00),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 6),
+
+                    // 信息行：风格 + 心情 + 时长 + 日期
                     Row(
                       children: [
                         Text(
@@ -547,14 +590,20 @@ class _WorkCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text(work.moodSticker!.emoji, style: const TextStyle(fontSize: 12)),
                         ],
-                        const SizedBox(width: 8),
-                        Icon(Icons.access_time, size: 12, color: AppTheme.textSecondary.withOpacity(0.6)),
-                        const SizedBox(width: 2),
+                        const SizedBox(width: 10),
+                        // 时长：更醒目
+                        Icon(Icons.access_time_filled,
+                            size: 12, color: AppTheme.textSecondary.withOpacity(0.6)),
+                        const SizedBox(width: 3),
                         Text(
                           durationStr,
-                          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary.withOpacity(0.8)),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary.withOpacity(0.6),
+                          ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 10),
                         Text(
                           dateStr,
                           style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
@@ -565,7 +614,7 @@ class _WorkCard extends StatelessWidget {
                 ),
               ),
 
-              // 右侧操作（非选择模式）
+              // ── 右侧操作 ──
               if (!selectMode) ...[
                 const SizedBox(width: 4),
                 PopupMenuButton<String>(
@@ -581,9 +630,9 @@ class _WorkCard extends StatelessWidget {
                       child: Row(
                         children: [
                           Icon(
-                            work.isFavorite ? Icons.favorite : Icons.favorite_border,
+                            work.isFavorite ? Icons.star : Icons.star_border,
                             size: 18,
-                            color: work.isFavorite ? AppTheme.moodRed : AppTheme.textSecondary,
+                            color: work.isFavorite ? const Color(0xFFFF8F00) : AppTheme.textSecondary,
                           ),
                           const SizedBox(width: 8),
                           Text(work.isFavorite ? '取消收藏' : '收藏'),
@@ -608,5 +657,14 @@ class _WorkCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 格式化时长：mm:ss，不足 1 秒时显示 0:01
+  String _formatDuration(Duration d) {
+    final totalSec = d.inSeconds;
+    if (totalSec <= 0) return '0:01';
+    final m = totalSec ~/ 60;
+    final s = totalSec % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
   }
 }
