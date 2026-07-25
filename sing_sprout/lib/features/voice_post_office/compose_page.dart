@@ -41,7 +41,7 @@ class _ComposePageState extends State<ComposePage> {
                 height: 80,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppTheme.divider),
                 ),
@@ -78,8 +78,7 @@ class _ComposePageState extends State<ComposePage> {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     '预览: ${_message.length > 30 ? '${_message.substring(0, 30)}...' : _message}',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textSecondary),
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                   ),
                 ),
 
@@ -94,9 +93,11 @@ class _ComposePageState extends State<ComposePage> {
                     // TODO: AI 生成封面 → 生成微信分享卡片
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(hasWork
-                            ? '明信片已生成，已复制分享链接'
-                            : '请先选择一首作品再发送'),
+                        content: Text(
+                          hasWork
+                              ? '明信片已生成，已复制分享链接'
+                              : '请先选择一首作品再发送',
+                        ),
                       ),
                     );
                     context.pop();
@@ -111,7 +112,7 @@ class _ComposePageState extends State<ComposePage> {
                   '将通过微信发送给爸爸妈妈',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.textSecondary.withOpacity(0.7),
+                    color: AppTheme.textSecondary.withValues(alpha: 0.7),
                   ),
                 ),
               ),

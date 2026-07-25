@@ -74,7 +74,7 @@ class _RecordButtonState extends State<RecordButton>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: activeColor.withOpacity(0.3 - pulseVal * 0.2),
+                        color: activeColor.withValues(alpha: 0.3 - pulseVal * 0.2),
                         width: 2,
                       ),
                     ),
@@ -90,7 +90,7 @@ class _RecordButtonState extends State<RecordButton>
                       color: activeColor,
                       boxShadow: [
                         BoxShadow(
-                          color: activeColor.withOpacity(0.35),
+                          color: activeColor.withValues(alpha: 0.35),
                           blurRadius: _isPressed ? 20 : 10,
                           spreadRadius: _isPressed ? 4 : 0,
                         ),

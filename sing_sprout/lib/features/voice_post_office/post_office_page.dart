@@ -78,7 +78,7 @@ class _InboxTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
+      children: const [
         _EmptyState(
           icon: Icons.mail_outline,
           message: '还没有收到回信\n试试给爸妈发第一张明信片吧',
@@ -93,7 +93,7 @@ class _OutboxTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
+      children: const [
         _EmptyState(
           icon: Icons.send,
           message: '还没有发送过明信片\n创作一首歌然后发给爸妈',
@@ -114,7 +114,7 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          Icon(icon, size: 56, color: AppTheme.textSecondary.withOpacity(0.3)),
+          Icon(icon, size: 56, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           Text(
             message,

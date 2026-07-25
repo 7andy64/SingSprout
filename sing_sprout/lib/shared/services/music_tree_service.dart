@@ -45,7 +45,7 @@ class MusicTreeService {
 
     // 发送/回信统计（从作品 note 中简单推断 — 有 note 的作品视为分享过）
     final sharedCards = sorted.where((w) => w.note != null && w.note!.isNotEmpty).length;
-    final receivedReplies = 0; // 回复数据在 VoiceCard 模型中，暂不跨模型聚合
+    const receivedReplies = 0; // 回复数据在 VoiceCard 模型中，暂不跨模型聚合
 
     // 基础乐感评分（简化版：基于作品数量和质量推断）
     final rhythmScore = _clampScore(totalWorks * 10.0);

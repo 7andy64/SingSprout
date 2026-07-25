@@ -76,7 +76,7 @@ class _TreePainter extends CustomPainter {
     }
 
     final canopyPaint = Paint()
-      ..color = canopyColor.withOpacity(0.8)
+      ..color = canopyColor.withValues(alpha: 0.8)
       ..style = PaintingStyle.fill;
 
     // 简化树冠：多个圆叠加

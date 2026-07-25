@@ -6,12 +6,6 @@ class EncryptionService {
   factory EncryptionService() => _instance;
   EncryptionService._();
 
-  String _key = '';
-
-  Future<void> initialize(String deviceFingerprint) async {
-    _key = deviceFingerprint;
-  }
-
   String encryptText(String plainText) {
     final bytes = utf8.encode(plainText);
     return base64.encode(bytes);

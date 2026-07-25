@@ -101,7 +101,7 @@ class _MoodRadioPageState extends State<MoodRadioPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppTheme.moodToColor(_selectedMood!).withOpacity(0.1),
+                    color: AppTheme.moodToColor(_selectedMood!).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -153,7 +153,7 @@ class _MoodRadioPageState extends State<MoodRadioPage> {
                       width: 32,
                       height: 32,
                       margin: const EdgeInsets.symmetric(horizontal: 3),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppTheme.divider,
                         shape: BoxShape.circle,
                       ),
@@ -191,7 +191,7 @@ class _MoodHistoryRow extends StatelessWidget {
           height: 32,
           margin: const EdgeInsets.symmetric(horizontal: 3),
           decoration: BoxDecoration(
-            color: color.withOpacity(record != null ? 1 : 0.3),
+            color: color.withValues(alpha: record != null ? 1 : 0.3),
             shape: BoxShape.circle,
           ),
           child: record != null

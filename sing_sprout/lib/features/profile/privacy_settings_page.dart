@@ -19,7 +19,7 @@ class PrivacySettingsPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withOpacity(0.08),
+              color: AppTheme.primaryGreen.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Row(
@@ -39,18 +39,18 @@ class PrivacySettingsPage extends StatelessWidget {
           const SizedBox(height: 24),
 
           // 隐私设置项
-          _SwitchItem(
+          const _SwitchItem(
             icon: Icons.lock_outline_rounded,
             title: '私密空间密码',
             subtitle: '为你的作品设置访问密码',
           ),
-          _SwitchItem(
+          const _SwitchItem(
             icon: Icons.cloud_off_rounded,
             title: '离线模式',
             subtitle: '不连接网络，仅在本地使用（分享功能将不可用）',
             value: true,
           ),
-          _SwitchItem(
+          const _SwitchItem(
             icon: Icons.share_outlined,
             title: '分享需二次确认',
             subtitle: '每次分享作品到微信前需要再次确认',
@@ -140,19 +140,21 @@ class _SwitchItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 15, color: AppTheme.textPrimary)),
-                Text(subtitle,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textSecondary)),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 15, color: AppTheme.textPrimary),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                ),
               ],
             ),
           ),
           Switch(
             value: value,
             onChanged: (_) {},
-            activeColor: AppTheme.primaryGreen,
+            activeThumbColor: AppTheme.primaryGreen,
           ),
         ],
       ),
@@ -179,14 +181,18 @@ class _ActionItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon,
-          color: destructive ? AppTheme.error : AppTheme.textSecondary,
-          size: 22),
-      title: Text(title,
-          style: TextStyle(
-            fontSize: 15,
-            color: destructive ? AppTheme.error : AppTheme.textPrimary,
-          )),
+      leading: Icon(
+        icon,
+        color: destructive ? AppTheme.error : AppTheme.textSecondary,
+        size: 22,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 15,
+          color: destructive ? AppTheme.error : AppTheme.textPrimary,
+        ),
+      ),
       subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
       onTap: onTap,
     );

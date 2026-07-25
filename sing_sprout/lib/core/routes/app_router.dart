@@ -112,10 +112,12 @@ class AppRouter {
             position: Tween<Offset>(
               begin: const Offset(0.0, 0.04),
               end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            )),
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              ),
+            ),
             child: child,
           ),
         );
@@ -212,7 +214,7 @@ class _BottomNavBarState extends State<_BottomNavBar>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, -2),
           ),

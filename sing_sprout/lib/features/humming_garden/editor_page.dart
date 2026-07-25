@@ -47,7 +47,7 @@ class _EditorPageState extends State<EditorPage> {
                 height: 160,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -172,9 +172,10 @@ class _SliderControl extends StatelessWidget {
         ),
         Row(
           children: [
-            Text(leftLabel,
-                style: const TextStyle(
-                    fontSize: 11, color: AppTheme.textSecondary)),
+            Text(
+              leftLabel,
+              style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+            ),
             Expanded(
               child: Slider(
                 value: value,
@@ -182,9 +183,10 @@ class _SliderControl extends StatelessWidget {
                 activeColor: AppTheme.primaryGreen,
               ),
             ),
-            Text(rightLabel,
-                style: const TextStyle(
-                    fontSize: 11, color: AppTheme.textSecondary)),
+            Text(
+              rightLabel,
+              style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+            ),
           ],
         ),
       ],

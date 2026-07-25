@@ -129,14 +129,17 @@ class _UpdateDialogState extends State<UpdateDialog>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primaryGreen.withOpacity(0.3),
+                              color: AppTheme.primaryGreen.withValues(alpha: 0.3),
                               blurRadius: 16,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.system_update_rounded,
-                            color: Colors.white, size: 32),
+                        child: const Icon(
+                          Icons.system_update_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
                       ),
                     ),
                   ),
@@ -159,9 +162,11 @@ class _UpdateDialogState extends State<UpdateDialog>
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 3),
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen.withOpacity(0.1),
+                          color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -175,9 +180,10 @@ class _UpdateDialogState extends State<UpdateDialog>
                       ),
                       if (sizeText.isNotEmpty) ...[
                         const SizedBox(width: 8),
-                        Text(sizeText,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppTheme.textSecondary)),
+                        Text(
+                        sizeText,
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                      ),
                       ],
                     ],
                   ),
@@ -221,7 +227,9 @@ class _UpdateDialogState extends State<UpdateDialog>
                           ? '下载中 ${(_progress * 100).toStringAsFixed(0)}%'
                           : '正在连接...',
                       style: const TextStyle(
-                          fontSize: 12, color: AppTheme.textSecondary),
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
 
@@ -231,18 +239,25 @@ class _UpdateDialogState extends State<UpdateDialog>
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppTheme.error.withOpacity(0.08),
+                        color: AppTheme.error.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline,
-                              size: 16, color: AppTheme.error),
+                          const Icon(
+                            Icons.error_outline,
+                            size: 16,
+                            color: AppTheme.error,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
-                            child: Text(_error!,
-                                style: const TextStyle(
-                                    fontSize: 12, color: AppTheme.error)),
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.error,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -264,12 +279,15 @@ class _UpdateDialogState extends State<UpdateDialog>
                               ? AppTheme.warning
                               : AppTheme.primaryGreen,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24)),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
                         ),
                         child: Text(
                           _error != null ? '重新下载' : '立即更新',
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -308,20 +326,26 @@ class _UpdateDialogState extends State<UpdateDialog>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppTheme.error.withOpacity(0.1),
+                    color: AppTheme.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.warning_amber_rounded,
-                          size: 12, color: AppTheme.error),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 12,
+                        color: AppTheme.error,
+                      ),
                       SizedBox(width: 3),
-                      Text('必须更新',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.error)),
+                      Text(
+                        '必须更新',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.error,
+                        ),
+                      ),
                     ],
                   ),
                 ),

@@ -98,15 +98,18 @@ class UpdateService {
     final body = (data['body'] as String?) ?? '';
     final forceUpdate = body.contains('[force]');
 
-    final sha256Match = RegExp(r'SHA256:\s*([a-f0-9]{64})',
-            caseSensitive: false)
-        .firstMatch(body);
+    final sha256Match = RegExp(
+      r'SHA256:\s*([a-f0-9]{64})',
+      caseSensitive: false,
+    ).firstMatch(body);
     final sha256 = sha256Match?.group(1) ?? '';
 
     final changelog = body
         .replaceAll(RegExp(r'\[force\]', caseSensitive: false), '')
-        .replaceAll(RegExp(r'SHA256:\s*[a-f0-9]{64}', caseSensitive: false),
-            '')
+        .replaceAll(
+          RegExp(r'SHA256:\s*[a-f0-9]{64}', caseSensitive: false),
+          '',
+        )
         .trim();
 
     if (!_versionGreater(latestVersion, AppConfig.version)) return null;

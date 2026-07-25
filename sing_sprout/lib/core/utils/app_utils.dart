@@ -1,4 +1,3 @@
-/// 通用工具函数
 import 'dart:math';
 import 'package:flutter/widgets.dart';
 
@@ -56,15 +55,13 @@ class ScreenAdapter {
 
   /// 字体大小自适应
   static double sp(BuildContext context, double fontSize) {
-    // ignore: deprecated_member_use
-    final scale = MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.3);
+    final scale = MediaQuery.of(context).textScaler.scale(1.0).clamp(1.0, 1.3);
     final screenWidth = MediaQuery.of(context).size.width;
     return fontSize * scale * (screenWidth / designWidth);
   }
 
   /// 限制文字缩放倍率
   static double textScale(BuildContext context) {
-    // ignore: deprecated_member_use
-    return MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.3);
+    return MediaQuery.of(context).textScaler.scale(1.0).clamp(1.0, 1.3);
   }
 }

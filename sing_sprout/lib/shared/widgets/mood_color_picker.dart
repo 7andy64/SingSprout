@@ -83,16 +83,18 @@ class _MoodColorPickerState extends State<MoodColorPicker>
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: color.withOpacity(isSelected ? 1 : 0.12),
+                color: color.withValues(alpha: isSelected ? 1 : 0.12),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: color.withOpacity(isSelected ? 1 : 0.5),
+                  color: color.withValues(alpha: isSelected ? 1 : 0.5),
                   width: isSelected ? 3 : 1.5,
                 ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                            color: color.withOpacity(0.35), blurRadius: 10)
+                          color: color.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                        ),
                       ]
                     : null,
               ),

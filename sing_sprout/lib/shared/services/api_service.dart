@@ -30,7 +30,7 @@ class ApiService {
               'text_content': textContent,
             }),
           )
-          .timeout(Duration(seconds: AppConfig.apiTimeoutSeconds));
+          .timeout(const Duration(seconds: AppConfig.apiTimeoutSeconds));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -49,7 +49,7 @@ class ApiService {
           .get(
             Uri.parse('$_baseUrl/messages/replies?device_id=$deviceId'),
           )
-          .timeout(Duration(seconds: AppConfig.apiTimeoutSeconds));
+          .timeout(const Duration(seconds: AppConfig.apiTimeoutSeconds));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;

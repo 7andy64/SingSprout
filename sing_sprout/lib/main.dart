@@ -49,7 +49,7 @@ Future<void> _checkForUpdate() async {
 
   // 需要 root navigator context，通过全局 key 获取
   final context = AppRouter.rootNavigatorKey.currentContext;
-  if (context == null) return;
+  if (context == null || !context.mounted) return;
 
   UpdateDialog.show(context, info);
 }

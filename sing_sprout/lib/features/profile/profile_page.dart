@@ -211,22 +211,26 @@ class _ProfilePageState extends State<ProfilePage> {
                       if (_hasUpdate)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.error,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Text('新',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white)),
+                          child: const Text(
+                            '新',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       const SizedBox(width: 6),
-                      Text(
+                      const Text(
                         'V${AppConfig.version}',
-                        style:
-                            const TextStyle(color: AppTheme.textSecondary),
+                        style: TextStyle(color: AppTheme.textSecondary),
                       ),
                     ],
                   ),

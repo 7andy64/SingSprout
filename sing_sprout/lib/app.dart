@@ -29,10 +29,10 @@ class SingSproutApp extends StatelessWidget {
           ],
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
-            final scale = mediaQuery.textScaleFactor.clamp(1.0, 1.3);
-            // ignore: deprecated_member_use
+            final rawScale = mediaQuery.textScaler.scale(1.0);
+            final clampedScale = rawScale.clamp(1.0, 1.3);
             return MediaQuery(
-              data: mediaQuery.copyWith(textScaleFactor: scale),
+              data: mediaQuery.copyWith(textScaler: TextScaler.linear(clampedScale)),
               child: child!,
             );
           },

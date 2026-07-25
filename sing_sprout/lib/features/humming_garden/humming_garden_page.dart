@@ -100,7 +100,7 @@ class _RecentWorksSection extends StatelessWidget {
                 return Container(
                   width: 100,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.08),
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Center(

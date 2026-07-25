@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 class ConnectivityProvider extends ChangeNotifier {
   bool _isConnected = true;
 
-  ConnectivityProvider() {}
+  ConnectivityProvider();
 
   bool get isConnected => _isConnected;
 
@@ -14,7 +14,4 @@ class ConnectivityProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  @override
-  void dispose() => super.dispose();
 }
