@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/enums.dart';
 import '../../core/constants/app_routes.dart';
@@ -7,6 +8,8 @@ import '../../shared/models/mood_record.dart';
 import '../../shared/services/local_storage_service.dart';
 import '../../shared/widgets/mood_color_picker.dart';
 import '../../shared/widgets/record_button.dart';
+import '../../shared/services/audio_service.dart';
+import '../../shared/providers/audio_provider.dart';
 
 /// 心情收音机 — P1 功能（MVP 简化版）
 ///
@@ -202,10 +205,20 @@ class _MoodRadioPageState extends State<MoodRadioPage> {
                 ),
                 const SizedBox(height: 16),
                 RecordButton(
-                  onRecordingStart: () {
+                  onRecordingStart: () async {
                     setState(() => _entryType = MoodEntryType.humming);
+                    // 启动真实录音，录音会持续到 RecordingPage 中停止
+                    try {
+                      final path = await AudioService().startRecording();
+                      if (path != null && mounted) {
+                        context.read<AudioProvider>().startRecording();
+                      }
+                    } catch (e) {
+                      debugPrint('[MoodRadio] 启动录音失败: $e');
+                    }
                   },
                   onRecordingStop: () {
+                    // 不在此处停止录音 —— 让 RecordingPage 的"AI 生成音乐"来停
                     context.push(AppRoutes.recording);
                   },
                   size: 56,
