@@ -15,6 +15,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // 原生库不压缩，加速安装
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.sing_sprout"
