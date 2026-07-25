@@ -104,7 +104,7 @@ class AudioProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void startPlaying(Duration totalDuration) {
+  Future<void> startPlaying(String filePath) async {
     _status = AudioStatus.playing;
     _currentPosition = Duration.zero;
     notifyListeners();

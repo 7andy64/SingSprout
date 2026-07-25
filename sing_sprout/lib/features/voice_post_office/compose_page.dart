@@ -138,14 +138,14 @@ class _ComposePageState extends State<ComposePage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppTheme.primaryGreen.withOpacity(0.06),
-                      AppTheme.primaryWarm.withOpacity(0.03),
+                      AppTheme.primaryGreen.withValues(alpha: 0.06),
+                      AppTheme.primaryWarm.withValues(alpha: 0.03),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryGreen.withOpacity(0.05),
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -179,11 +179,11 @@ class _ComposePageState extends State<ComposePage> {
                   hintText: '比如：妈妈我好想你...',
                 ),
               ),
-              if (_message.isNotEmpty)
+              if (_messageController.text.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    '预览: ${_message.length > 30 ? '${_message.substring(0, 30)}...' : _message}',
+                    '预览: ${_messageController.text.length > 30 ? '${_messageController.text.substring(0, 30)}...' : _messageController.text}',
                     style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                   ),
                 ),
@@ -254,8 +254,8 @@ class _WorkSelector extends StatelessWidget {
               width: 160,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.primaryGreen.withOpacity(0.1)
-                    : AppTheme.primaryGreen.withOpacity(0.05),
+                    ? AppTheme.primaryGreen.withValues(alpha: 0.1)
+                    : AppTheme.primaryGreen.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected ? AppTheme.primaryGreen : AppTheme.divider,

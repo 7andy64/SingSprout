@@ -103,10 +103,10 @@ class _RecordingPageState extends State<RecordingPage> {
                 height: 120,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppTheme.primaryGreen.withOpacity(0.15),
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.15),
                   ),
                 ),
                 child: const Center(
@@ -116,7 +116,7 @@ class _RecordingPageState extends State<RecordingPage> {
                         TextStyle(color: AppTheme.textSecondary, fontSize: 14),
                   ),
                 ),
-              ],
+              ),
 
               const SizedBox(height: 32),
 
@@ -379,7 +379,7 @@ class _RecoveryBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

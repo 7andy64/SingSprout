@@ -220,7 +220,7 @@ class _AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      bottomNavigationBar: const _BottomNavBar(),
+      bottomNavigationBar: _BottomNavBar(),
     );
   }
 }
@@ -273,7 +273,7 @@ class _BottomNavBar extends StatelessWidget {
           activeIcon: Icon(Icons.person_rounded),
           label: '我的',
         ),
-      ),
+      ],
     );
   }
 
