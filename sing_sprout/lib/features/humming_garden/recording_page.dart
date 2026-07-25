@@ -170,7 +170,8 @@ class _RecordingPageState extends State<RecordingPage> {
                       durationSec: 3.0,
                     );
 
-                    final duration = AudioService().recordingDuration ??
+                    final duration = AudioService().lastDuration ??
+                        AudioService().recordingDuration ??
                         const Duration(seconds: 3);
                     final work = MusicWork.create(
                       title: '${_selectedStyle.label}作品',

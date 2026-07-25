@@ -455,21 +455,44 @@ class _WorkCard extends StatefulWidget {
   State<_WorkCard> createState() => _WorkCardState();
 }
 
-class _WorkCardState extends State<_WorkCard> {
+class _WorkCardState extends State<_WorkCard>
+    with SingleTickerProviderStateMixin {
   final _player = AudioPlayer();
   bool _isPlaying = false;
+  double _progress = 0.0;
 
-  /// 全局唯一活跃播放器，保证同一时间只有一个卡片在播放。
+  /// 脉冲动画控制器 — 播放时按钮有呼吸效果
+  late final AnimationController _pulseCtrl;
+
+  /// 全局唯一活跃播放器
   static _WorkCardState? _activePlayer;
 
   @override
   void initState() {
     super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _player.positionStream.listen((pos) {
+      final dur = _player.duration ?? Duration.zero;
+      if (dur.inMilliseconds > 0 && mounted) {
+        setState(() => _progress = pos.inMilliseconds / dur.inMilliseconds);
+      }
+    });
+
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         _player.seek(Duration.zero);
         _player.pause();
-        setState(() => _isPlaying = false);
+        if (mounted) {
+          setState(() {
+            _isPlaying = false;
+            _progress = 0;
+          });
+          _pulseCtrl.reverse();
+        }
       }
     });
   }
@@ -477,16 +500,15 @@ class _WorkCardState extends State<_WorkCard> {
   @override
   void dispose() {
     if (_activePlayer == this) _activePlayer = null;
+    _pulseCtrl.dispose();
     _player.dispose();
     super.dispose();
   }
 
   Future<void> _togglePlayPause() async {
-    // 停止其他正在播放的卡片
     if (_activePlayer != null && _activePlayer != this) {
       await _activePlayer!._stop();
     }
-
     if (_isPlaying) {
       await _stop();
     } else {
@@ -498,7 +520,10 @@ class _WorkCardState extends State<_WorkCard> {
     try {
       await _player.setFilePath(widget.work.audioPath);
       await _player.play();
-      setState(() => _isPlaying = true);
+      if (mounted) {
+        setState(() => _isPlaying = true);
+        _pulseCtrl.repeat(reverse: true);
+      }
       _activePlayer = this;
     } catch (e) {
       debugPrint('[WorkCard] 播放失败: $e');
@@ -510,7 +535,13 @@ class _WorkCardState extends State<_WorkCard> {
       await _player.pause();
       await _player.seek(Duration.zero);
     } catch (_) {}
-    setState(() => _isPlaying = false);
+    if (mounted) {
+      setState(() {
+        _isPlaying = false;
+        _progress = 0;
+      });
+      _pulseCtrl.reverse();
+    }
     if (_activePlayer == this) _activePlayer = null;
   }
 
@@ -565,38 +596,73 @@ class _WorkCardState extends State<_WorkCard> {
                 ),
               ],
 
-              // ── 左侧：圆形播放/暂停按钮 ──
+              // ── 左侧：圆形播放/暂停按钮（带进度环 + 脉冲呼吸） ──
               GestureDetector(
                 onTap: _togglePlayPause,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: _isPlaying
-                          ? const [Color(0xFFFF6B6B), Color(0xFFE55A5A)]
-                          : const [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_isPlaying
-                                ? const Color(0xFFFF6B6B)
-                                : AppTheme.primaryGreen)
-                            .withOpacity(0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                child: AnimatedBuilder(
+                  animation: _pulseCtrl,
+                  builder: (context, _) {
+                    final pulseScale = _isPlaying ? 1.0 + _pulseCtrl.value * 0.06 : 1.0;
+                    return Transform.scale(
+                      scale: pulseScale,
+                      child: SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // 进度环（仅播放时可见）
+                            if (_isPlaying)
+                              SizedBox(
+                                width: 56,
+                                height: 56,
+                                child: CircularProgressIndicator(
+                                  value: _progress.clamp(0.0, 1.0),
+                                  strokeWidth: 3,
+                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  valueColor: const AlwaysStoppedAnimation<Color>(
+                                    Color(0xFFFF6B6B),
+                                  ),
+                                ),
+                              ),
+                            // 按钮本体
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeInOut,
+                              width: _isPlaying ? 48 : 56,
+                              height: _isPlaying ? 48 : 56,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: _isPlaying
+                                      ? const [Color(0xFFFF6B6B), Color(0xFFD32F2F)]
+                                      : const [Color(0xFF7BC67E), Color(0xFF4A8A3B)],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (_isPlaying
+                                            ? const Color(0xFFFF6B6B)
+                                            : const Color(0xFF6BAF4B))
+                                        .withOpacity(_isPlaying ? 0.4 : 0.3),
+                                    blurRadius: _isPlaying ? 16 : 10,
+                                    spreadRadius: _isPlaying ? 2 : 0,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: _isPlaying ? 26 : 30,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Icon(
-                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 30,
-                  ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),

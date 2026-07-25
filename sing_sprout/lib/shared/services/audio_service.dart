@@ -31,16 +31,25 @@ class AudioService {
   /// 上一次权限检查结果的缓存
   bool? _cachedMicPermission;
 
+  /// 最近一次停止录音后的时长（stopRecording 后 _recordingStartedAt 会被清空，
+  /// 通过此字段保存时长供调用方获取）
+  Duration? _lastDuration;
+
   // ── Getters ──
 
   bool get isRecording => _isRecording;
   bool get isPlaying => _isPlaying;
   String? get savedFragmentPath => _savedFragmentPath;
   String? get currentRecordingPath => _currentRecordingPath;
+
+  /// 当前录音的实时时长（录制中有效，录制停止后返回 null）。
   Duration? get recordingDuration {
     if (_recordingStartedAt == null) return null;
     return DateTime.now().difference(_recordingStartedAt!);
   }
+
+  /// 最近一次停止录音后的真实时长（录制停止后有效）。
+  Duration? get lastDuration => _lastDuration;
 
   // ── 权限处理 ──
 
@@ -180,6 +189,8 @@ class AudioService {
     final filePath = _currentRecordingPath;
 
     try {
+      // 停止前先捕获时长
+      _lastDuration = recordingDuration;
       // 停止录音器
       final savedPath = await _audioRecorder.stop();
       _isRecording = false;

@@ -131,7 +131,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       audioPath: audioPath,
       styleSeed: _selectedStyle,
       moodSticker: _selectedMood,
-      duration: AudioService().recordingDuration ?? const Duration(seconds: 3),
+      duration: AudioService().lastDuration ?? const Duration(seconds: 3),
       sourceModule: 'humming_garden',
     );
 
