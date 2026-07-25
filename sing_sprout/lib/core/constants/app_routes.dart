@@ -9,10 +9,18 @@ class AppRoutes {
   static const String postOffice = '/post-office';
   static const String profile = '/profile';
 
-  // 子页面
+  // 独立页面（非 Tab）
+  static const String creativeFlow = '/creative-flow';
+  static const String onboarding = '/onboarding';
+  static const String works = '/works';
+  static const String workDetail = '/work-detail';
+  static const String sounds = '/sounds';
+  static const String ledger = '/ledger';
+  static const String observation = '/observation';
   static const String recording = '/recording';
   static const String editor = '/editor';
   static const String composeCard = '/compose-card';
+  static const String storage = '/storage';
   static const String privacySettings = '/privacy-settings';
   static const String fieldSoundLab = '/field-sound-lab';
   static const String rhythmTribe = '/rhythm-tribe';

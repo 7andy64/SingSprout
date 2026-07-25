@@ -21,6 +21,9 @@ class AudioProvider extends ChangeNotifier {
   String? _currentRecordingPath;
   double _currentAmplitude = 0;
 
+  /// 来电等中断时自动保存的片段路径
+  String? _savedFragmentPath;
+
   AudioStatus get status => _status;
   Duration get currentPosition => _currentPosition;
   Duration get totalDuration => _totalDuration;
@@ -28,6 +31,8 @@ class AudioProvider extends ChangeNotifier {
   String? get currentRecordingPath => _currentRecordingPath;
   double get currentAmplitude => _currentAmplitude;
   bool get isRecording => _status == AudioStatus.recording;
+  String? get savedFragmentPath => _savedFragmentPath;
+  bool get hasSavedFragment => _savedFragmentPath != null;
 
   AudioProvider() {
     _positionSub = _service.position.listen((pos) {
@@ -56,6 +61,7 @@ class AudioProvider extends ChangeNotifier {
     _waveformData = [];
     _status = AudioStatus.recording;
     _currentPosition = Duration.zero;
+    _savedFragmentPath = null;
     notifyListeners();
 
     _ampSub = _service.amplitude.listen((amp) {
@@ -84,7 +90,21 @@ class AudioProvider extends ChangeNotifier {
     return path;
   }
 
-  void startPlaying(String filePath) async {
+  /// 来电中断时调用 — 记录已保存的片段路径
+  void recordingInterrupted(String savedPath) {
+    _savedFragmentPath = savedPath;
+    _status = AudioStatus.processing;
+    debugPrint('[AudioProvider] 录制被中断，片段已保存: $savedPath');
+    notifyListeners();
+  }
+
+  /// 清除已保存的片段（用户确认放弃时调用）
+  void clearSavedFragment() {
+    _savedFragmentPath = null;
+    notifyListeners();
+  }
+
+  void startPlaying(Duration totalDuration) {
     _status = AudioStatus.playing;
     _currentPosition = Duration.zero;
     notifyListeners();
