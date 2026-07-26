@@ -102,24 +102,12 @@ class _RecordingPageState extends State<RecordingPage> {
                   onDiscard: _discardFragment,
                 ),
 
-              // 波形可视化占位
-              Container(
-                height: 120,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppTheme.primaryGreen.withOpacity(0.15),
-                  ),
-                ),
-                child: const Center(
-                  child: Text(
-                    '🎵 正在用 AI 听懂你的旋律...',
-                    style:
-                        TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-                  ),
-                ),
+              // 波形可视化
+              _WaveformDisplay(
+                isRecording: audioProvider.isRecording,
+                hasRecording: audioProvider.currentRecordingPath != null,
+                amplitude: audioProvider.currentAmplitude,
+                waveformData: audioProvider.waveformData,
               ),
 
               const SizedBox(height: 32),
