@@ -115,6 +115,10 @@ class _EditorPageState extends State<EditorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('编辑作品'),
         centerTitle: true,
         actions: [
@@ -192,10 +196,9 @@ class _EditorPageState extends State<EditorPage> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: OutlinedButton(
                       onPressed: _saving ? null : _saveWork,
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('保存'),
+                      child: const Text('保存'),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 52),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
@@ -205,15 +208,14 @@ class _EditorPageState extends State<EditorPage> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child: ElevatedButton(
                       onPressed: () {
                         // 带着当前作品 ID 跳转声音邮局
                         context.push(
                           '${AppRoutes.composeCard}?workId=${_work.id}',
                         );
                       },
-                      icon: const Icon(Icons.mail_outline),
-                      label: const Text('发给爸妈'),
+                      child: const Text('发给爸妈'),
                     ),
                   ),
                 ],
@@ -288,6 +290,7 @@ class _OrganicPlaybackPreview extends StatelessWidget {
                     child: Container(
                       width: 56,
                       height: 56,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
@@ -303,10 +306,9 @@ class _OrganicPlaybackPreview extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Icon(
-                        isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 30,
+                      child: Text(
+                        isPlaying ? '⏸' : '▶',
+                        style: const TextStyle(color: Colors.white, fontSize: 22),
                       ),
                     ),
                   ),

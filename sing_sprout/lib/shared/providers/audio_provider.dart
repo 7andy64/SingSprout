@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import '../services/audio_service.dart';
@@ -9,7 +9,7 @@ enum AudioStatus { idle, recording, processing, playing, paused }
 class AudioProvider extends ChangeNotifier {
   final _service = AudioService();
   StreamSubscription<RecordState>? _recordSub;
-  StreamSubscription<double>? _ampSub;
+  StreamSubscription<Amplitude>? _ampSub;
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<Duration>? _durationSub;
@@ -44,7 +44,7 @@ class AudioProvider extends ChangeNotifier {
       notifyListeners();
     });
     _playerStateSub = _service.playerState.listen((state) {
-      if (state == PlayerState.completed) {
+      if (state.processingState == ProcessingState.completed) {
         _status = AudioStatus.idle;
         _currentPosition = Duration.zero;
         notifyListeners();
@@ -64,9 +64,9 @@ class AudioProvider extends ChangeNotifier {
     _savedFragmentPath = null;
     notifyListeners();
 
-    _ampSub = _service.amplitude.listen((amp) {
-      _currentAmplitude = amp;
-      _waveformData!.add((amp + 60) / 60);
+    _ampSub = _service.amplitudeStream.listen((amp) {
+      _currentAmplitude = amp.current;
+      _waveformData!.add((amp.current + 60) / 60);
       notifyListeners();
     });
 

@@ -193,12 +193,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
               child: Container(
                 width: 52,
                 height: 52,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(26),
                   border: Border.all(color: AppTheme.divider),
                 ),
-                child: const Icon(Icons.arrow_back, color: AppTheme.textSecondary),
+                child: const Text('←', style: TextStyle(fontSize: 24, color: AppTheme.textSecondary)),
               ),
             ),
 

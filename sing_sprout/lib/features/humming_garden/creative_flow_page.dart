@@ -321,15 +321,10 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       appBar: AppBar(
         title: Text(_stage == _CreativeStage.idle ? '创作' : _stageLabel()),
         centerTitle: true,
-        leading: IconButton(icon: const Icon(Icons.close), onPressed: () => context.pop()),
+        leading: IconButton(icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)), onPressed: () => context.pop()),
       ),
       body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          switchInCurve: Curves.easeOutBack,
-          switchOutCurve: Curves.easeIn,
-          child: _buildStage(),
-        ),
+        child: _buildStage(),
       ),
     );
   }
@@ -357,40 +352,49 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   // ═══ 阶段 1：准备录音 ═══
 
   Widget _buildIdleStage() {
-    return Column(
-      key: const ValueKey('idle'),
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const AnimalAvatar(
-          animal: GuardianAnimal.panda,
-          size: 72,
-          speechBubble: '来，对着手机\n哼一段旋律吧～',
-        ),
-        const SizedBox(height: 48),
-        GestureDetector(
-          onLongPressStart: (_) => _goToStage(_CreativeStage.recording),
-          onLongPressEnd: (_) => _goToStage(_CreativeStage.stylePick),
-          child: Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
-              ),
-              boxShadow: [
-                BoxShadow(color: AppTheme.primaryGreen.withValues(alpha: 0.35), blurRadius: 16, spreadRadius: 2),
-              ],
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        key: const ValueKey('idle'),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Center(
+            child: AnimalAvatar(
+              animal: GuardianAnimal.panda,
+              size: 72,
+              speechBubble: '来，对着手机\n哼一段旋律吧～',
             ),
-            child: const Icon(Icons.mic_none_rounded, color: Colors.white, size: 40),
           ),
-        ),
-        const SizedBox(height: 12),
-        const Text('长按开始哼唱', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
-        const SizedBox(height: 40),
-      ],
+          const SizedBox(height: 48),
+          Center(
+            child: GestureDetector(
+              onTap: () => _goToStage(_CreativeStage.recording),
+              child: Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: AppTheme.primaryGreen.withOpacity(0.35), blurRadius: 16, spreadRadius: 2),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: const Text('🎤', style: TextStyle(color: Colors.white, fontSize: 36)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Center(
+            child: Text('点击开始哼唱', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
     );
   }
 
@@ -399,6 +403,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   Widget _buildRecordingStage() {
     return Column(
       key: const ValueKey('recording'),
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: 32),
         const Text('正在听你哼唱...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
@@ -415,7 +420,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
           ),
         ),
         GestureDetector(
-          onLongPressEnd: (_) => _goToStage(_CreativeStage.stylePick),
+          onTap: () => _goToStage(_CreativeStage.stylePick),
           child: Container(
             width: 80, height: 80,
             decoration: BoxDecoration(
@@ -426,11 +431,12 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
               ),
               boxShadow: [BoxShadow(color: AppTheme.error.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 4)],
             ),
-            child: const Icon(Icons.mic, color: Colors.white, size: 38),
+            alignment: Alignment.center,
+            child: const Text('🎤', style: TextStyle(color: Colors.white, fontSize: 34)),
           ),
         ),
         const SizedBox(height: 12),
-        const Text('松开完成录音', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+        const Text('点击完成录音', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
         const SizedBox(height: 40),
       ],
     );
@@ -443,7 +449,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       key: const ValueKey('stylePick'),
       padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // ── 录音确认 — 有机渐变 + 音符漂浮，无硬边框 ──
           ClipRRect(
@@ -723,11 +729,14 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
 
     return SingleChildScrollView(
       key: const ValueKey('editing'),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── 播放预览 ──
-          ClipRRect(
+          // ── 播放预览 — 有机云朵形态 ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: ClipRRect(
             borderRadius: BorderRadius.circular(28),
             child: Container(
               height: 132,
@@ -794,6 +803,8 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                               color: Colors.white,
                               size: 30,
                             ),
+                            alignment: Alignment.center,
+                            child: Text(_isPlaying ? '⏸' : '▶', style: const TextStyle(color: Colors.white, fontSize: 22)),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -835,11 +846,34 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                       ),
                     ),
                 ],
-              ),
             ),
           ),
+          ), // Close ClipRRect
+          ), // Close Padding
 
+          const SizedBox(height: 32),
+
+          // 控件区域 — 每个控件独立居中
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 280),
+              child: TemperatureDial(value: _temperature, onChanged: (v) => setState(() => _temperature = v)),
+            ),
+          ),
           const SizedBox(height: 28),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 280),
+              child: SpeedRaceTrack(value: _speed, onChanged: (v) => setState(() => _speed = v)),
+            ),
+          ),
+          const SizedBox(height: 28),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 280),
+              child: InstrumentMixer(value: _instrumentMix, onChanged: (v) => setState(() => _instrumentMix = v)),
+            ),
+          ),
 
           // ── 编辑控件（触发重合成） ──
           TemperatureDial(
@@ -896,23 +930,21 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
+                child: OutlinedButton(
                   onPressed: () => _saveWork(thenShare: false),
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('保存'),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 52),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                     side: const BorderSide(color: AppTheme.primaryGreen),
                   ),
+                  child: const Text('保存'),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   onPressed: () => _saveWork(thenShare: true),
-                  icon: const Icon(Icons.mail_outline),
-                  label: const Text('发给爸妈'),
+                  child: const Text('发给爸妈'),
                 ),
               ),
             ],

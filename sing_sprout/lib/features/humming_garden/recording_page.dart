@@ -82,6 +82,10 @@ class _RecordingPageState extends State<RecordingPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('创作'),
         centerTitle: true,
       ),
@@ -89,7 +93,7 @@ class _RecordingPageState extends State<RecordingPage> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // 来电中断恢复横幅
               if (_showRecoveryBanner)
@@ -98,12 +102,24 @@ class _RecordingPageState extends State<RecordingPage> {
                   onDiscard: _discardFragment,
                 ),
 
-              // 波形可视化
-              _WaveformDisplay(
-                isRecording: audioProvider.isRecording,
-                hasRecording: audioProvider.currentRecordingPath != null,
-                amplitude: audioProvider.currentAmplitude,
-                waveformData: audioProvider.waveformData,
+              // 波形可视化占位
+              Container(
+                height: 120,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.primaryGreen.withOpacity(0.15),
+                  ),
+                ),
+                child: const Center(
+                  child: Text(
+                    '🎵 正在用 AI 听懂你的旋律...',
+                    style:
+                        TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                  ),
+                ),
               ),
 
               const SizedBox(height: 32),
@@ -321,6 +337,47 @@ class _WaveformPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _WaveformPainter oldDelegate) =>
       oldDelegate.amplitude != amplitude || oldDelegate.frozen != frozen;
+}
+
+class _RecordButton extends StatelessWidget {
+  final bool isRecording;
+  final VoidCallback onStart;
+  final VoidCallback onStop;
+
+  const _RecordButton({
+    required this.isRecording,
+    required this.onStart,
+    required this.onStop,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isRecording ? onStop : onStart,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: isRecording ? 96 : 80,
+        height: isRecording ? 96 : 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isRecording ? AppTheme.error : AppTheme.primaryGreen,
+          boxShadow: [
+            BoxShadow(
+              color: (isRecording ? AppTheme.error : AppTheme.primaryGreen)
+                  .withValues(alpha: 0.35),
+              blurRadius: isRecording ? 24 : 12,
+              spreadRadius: isRecording ? 6 : 0,
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          isRecording ? '⏹' : '🎤',
+          style: const TextStyle(color: Colors.white, fontSize: 32),
+        ),
+      ),
+    );
+  }
 }
 
 /// 来电中断恢复横幅

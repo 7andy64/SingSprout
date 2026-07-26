@@ -156,11 +156,29 @@ class _HummingGardenPageState extends State<HummingGardenPage>
 
                 const SizedBox(height: 16),
 
-                // ── 录音按钮 ──
-                RecordButton(
-                  onRecordingStart: () {},
-                  onRecordingStop: _startCreativeFlow,
-                  size: 80,
+                // ── 进入创作按钮 ──
+                GestureDetector(
+                  onTap: _startCreativeFlow,
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryGreen.withOpacity(0.35),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.mic, color: Colors.white, size: 36),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
