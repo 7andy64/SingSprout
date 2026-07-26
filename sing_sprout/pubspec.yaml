@@ -1,6 +1,6 @@
 name: sing_sprout
 description: 声芽 SingSprout - AI音乐启蒙创作工具
-version: 0.1.0+1
+version: 0.6.0+1
 publish_to: none
 
 environment:
@@ -19,8 +19,19 @@ dependencies:
   flutter_animate: ^4.3.0
   crypto: ^3.0.3
   path_provider: ^2.1.1
+  path: ^1.8.3
+  sqflite: ^2.3.2
+  encrypt: ^5.0.3
+  flutter_secure_storage: ^9.0.0
+  just_audio: ^0.9.40
+  share_plus: ^12.0.2
+  archive: ^3.6.1
+  record: ^7.1.1
+  audioplayers: ^5.2.1
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
+  sqflite_common_ffi: ^2.3.3

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -41,8 +42,11 @@ class UpdateService {
     'https://api.github.com/repos/nanbujiwanfeng/SingSprout/releases/latest',
   ];
 
-  /// 依次尝试 Gitee → GitHub，谁通用谁
+  /// 依次尝试 Gitee → GitHub，谁通用谁。
+  /// Web 端不支持 APK 更新，直接返回 null。
   Future<UpdateInfo?> checkForUpdate() async {
+    if (kIsWeb) return null;
+
     for (final url in _apiUrls) {
       final info = await _tryApi(url);
       if (info != null) return info;
@@ -93,20 +97,29 @@ class UpdateService {
       downloadUrl = 'https://ghproxy.com/$downloadUrl';
     }
 
+    // 安全检查：拒绝非 HTTPS 的下载链接
+    if (!downloadUrl.startsWith('https://')) {
+      debugPrint('[UpdateService] 拒绝非 HTTPS 下载链接: $downloadUrl');
+      return null;
+    }
+
     final fileSize = apkAsset['size'] as int? ?? 0;
 
     final body = (data['body'] as String?) ?? '';
     final forceUpdate = body.contains('[force]');
 
-    final sha256Match = RegExp(r'SHA256:\s*([a-f0-9]{64})',
-            caseSensitive: false)
-        .firstMatch(body);
+    final sha256Match = RegExp(
+      r'SHA256:\s*([a-f0-9]{64})',
+      caseSensitive: false,
+    ).firstMatch(body);
     final sha256 = sha256Match?.group(1) ?? '';
 
     final changelog = body
         .replaceAll(RegExp(r'\[force\]', caseSensitive: false), '')
-        .replaceAll(RegExp(r'SHA256:\s*[a-f0-9]{64}', caseSensitive: false),
-            '')
+        .replaceAll(
+          RegExp(r'SHA256:\s*[a-f0-9]{64}', caseSensitive: false),
+          '',
+        )
         .trim();
 
     if (!_versionGreater(latestVersion, AppConfig.version)) return null;
@@ -129,7 +142,8 @@ class UpdateService {
     void Function(double) onProgress,
   ) async {
     final dir = await getExternalStorageDirectory();
-    final savePath = '${dir!.path}/singsprout_update.apk';
+    if (dir == null) throw Exception('无法访问外部存储');
+    final savePath = '${dir.path}/singsprout_update.apk';
 
     // 删除旧的部分下载文件
     final oldFile = File(savePath);
@@ -164,12 +178,20 @@ class UpdateService {
 
   /// 校验文件 SHA256
   Future<bool> verifySha256(File file, String expectedHash) async {
-    if (expectedHash.isEmpty) return true;
+    if (expectedHash.isEmpty) {
+      debugPrint('[UpdateService] 未提供 SHA-256 校验值，跳过完整性检查');
+      return true;
+    }
     try {
       final bytes = await file.readAsBytes();
       final hash = sha256.convert(bytes).toString();
-      return hash == expectedHash;
-    } catch (_) {
+      final match = hash == expectedHash;
+      if (!match) {
+        debugPrint('[UpdateService] SHA-256 校验失败！下载文件可能已损坏或被篡改');
+      }
+      return match;
+    } catch (e) {
+      debugPrint('[UpdateService] SHA-256 校验异常: $e');
       return false;
     }
   }
@@ -184,8 +206,13 @@ class UpdateService {
   /// 简单 semver 比较：a > b
   static bool _versionGreater(String a, String b) {
     try {
-      final pa = a.split('.').map(int.parse).toList();
-      final pb = b.split('.').map(int.parse).toList();
+      // 去除预发布后缀（如 -beta.1），只比较数字版本号
+      final cleanVersion = (String v) {
+        final dashIndex = v.indexOf('-');
+        return dashIndex > 0 ? v.substring(0, dashIndex) : v;
+      };
+      final pa = cleanVersion(a).split('.').map(int.parse).toList();
+      final pb = cleanVersion(b).split('.').map(int.parse).toList();
       while (pa.length < 3) { pa.add(0); }
       while (pb.length < 3) { pb.add(0); }
       for (var i = 0; i < 3; i++) {
@@ -193,7 +220,8 @@ class UpdateService {
         if (pa[i] < pb[i]) return false;
       }
       return false;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[UpdateService] 版本号解析失败: $e');
       return false;
     }
   }

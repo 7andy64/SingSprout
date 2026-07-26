@@ -1,3 +1,5 @@
+import 'package:uuid/uuid.dart';
+
 /// 声音明信片模型
 class VoiceCard {
   final String id;
@@ -37,7 +39,7 @@ class VoiceCard {
   }) {
     final now = DateTime.now();
     return VoiceCard(
-      id: now.millisecondsSinceEpoch.toString(),
+      id: const Uuid().v4(),
       workId: workId ?? '',
       senderId: senderId,
       recipientId: recipientId,
@@ -47,6 +49,34 @@ class VoiceCard {
       replyToId: replyToId,
       direction: VoiceCardDirection.sent,
       createdAt: now,
+    );
+  }
+
+  VoiceCard copyWith({
+    String? id,
+    String? workId,
+    String? senderId,
+    String? recipientId,
+    String? audioPath,
+    String? textContent,
+    String? coverUrl,
+    String? replyToId,
+    VoiceCardDirection? direction,
+    DateTime? createdAt,
+    DateTime? readAt,
+  }) {
+    return VoiceCard(
+      id: id ?? this.id,
+      workId: workId ?? this.workId,
+      senderId: senderId ?? this.senderId,
+      recipientId: recipientId ?? this.recipientId,
+      audioPath: audioPath ?? this.audioPath,
+      textContent: textContent ?? this.textContent,
+      coverUrl: coverUrl ?? this.coverUrl,
+      replyToId: replyToId ?? this.replyToId,
+      direction: direction ?? this.direction,
+      createdAt: createdAt ?? this.createdAt,
+      readAt: readAt ?? this.readAt,
     );
   }
 }
