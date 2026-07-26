@@ -82,6 +82,10 @@ class _RecordingPageState extends State<RecordingPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('创作'),
         centerTitle: true,
       ),
@@ -89,7 +93,7 @@ class _RecordingPageState extends State<RecordingPage> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // 来电中断恢复横幅
               if (_showRecoveryBanner)
@@ -116,7 +120,7 @@ class _RecordingPageState extends State<RecordingPage> {
                         TextStyle(color: AppTheme.textSecondary, fontSize: 14),
                   ),
                 ),
-              ],
+              ),
 
               const SizedBox(height: 32),
 
@@ -354,10 +358,10 @@ class _RecordButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(
-          isRecording ? Icons.stop : Icons.mic,
-          color: Colors.white,
-          size: 40,
+        alignment: Alignment.center,
+        child: Text(
+          isRecording ? '⏹' : '🎤',
+          style: const TextStyle(color: Colors.white, fontSize: 32),
         ),
       ),
     );

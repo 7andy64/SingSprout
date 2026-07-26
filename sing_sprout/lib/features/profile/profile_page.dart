@@ -243,7 +243,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   context.read<AppState>().loadLocalData();
                 }
               },
-              icon: const Icon(Icons.auto_awesome, size: 20),
               label: const Text('创建我的档案'),
             ),
           ],

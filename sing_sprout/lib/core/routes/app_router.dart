@@ -220,58 +220,72 @@ class _AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      bottomNavigationBar: const _BottomNavBar(),
+      bottomNavigationBar: _BottomNavBar(),
     );
   }
 }
 
-/// 底部导航栏（5 项）
+/// 底部导航栏（5 项）— 使用 emoji 避免 Material Icons 字体加载问题
 class _BottomNavBar extends StatelessWidget {
+  // emoji + 标签映射
+  static const _tabs = [
+    ('🎤', '哼唱'),
+    ('💜', '心情'),
+    ('🌳', '音乐树'),
+    ('📮', '邮局'),
+    ('👤', '我的'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    final screenWidth = MediaQuery.of(context).size.width;
-    final scale = screenWidth / 375;
-    final iconFontSize = (24 * scale).clamp(20.0, 28.0);
-    final labelFontSize = (12 * scale).clamp(11.0, 14.0);
     final index = _calculateIndex(location);
 
-    return BottomNavigationBar(
-      currentIndex: _calculateIndex(location),
-      onTap: (index) => _onTap(context, index),
-      type: BottomNavigationBarType.fixed,
-      elevation: 8,
-      selectedItemColor: AppTheme.primaryGreen,
-      unselectedItemColor: AppTheme.textSecondary,
-      selectedIconTheme: const IconThemeData(size: 26),
-      unselectedIconTheme: const IconThemeData(size: 24),
-      selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: const TextStyle(fontSize: 12),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.mic_none_rounded),
-          activeIcon: Icon(Icons.mic_rounded),
-          label: '哼唱',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.sentiment_satisfied_outlined),
-          activeIcon: Icon(Icons.sentiment_satisfied_rounded),
-          label: '心情',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.park_outlined),
-          activeIcon: Icon(Icons.park_rounded),
-          label: '音乐树',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.mail_outline_rounded),
-          activeIcon: Icon(Icons.mail_rounded),
-          label: '邮局',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline_rounded),
-          activeIcon: Icon(Icons.person_rounded),
-          label: '我的',
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_tabs.length, (i) {
+              final selected = i == index;
+              return GestureDetector(
+                onTap: () => _onTap(context, i),
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 56,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _tabs[i].$1,
+                        style: TextStyle(fontSize: 26),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _tabs[i].$2,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                          color: selected ? AppTheme.primaryGreen : AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
