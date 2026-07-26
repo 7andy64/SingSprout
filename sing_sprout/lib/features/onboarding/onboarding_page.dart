@@ -285,12 +285,12 @@ class _StepPickAnimal extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.primaryGreen.withOpacity(0.08)
+                        ? AppTheme.primaryGreen.withValues(alpha: 0.08)
                         : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: isSelected
                         ? Border.all(
-                            color: AppTheme.primaryGreen.withOpacity(0.4),
+                            color: AppTheme.primaryGreen.withValues(alpha: 0.4),
                             width: 2,
                           )
                         : Border.all(color: AppTheme.divider),
@@ -388,12 +388,12 @@ class _StepTellAboutYou extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.primaryGreen.withOpacity(0.08)
+                            ? AppTheme.primaryGreen.withValues(alpha: 0.08)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: isSelected
                             ? Border.all(
-                                color: AppTheme.primaryGreen.withOpacity(0.4),
+                                color: AppTheme.primaryGreen.withValues(alpha: 0.4),
                                 width: 2,
                               )
                             : Border.all(color: AppTheme.divider),
@@ -530,7 +530,7 @@ class _StepReady extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen.withOpacity(0.1),
+                          color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(

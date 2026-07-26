@@ -183,7 +183,7 @@ class _MoodRadioPageState extends State<MoodRadioPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
-                    color: _moodToColor(_selectedMood!).withOpacity(0.1),
+                    color: _moodToColor(_selectedMood!).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -325,10 +325,10 @@ class _SafetyPrompt extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.moodPurple.withOpacity(0.08),
+        color: AppTheme.moodPurple.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.moodPurple.withOpacity(0.2),
+          color: AppTheme.moodPurple.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -403,7 +403,7 @@ class _SafetyAction extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
@@ -586,7 +586,7 @@ class _DestChip extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryGreen.withOpacity(0.1) : Colors.white,
+            color: isSelected ? AppTheme.primaryGreen.withValues(alpha: 0.1) : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected ? AppTheme.primaryGreen : AppTheme.divider,
@@ -702,7 +702,7 @@ class _MoodTimeline extends StatelessWidget {
                         height: 10,
                         margin: const EdgeInsets.only(right: 3),
                         decoration: BoxDecoration(
-                          color: _moodToColor(r.mood).withOpacity(0.8),
+                          color: _moodToColor(r.mood).withValues(alpha: 0.8),
                           shape: BoxShape.circle,
                         ),
                       )),

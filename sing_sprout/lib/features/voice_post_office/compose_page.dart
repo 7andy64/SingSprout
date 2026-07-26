@@ -142,14 +142,14 @@ class _ComposePageState extends State<ComposePage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppTheme.primaryGreen.withOpacity(0.06),
-                      AppTheme.primaryWarm.withOpacity(0.03),
+                      AppTheme.primaryGreen.withValues(alpha: 0.06),
+                      AppTheme.primaryWarm.withValues(alpha: 0.03),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryGreen.withOpacity(0.05),
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -258,8 +258,8 @@ class _WorkSelector extends StatelessWidget {
               width: 160,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.primaryGreen.withOpacity(0.1)
-                    : AppTheme.primaryGreen.withOpacity(0.05),
+                    ? AppTheme.primaryGreen.withValues(alpha: 0.1)
+                    : AppTheme.primaryGreen.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected ? AppTheme.primaryGreen : AppTheme.divider,

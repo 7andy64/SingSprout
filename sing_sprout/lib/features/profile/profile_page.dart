@@ -281,12 +281,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppTheme.primaryGreen.withOpacity(0.08)
+                          ? AppTheme.primaryGreen.withValues(alpha: 0.08)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: isSelected
                           ? Border.all(
-                              color: AppTheme.primaryGreen.withOpacity(0.3),
+                              color: AppTheme.primaryGreen.withValues(alpha: 0.3),
                             )
                           : null,
                     ),
@@ -496,7 +496,7 @@ class _ProfileHeader extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -688,7 +688,7 @@ class _LowStorageBanner extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFFFF3CD),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFFC107).withOpacity(0.3)),
+            border: Border.all(color: const Color(0xFFFFC107).withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [

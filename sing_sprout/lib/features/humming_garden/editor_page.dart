@@ -251,14 +251,14 @@ class _OrganicPlaybackPreview extends StatelessWidget {
             center: Alignment.topLeft,
             radius: 1.5,
             colors: [
-              AppTheme.primaryGreen.withOpacity(0.10),
-              AppTheme.primaryGreen.withOpacity(0.03),
-              AppTheme.bgWarm.withOpacity(0.8),
+              AppTheme.primaryGreen.withValues(alpha: 0.10),
+              AppTheme.primaryGreen.withValues(alpha: 0.03),
+              AppTheme.bgWarm.withValues(alpha: 0.8),
             ],
           ),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryGreen.withOpacity(0.06),
+              color: AppTheme.primaryGreen.withValues(alpha: 0.06),
               blurRadius: 20,
               offset: const Offset(0, 4),
             ),
@@ -300,7 +300,7 @@ class _OrganicPlaybackPreview extends StatelessWidget {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryGreen.withOpacity(0.25),
+                            color: AppTheme.primaryGreen.withValues(alpha: 0.25),
                             blurRadius: 12,
                             offset: const Offset(0, 2),
                           ),

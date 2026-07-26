@@ -235,7 +235,7 @@ class PostcardGenerator {
 
   static void _drawVine(ui.Canvas canvas, int width, int height) {
     final vinePaint = ui.Paint()
-      ..color = const ui.Color(0xFF4CAF50).withOpacity(0.15)
+      ..color = const ui.Color(0xFF4CAF50).withValues(alpha: 0.15)
       ..strokeWidth = 3
       ..style = ui.PaintingStyle.stroke;
 
@@ -254,7 +254,7 @@ class PostcardGenerator {
       final t = i / 50;
       final x = t * width;
       final y = height - 60 + sin(t * pi * 3) * 30;
-      _drawSmallLeaf(canvas, ui.Offset(x, y), vinePaint.color.withOpacity(0.3));
+      _drawSmallLeaf(canvas, ui.Offset(x, y), vinePaint.color.withValues(alpha: 0.3));
     }
   }
 

@@ -163,17 +163,45 @@ class _RecordingPageState extends State<RecordingPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // 如果正在录音则停止，获取真实录音文件
-                    String? audioPath;
-                    if (context.read<AudioProvider>().isRecording) {
-                      audioPath = await AudioService().stopRecording();
-                      context.read<AudioProvider>().stopRecording();
+                    // Not recording yet → start recording
+                    if (!context.read<AudioProvider>().isRecording) {
+                      final hasPermission = await AudioService().requestMicPermission();
+                      if (!hasPermission) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('需要麦克风权限'), behavior: SnackBarBehavior.floating),
+                          );
+                        }
+                        return;
+                      }
+                      await context.read<AudioProvider>().startWavRecording();
+                      return;
                     }
-                    // 没有录音则用测试音频兜底
-                    audioPath ??= await AudioGenerator.generateTestTone(
-                      styleSeed: _selectedStyle.name,
-                      durationSec: 3.0,
-                    );
+
+                    // Currently recording → stop and generate
+                    final recordedPath = await context.read<AudioProvider>().stopRecording();
+
+                    // AI 流水线：哼唱 WAV → 完整音乐
+                    String? audioPath;
+                    if (recordedPath != null) {
+                      try {
+                        final result = await AudioGenerator.generateFromHumming(
+                          wavFilePath: recordedPath,
+                          styleSeed: _selectedStyle,
+                          recordingDuration: AudioService().lastDuration,
+                        );
+                        audioPath = result.audioPath;
+                      } catch (e) {
+                        debugPrint('[RecordingPage] AI 生成失败: $e');
+                      }
+                    }
+                    // 回退
+                    if (audioPath == null) {
+                      audioPath = (await AudioGenerator.generateTestTone(
+                        styleSeed: _selectedStyle.name,
+                        durationSec: 3.0,
+                      )).audioPath;
+                    }
 
                     final duration = AudioService().lastDuration ??
                         AudioService().recordingDuration ??
@@ -191,7 +219,7 @@ class _RecordingPageState extends State<RecordingPage> {
                     if (!context.mounted) return;
                     context.push(AppRoutes.editor, extra: work);
                   },
-                  child: const Text('✨ AI 生成音乐'),
+                  child: Text(audioProvider.isRecording ? '⏹ 停止并生成' : '🎤 开始哼唱'),
                 ),
               ),
               const SizedBox(height: 16),
@@ -200,22 +228,6 @@ class _RecordingPageState extends State<RecordingPage> {
         ),
       ),
     );
-  }
-
-  void _generateMusic(BuildContext context) {
-    final path = context.read<AudioProvider>().currentRecordingPath;
-    if (path == null) return;
-
-    final work = MusicWork.create(
-      title: '未命名作品',
-      audioPath: path,
-      styleSeed: _selectedStyle,
-      moodSticker: _selectedMood,
-      duration: Duration.zero,
-    );
-
-    context.read<AppState>().addWork(work);
-    context.push('${AppRoutes.editor}?id=${work.id}');
   }
 
   @override
@@ -383,7 +395,7 @@ class _RecoveryBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

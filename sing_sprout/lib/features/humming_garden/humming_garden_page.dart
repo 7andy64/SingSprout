@@ -331,14 +331,14 @@ class _QuickActionChip extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppTheme.primaryGreen.withOpacity(0.06),
-              AppTheme.primaryWarm.withOpacity(0.04),
+              AppTheme.primaryGreen.withValues(alpha: 0.06),
+              AppTheme.primaryWarm.withValues(alpha: 0.04),
             ],
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primaryGreen.withOpacity(0.06),
+              color: AppTheme.primaryGreen.withValues(alpha: 0.06),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -377,7 +377,7 @@ class _MiniEnergyBar extends StatelessWidget {
       child: LinearProgressIndicator(
         value: value,
         minHeight: 6,
-        backgroundColor: color.withOpacity(0.1),
+        backgroundColor: color.withValues(alpha: 0.1),
         valueColor: AlwaysStoppedAnimation<Color>(color),
       ),
     );
@@ -424,14 +424,14 @@ class _RecentWorksSection extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        AppTheme.primaryGreen.withOpacity(0.08 + index * 0.03),
-                        AppTheme.primaryWarm.withOpacity(0.03),
+                        AppTheme.primaryGreen.withValues(alpha: 0.08 + index * 0.03),
+                        AppTheme.primaryWarm.withValues(alpha: 0.03),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryGreen.withOpacity(0.05),
+                        color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -471,13 +471,13 @@ class _StatCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             Colors.white,
-            AppTheme.bgWarm.withOpacity(0.5),
+            AppTheme.bgWarm.withValues(alpha: 0.5),
           ],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.05),
+            color: AppTheme.primaryGreen.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
@@ -548,13 +548,13 @@ class _MoodDayChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           children: [
             Text('$count', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: color)),
-            Text(label, style: TextStyle(fontSize: 11, color: color.withOpacity(0.7))),
+            Text(label, style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.7))),
           ],
         ),
       ),

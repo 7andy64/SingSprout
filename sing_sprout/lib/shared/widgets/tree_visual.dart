@@ -146,7 +146,7 @@ class _TreePainter extends CustomPainter {
     // ── 落叶（quiet 状态） ──
     if (state == TreeState.quiet) {
       final leafPaint = Paint()
-        ..color = const Color(0xFFC4A45A).withOpacity(0.6)
+        ..color = const Color(0xFFC4A45A).withValues(alpha: 0.6)
         ..style = PaintingStyle.fill;
       for (int i = 0; i < 4; i++) {
         final dx = centerX + rng.nextDouble() * 60 - 30;
@@ -157,7 +157,7 @@ class _TreePainter extends CustomPainter {
 
     // ── 根系 ──
     final rootPaint = Paint()
-      ..color = AppTheme.primarySoil.withOpacity(0.3 + growthEnergy * 0.2)
+      ..color = AppTheme.primarySoil.withValues(alpha: 0.3 + growthEnergy * 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 

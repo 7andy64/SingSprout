@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../models/music_work.dart';
 import '../models/user_profile.dart';
 import '../models/music_tree_data.dart';
-import '../models/music_work.dart';
 import '../models/sound_sample.dart';
 import '../models/voice_card.dart';
 import '../repositories/work_repository.dart';
@@ -100,14 +99,51 @@ class AppState extends ChangeNotifier {
 
   /// 从现有数据构建音乐树数据。
   MusicTreeData _buildTreeData() {
+    final now = DateTime.now();
     final lastActive =
-        _works.isNotEmpty ? _works.first.updatedAt : DateTime.now();
-    return MusicTreeData(
+        _works.isNotEmpty ? _works.first.createdAt : now;
+
+    // 累计使用天数
+    final activeDays = <String>{};
+    for (final w in _works) {
+      activeDays.add('${w.createdAt.year}-${w.createdAt.month}-${w.createdAt.day}');
+    }
+    final totalDays = activeDays.length;
+
+    // 连续使用天数
+    int streakDays = 0;
+    for (int i = 0; i < 365; i++) {
+      final check = now.subtract(Duration(days: i));
+      final key = '${check.year}-${check.month}-${check.day}';
+      if (activeDays.contains(key)) {
+        streakDays++;
+      } else {
+        break;
+      }
+    }
+
+    final sharedCards = _cards.where((c) => c.direction == VoiceCardDirection.sent).length;
+    final receivedReplies = _cards.where((c) => c.direction == VoiceCardDirection.received).length;
+
+    // 综合成长能量
+    final workEnergy = (_works.length * 15).clamp(0, 55).toDouble();
+    final streakEnergy = (streakDays * 5).clamp(0, 25).toDouble();
+    final cardEnergy = (sharedCards * 3).clamp(0, 10).toDouble();
+    final replyEnergy = (receivedReplies * 5).clamp(0, 10).toDouble();
+    final growthEnergy = (workEnergy + streakEnergy + cardEnergy + replyEnergy).clamp(0, 100).toDouble();
+
+    final data = MusicTreeData(
       totalWorks: _works.length,
-      sharedCards: _cards.where((c) => c.direction == VoiceCardDirection.sent).length,
-      receivedReplies:
-          _cards.where((c) => c.direction == VoiceCardDirection.received).length,
+      streakDays: streakDays,
+      totalDays: totalDays,
+      sharedCards: sharedCards,
+      receivedReplies: receivedReplies,
+      growthEnergy: growthEnergy,
       lastActiveDate: lastActive,
+    );
+
+    return data.copyWith(
+      treeState: MusicTreeData.calculateState(data),
     );
   }
 

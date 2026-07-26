@@ -106,7 +106,7 @@ class _SoundCard extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: _typeColor(sound.type).withOpacity(0.1),
+                color: _typeColor(sound.type).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
@@ -143,7 +143,7 @@ class _SoundCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: _typeColor(sound.type).withOpacity(0.1),
+                          color: _typeColor(sound.type).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
