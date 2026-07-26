@@ -280,7 +280,7 @@ class _WorksPageState extends State<WorksPage> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                   child: Row(
                     children: [
                       Text(
@@ -553,7 +553,7 @@ class _WorkCardState extends State<_WorkCard>
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       color: widget.selected
-          ? AppTheme.primaryGreen.withOpacity(0.06)
+          ? AppTheme.primaryGreen.withValues(alpha: 0.06)
           : (widget.work.isFavorite ? const Color(0xFFFFF8E1) : null),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -619,7 +619,7 @@ class _WorkCardState extends State<_WorkCard>
                                 child: CircularProgressIndicator(
                                   value: _progress.clamp(0.0, 1.0),
                                   strokeWidth: 3,
-                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                                   valueColor: const AlwaysStoppedAnimation<Color>(
                                     Color(0xFFFF6B6B),
                                   ),
@@ -645,7 +645,7 @@ class _WorkCardState extends State<_WorkCard>
                                     color: (_isPlaying
                                             ? const Color(0xFFFF6B6B)
                                             : const Color(0xFF6BAF4B))
-                                        .withOpacity(_isPlaying ? 0.4 : 0.3),
+                                        .withValues(alpha: _isPlaying ? 0.4 : 0.3),
                                     blurRadius: _isPlaying ? 16 : 10,
                                     spreadRadius: _isPlaying ? 2 : 0,
                                     offset: const Offset(0, 3),
@@ -692,7 +692,7 @@ class _WorkCardState extends State<_WorkCard>
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFB300).withOpacity(0.12),
+                              color: const Color(0xFFFFB300).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Row(
@@ -728,14 +728,14 @@ class _WorkCardState extends State<_WorkCard>
                         ],
                         const SizedBox(width: 10),
                         Icon(Icons.access_time_filled,
-                            size: 12, color: AppTheme.textSecondary.withOpacity(0.6)),
+                            size: 12, color: AppTheme.textSecondary.withValues(alpha: 0.6)),
                         const SizedBox(width: 3),
                         Text(
                           durationStr,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary.withOpacity(0.6),
+                            color: AppTheme.textPrimary.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(width: 10),

@@ -129,7 +129,7 @@ class _CardItem extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+          backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
           child: Text(
             work?.styleSeed.icon ?? '🎵',
             style: const TextStyle(fontSize: 20),
@@ -148,7 +148,7 @@ class _CardItem extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: AppTheme.textSecondary.withOpacity(0.8),
+                  color: AppTheme.textSecondary.withValues(alpha: 0.8),
                   fontSize: 13,
                 ),
               ),

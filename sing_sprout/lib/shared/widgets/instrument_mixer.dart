@@ -75,7 +75,7 @@ class _InstrumentMixerState extends State<InstrumentMixer> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
               decoration: BoxDecoration(
-                color: AppTheme.primaryWarm.withOpacity(0.2),
+                color: AppTheme.primaryWarm.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -106,9 +106,9 @@ class _InstrumentMixerState extends State<InstrumentMixer> {
                   height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                     border: Border.all(
-                      color: AppTheme.primaryGreen.withOpacity(0.3),
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.3),
                       width: 2,
                     ),
                   ),
@@ -140,8 +140,8 @@ class _InstrumentMixerState extends State<InstrumentMixer> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isActive
-                            ? AppTheme.primaryGreen.withOpacity(0.15)
-                            : AppTheme.divider.withOpacity(0.3),
+                            ? AppTheme.primaryGreen.withValues(alpha: 0.15)
+                            : AppTheme.divider.withValues(alpha: 0.3),
                         border: Border.all(
                           color: isActive
                               ? AppTheme.primaryGreen
@@ -151,7 +151,7 @@ class _InstrumentMixerState extends State<InstrumentMixer> {
                         boxShadow: isActive
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.primaryGreen.withOpacity(0.2),
+                                  color: AppTheme.primaryGreen.withValues(alpha: 0.2),
                                   blurRadius: 6,
                                 ),
                               ]

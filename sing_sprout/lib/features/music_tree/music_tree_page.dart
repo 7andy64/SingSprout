@@ -110,6 +110,13 @@ class _MusicTreePageState extends State<MusicTreePage> {
                           ? '坚持很棒！'
                           : '每一天都是进步',
                     ),
+                    const Divider(height: 20),
+                    _StatItem(
+                      icon: '📅',
+                      label: '累计使用',
+                      value: '${data?.totalDays ?? 0} 天',
+                      subtitle: '从第一天到现在的旅程',
+                    ),
                   ],
                 ),
 
@@ -139,6 +146,31 @@ class _MusicTreePageState extends State<MusicTreePage> {
                           ),
                         ],
                       ),
+                    ],
+                  ),
+                ],
+
+                if (data != null && (data.sharedCards > 0 || data.receivedReplies > 0)) ...[
+                  const SizedBox(height: 16),
+                  _StatCard(
+                    title: '连接花园',
+                    children: [
+                      if (data.sharedCards > 0) ...[
+                        _StatItem(
+                          icon: '💌',
+                          label: '发送明信片',
+                          value: '${data.sharedCards} 张',
+                          subtitle: '把音乐分享给想念的人',
+                        ),
+                        const Divider(height: 20),
+                      ],
+                      if (data.receivedReplies > 0)
+                        _StatItem(
+                          icon: '📬',
+                          label: '收到回信',
+                          value: '${data.receivedReplies} 封',
+                          subtitle: '有人也在想念你',
+                        ),
                     ],
                   ),
                 ],
@@ -306,7 +338,7 @@ class _MoodDayChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -323,7 +355,7 @@ class _MoodDayChip extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 11,
-                color: color.withOpacity(0.7),
+                color: color.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -359,7 +391,7 @@ class _GrowthEnergyBar extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: value,
                   minHeight: 12,
-                  backgroundColor: color.withOpacity(0.1),
+                  backgroundColor: color.withValues(alpha: 0.1),
                   valueColor: AlwaysStoppedAnimation<Color>(color),
                 ),
               ),

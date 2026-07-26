@@ -105,7 +105,7 @@ class AudioService {
 
   // ── 录音 ──
 
-  /// 开始录音。
+  /// 开始录音（AAC 格式，通用场景）。
   ///
   /// 录音文件以 [当前时间戳].m4a 命名，保存到 FileStorageService
   /// 管理的 recordings/ 目录。
@@ -114,6 +114,41 @@ class AudioService {
   ///
   /// 可能抛出 [AudioRecordException] 包含具体错误信息。
   Future<String?> startRecording() async {
+    return _startRecordingInternal(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        bitRate: 128000,
+        sampleRate: 44100,
+        numChannels: 1,
+        autoGain: true,
+        echoCancel: true,
+        noiseSuppress: true,
+      ),
+      extension: 'm4a',
+    );
+  }
+
+  /// 开始录音（WAV PCM 格式，用于哼唱分析）。
+  ///
+  /// WAV 录制用于 AI 流水线的音高检测阶段。
+  /// 16-bit PCM, 44100Hz, 单声道。
+  ///
+  /// 返回录音文件的完整路径，如果权限不足或发生错误则返回 null。
+  Future<String?> startWavRecording() async {
+    return _startRecordingInternal(
+      const RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 44100,
+        numChannels: 1,
+        autoGain: true,
+        echoCancel: true,
+        noiseSuppress: true,
+      ),
+      extension: 'wav',
+    );
+  }
+
+  Future<String?> _startRecordingInternal(RecordConfig config, {required String extension}) async {
     // ── 1. 状态检查 ──
     if (_isRecording) {
       debugPrint('[AudioService] 已在录音中，忽略重复请求');
@@ -133,8 +168,7 @@ class AudioService {
     }
 
     // ── 4. 生成文件路径 ──
-    // 格式: recordings/rec_20260725_143000_m4a_12345.m4a
-    _currentRecordingPath = _fileStorage.generateRecordingPath(extension: 'm4a');
+    _currentRecordingPath = _fileStorage.generateRecordingPath(extension: extension);
 
     // ── 5. 确保目录存在 ──
     try {
@@ -146,18 +180,7 @@ class AudioService {
       throw AudioRecordException('无法创建录音目录: $e');
     }
 
-    // ── 6. 配置录音参数 ──
-    const config = RecordConfig(
-      encoder: AudioEncoder.aacLc,   // AAC 编码 → .m4a 文件
-      bitRate: 128000,               // 128 kbps，语音/哼唱质量
-      sampleRate: 44100,             // 44.1 kHz 采样率
-      numChannels: 1,                // 单声道（人声/哼唱）
-      autoGain: true,                // 自动增益控制
-      echoCancel: true,              // 回声消除
-      noiseSuppress: true,           // 噪声抑制
-    );
-
-    // ── 7. 开始录音 ──
+    // ── 6. 开始录音 ──
     try {
       final filePath = _currentRecordingPath!;
       await _audioRecorder.start(config, path: filePath);

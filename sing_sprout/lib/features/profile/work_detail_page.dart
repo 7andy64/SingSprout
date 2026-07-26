@@ -285,7 +285,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.2),
+            color: AppTheme.primaryGreen.withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -312,7 +312,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -326,9 +326,9 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
               trackHeight: 4,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
               activeTrackColor: AppTheme.primaryGreen,
-              inactiveTrackColor: AppTheme.primaryGreen.withOpacity(0.15),
+              inactiveTrackColor: AppTheme.primaryGreen.withValues(alpha: 0.15),
               thumbColor: AppTheme.primaryGreen,
-              overlayColor: AppTheme.primaryGreen.withOpacity(0.1),
+              overlayColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
             ),
             child: Slider(
               value: progress.clamp(0.0, 1.0),
@@ -356,7 +356,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
                   color: AppTheme.primaryGreen,
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryGreen.withOpacity(0.3),
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -416,7 +416,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.15)),
+        border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,7 +542,7 @@ class _ActionButton extends StatelessWidget {
         label: Text(label, style: TextStyle(color: color, fontSize: 13)),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
-          side: BorderSide(color: color.withOpacity(0.3)),
+          side: BorderSide(color: color.withValues(alpha: 0.3)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

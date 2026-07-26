@@ -33,7 +33,7 @@ class WaveParticlesPainter extends CustomPainter {
         AppTheme.primaryGreen,
         AppTheme.primaryWarm,
         rng.nextDouble() * volume,
-      )!.withOpacity(opacity);
+      )!.withValues(alpha: opacity);
 
       final paint = Paint()
         ..color = color
@@ -45,7 +45,7 @@ class WaveParticlesPainter extends CustomPainter {
 
     // 中央波形基线
     final wavePaint = Paint()
-      ..color = AppTheme.primaryGreen.withOpacity(0.15 + volume * 0.2)
+      ..color = AppTheme.primaryGreen.withValues(alpha: 0.15 + volume * 0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 
@@ -63,7 +63,7 @@ class WaveParticlesPainter extends CustomPainter {
     // 录制指示圆环
     if (volume > 0.1) {
       final ringPaint = Paint()
-        ..color = AppTheme.error.withOpacity(0.3 + volume * 0.4)
+        ..color = AppTheme.error.withValues(alpha: 0.3 + volume * 0.4)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2;
 

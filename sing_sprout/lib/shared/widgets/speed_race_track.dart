@@ -33,7 +33,7 @@ class _SpeedRaceTrackState extends State<SpeedRaceTrack> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
               decoration: BoxDecoration(
-                color: AppTheme.primaryGreen.withOpacity(0.1),
+                color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -85,7 +85,7 @@ class _SpeedRaceTrackState extends State<SpeedRaceTrack> {
                         left: trackWidth * i / 8 + 8,
                         child: Text(
                           '🌿',
-                          style: TextStyle(fontSize: 10, color: AppTheme.divider.withOpacity(0.5)),
+                          style: TextStyle(fontSize: 10, color: AppTheme.divider.withValues(alpha: 0.5)),
                         ),
                       );
                     }),
@@ -120,7 +120,7 @@ class _SpeedRaceTrackState extends State<SpeedRaceTrack> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primaryGreen.withOpacity(0.2),
+                              color: AppTheme.primaryGreen.withValues(alpha: 0.2),
                               blurRadius: 6,
                             ),
                           ],

@@ -154,7 +154,7 @@ class _CardItem extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: (isReceived ? AppTheme.moodBlue : AppTheme.primaryGreen)
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(

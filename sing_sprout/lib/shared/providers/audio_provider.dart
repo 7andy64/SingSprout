@@ -76,6 +76,29 @@ class AudioProvider extends ChangeNotifier {
     }
   }
 
+  /// 开始 WAV 格式录音（用于哼唱分析的哼唱花园流程）
+  Future<void> startWavRecording() async {
+    final hasPermission = await _service.requestMicPermission();
+    if (!hasPermission) return;
+
+    _waveformData = [];
+    _status = AudioStatus.recording;
+    _currentPosition = Duration.zero;
+    _savedFragmentPath = null;
+    notifyListeners();
+
+    _ampSub = _service.amplitude.listen((amp) {
+      _currentAmplitude = amp;
+      _waveformData!.add((amp + 60) / 60);
+      notifyListeners();
+    });
+
+    final path = await _service.startWavRecording();
+    if (path != null) {
+      _currentRecordingPath = path;
+    }
+  }
+
   Future<String?> stopRecording() async {
     _ampSub?.cancel();
     _ampSub = null;

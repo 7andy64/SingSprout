@@ -76,7 +76,7 @@ class _TemperatureDialState extends State<TemperatureDial> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: currentColor.withOpacity(0.2),
+                  color: currentColor.withValues(alpha: 0.2),
                   blurRadius: 8,
                 ),
               ],
@@ -96,7 +96,7 @@ class _TemperatureDialState extends State<TemperatureDial> {
                       border: Border.all(color: currentColor, width: 3),
                       boxShadow: [
                         BoxShadow(
-                          color: currentColor.withOpacity(0.3),
+                          color: currentColor.withValues(alpha: 0.3),
                           blurRadius: 6,
                         ),
                       ],

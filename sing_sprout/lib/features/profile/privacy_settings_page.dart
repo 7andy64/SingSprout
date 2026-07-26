@@ -8,6 +8,7 @@ import '../../shared/services/private_space_service.dart';
 import '../../shared/services/export_service.dart';
 import '../../shared/services/file_storage_service.dart';
 import '../../shared/services/database_service.dart';
+import '../../shared/services/dash_scope_service.dart';
 
 /// 隐私与安全设置
 class PrivacySettingsPage extends StatefulWidget {
@@ -22,8 +23,11 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
   bool _loaded = false;
   bool _exporting = false;
   bool _clearing = false;
+  bool _aiConfigured = false;
+  bool _aiLoading = false;
   final _pw1Controller = TextEditingController();
   final _pw2Controller = TextEditingController();
+  final _apiKeyController = TextEditingController();
 
   @override
   void initState() {
@@ -35,14 +39,17 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
   void dispose() {
     _pw1Controller.dispose();
     _pw2Controller.dispose();
+    _apiKeyController.dispose();
     super.dispose();
   }
 
   Future<void> _loadState() async {
     final enabled = await PrivateSpaceService().isPasswordSet();
+    final aiReady = await DashScopeService().isConfigured;
     if (mounted) {
       setState(() {
         _privateEnabled = enabled;
+        _aiConfigured = aiReady;
         _loaded = true;
       });
     }
@@ -224,6 +231,93 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
     );
+  }
+
+  // ═══════════════════════════════════════════
+  // AI 设置（阿里云百炼 API Key）
+  // ═══════════════════════════════════════════
+
+  Future<void> _showApiKeyDialog() async {
+    _apiKeyController.clear();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('设置 AI 密钥'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '在阿里云百炼平台（DashScope）创建 API Key 后粘贴到下方。\n密钥仅保存在手机本地，不会上传。',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _apiKeyController,
+              obscureText: true,
+              maxLines: 1,
+              decoration: const InputDecoration(
+                labelText: 'API Key (sk-...)',
+                hintText: 'sk-xxxxxxxxxxxxxxxx',
+                prefixIcon: Icon(Icons.key),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('保存')),
+        ],
+      ),
+    );
+
+    if (ok != true || !mounted) return;
+    final key = _apiKeyController.text.trim();
+    if (key.isEmpty) return;
+
+    setState(() => _aiLoading = true);
+    try {
+      await DashScopeService().setApiKey(key);
+      setState(() {
+        _aiConfigured = true;
+        _aiLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI 密钥已保存'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      setState(() => _aiLoading = false);
+      if (mounted) _showError('保存失败: $e');
+    }
+  }
+
+  Future<void> _removeApiKey() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('移除 AI 密钥'),
+        content: const Text('移除后将使用离线规则引擎生成音乐。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('移除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await DashScopeService().clearApiKey();
+    setState(() => _aiConfigured = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI 密钥已移除，将使用离线模式'), behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 
   // ═══════════════════════════════════════════
@@ -415,7 +509,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withOpacity(0.08),
+              color: AppTheme.primaryGreen.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Row(
@@ -515,6 +609,56 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
                   trailing: const Icon(Icons.chevron_right, color: AppTheme.divider),
                   onTap: _showDeleteConfirm,
                 ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── AI 设置 ──
+          const Text('AI 设置', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    _aiConfigured ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
+                    color: _aiConfigured ? AppTheme.primaryGreen : AppTheme.textSecondary,
+                    size: 22,
+                  ),
+                  title: const Text('AI 音乐增强', style: TextStyle(fontSize: 15)),
+                  subtitle: Text(
+                    _loaded
+                        ? (_aiConfigured ? '已配置阿里云通义千问 — 在线增强编曲' : '未配置 — 使用离线规则引擎')
+                        : '加载中...',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                  trailing: _aiLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : _aiConfigured
+                          ? PopupMenuButton<String>(
+                              onSelected: (a) {
+                                if (a == 'change') _showApiKeyDialog();
+                                if (a == 'remove') _removeApiKey();
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(value: 'change', child: Text('更换密钥')),
+                                PopupMenuItem(value: 'remove', child: Text('移除密钥', style: TextStyle(color: AppTheme.error))),
+                              ],
+                            )
+                          : const Icon(Icons.chevron_right, color: AppTheme.divider),
+                  onTap: _aiConfigured ? null : _showApiKeyDialog,
+                ),
+                if (_aiConfigured)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(52, 0, 16, 14),
+                    child: Text(
+                      '哼唱录音后，AI 会分析旋律并自动编排和弦。未配置时使用离线规则引擎。密钥加密存储于手机本地。',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+                    ),
+                  ),
               ],
             ),
           ),
