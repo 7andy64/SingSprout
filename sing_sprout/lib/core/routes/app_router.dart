@@ -287,7 +287,7 @@ class _BottomNavBar extends StatelessWidget {
             }),
           ),
         ),
-      ],
+      ),
     );
   }
 

@@ -798,11 +798,6 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                              color: Colors.white,
-                              size: 30,
-                            ),
                             alignment: Alignment.center,
                             child: Text(_isPlaying ? '⏸' : '▶', style: const TextStyle(color: Colors.white, fontSize: 22)),
                           ),

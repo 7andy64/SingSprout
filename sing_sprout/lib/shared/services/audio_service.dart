@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:just_audio/just_audio.dart';
@@ -21,7 +20,6 @@ class AudioService {
   final _audioRecorder = AudioRecorder();
   final _player = AudioPlayer();
   final _fileStorage = FileStorageService();
-  final _player = AudioPlayer();
 
   bool _isRecording = false;
   bool _isPlaying = false;
@@ -56,9 +54,12 @@ class AudioService {
   /// 最近一次停止录音后的真实时长（录制停止后有效）。
   Duration? get lastDuration => _lastDuration;
 
-  Stream<Duration> get position => _player.onPositionChanged;
-  Stream<Duration> get duration => _player.onDurationChanged;
-  Stream<PlayerState> get playerState => _player.onPlayerStateChanged;
+  Stream<Duration> get position =>
+      _player.positionStream.where((d) => d != null).cast<Duration>();
+  Stream<Duration> get duration =>
+      _player.durationStream.where((d) => d != null).cast<Duration>();
+  Stream<PlayerState> get playerState =>
+      _player.playerStateStream.where((s) => s != null).cast<PlayerState>();
   Stream<double> get amplitude =>
       amplitudeStream.map((a) => a.current.clamp(-60.0, 0.0));
 
@@ -306,18 +307,6 @@ class AudioService {
   /// 每 100ms 采样一次，返回 Amplitude 对象包含 current 和 max 值。
   Stream<Amplitude> get amplitudeStream =>
       _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 100));
-
-  /// 播放位置流
-  Stream<Duration> get position =>
-      _player.positionStream.where((d) => d != null).cast<Duration>();
-
-  /// 音频时长流
-  Stream<Duration> get duration =>
-      _player.durationStream.where((d) => d != null).cast<Duration>();
-
-  /// 播放状态流
-  Stream<PlayerState> get playerState =>
-      _player.playerStateStream.where((s) => s != null).cast<PlayerState>();
 
   // ── 中断处理 ──
 
