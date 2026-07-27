@@ -52,6 +52,68 @@ class VoiceCard {
     );
   }
 
+  /// 是否未读（收到的卡片且未阅读）
+  bool get isUnread =>
+      direction == VoiceCardDirection.received && readAt == null;
+
+  /// 创建一张收到的回信
+  factory VoiceCard.received({
+    required String id,
+    required String senderId,
+    required String workId,
+    String? textContent,
+    String? audioPath,
+    String? coverUrl,
+    String? replyToId,
+    required DateTime createdAt,
+  }) {
+    return VoiceCard(
+      id: id,
+      workId: workId,
+      senderId: senderId,
+      textContent: textContent,
+      audioPath: audioPath,
+      coverUrl: coverUrl,
+      replyToId: replyToId,
+      direction: VoiceCardDirection.received,
+      createdAt: createdAt,
+      readAt: null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'work_id': workId,
+        'sender_id': senderId,
+        'recipient_id': recipientId,
+        'audio_path': audioPath,
+        'text_content': textContent,
+        'cover_url': coverUrl,
+        'reply_to_id': replyToId,
+        'direction': direction.name,
+        'created_at': createdAt.toIso8601String(),
+        'read_at': readAt?.toIso8601String(),
+      };
+
+  factory VoiceCard.fromJson(Map<String, dynamic> json) => VoiceCard(
+        id: json['id'] as String,
+        workId: json['work_id'] as String? ?? json['workId'] as String,
+        senderId: json['sender_id'] as String? ?? json['senderId'] as String,
+        recipientId: json['recipient_id'] as String?,
+        audioPath: json['audio_path'] as String?,
+        textContent: json['text_content'] as String?,
+        coverUrl: json['cover_url'] as String?,
+        replyToId: json['reply_to_id'] as String?,
+        direction: VoiceCardDirection.values.firstWhere(
+          (e) => e.name == json['direction'],
+          orElse: () => VoiceCardDirection.sent,
+        ),
+        createdAt: DateTime.parse(json['created_at'] as String),
+        readAt: json['read_at'] != null
+            ? DateTime.parse(json['read_at'] as String)
+            : null,
+      );
+
   VoiceCard copyWith({
     String? id,
     String? workId,

@@ -301,6 +301,83 @@ class ArrangementEngine {
     );
   }
 
+  /// Arrange using AI recipe + rule engine for note generation.
+  ///
+  /// The [recipe] provides creative decisions (chord progression, tempo,
+  /// style) while the rule engine handles reliable MIDI note generation.
+  static Arrangement arrangeWithRecipe({
+    required List<MidiNoteEvent> melody,
+    required AiArrangementRecipe recipe,
+    required int tonicMidi,
+    double? durationOverride,
+  }) {
+    if (melody.isEmpty) {
+      return _emptyArrangementWithRecipe(recipe, tonicMidi, durationOverride ?? 4.0);
+    }
+
+    final totalDuration = durationOverride ??
+        (melody.map((n) => n.startSeconds + n.durationSeconds).reduce(max) + 1.0).clamp(3.0, 30.0);
+
+    // Convert AI style enums to internal types
+    _ChordRhythm chordRhythm;
+    switch (recipe.chordStyle) {
+      case AiChordStyle.arpeggiated: chordRhythm = _ChordRhythm.arpeggiated; break;
+      case AiChordStyle.pad: chordRhythm = _ChordRhythm.pad; break;
+      case AiChordStyle.staccato: chordRhythm = _ChordRhythm.staccato; break;
+    }
+
+    _BassPattern bassPattern;
+    switch (recipe.bassStyle) {
+      case AiBassStyle.rootOnBeats: bassPattern = _BassPattern.rootOnOneAndThree; break;
+      case AiBassStyle.held: bassPattern = _BassPattern.heldRoot; break;
+      case AiBassStyle.alternating: bassPattern = _BassPattern.rootFifth; break;
+    }
+
+    final profile = _StyleProfile(
+      progression: recipe.chordProgression,
+      tempo: recipe.tempoBpm,
+      chordRhythm: chordRhythm,
+      chordDurationBeats: recipe.chordStyle == AiChordStyle.pad ? 8.0 : 4.0,
+      bassPattern: bassPattern,
+      scale: _majorScale,
+      hasPercussion: recipe.addPercussion,
+    );
+
+    final chordNotes = _generateChords(tonicMidi, profile, totalDuration, profile.scale);
+    final bassNotes = _generateBass(tonicMidi, profile, totalDuration, profile.scale);
+
+    List<MidiNoteEvent> percNotes = [];
+    if (profile.hasPercussion) {
+      percNotes = _generatePercussion(totalDuration, profile.tempo);
+    }
+
+    return Arrangement(
+      melody: melody,
+      chords: chordNotes,
+      bass: bassNotes,
+      percussion: percNotes,
+      tempoBpm: profile.tempo,
+      tonicMidi: tonicMidi,
+      totalDurationSeconds: totalDuration,
+    );
+  }
+
+  static Arrangement _emptyArrangementWithRecipe(
+    AiArrangementRecipe recipe,
+    int tonicMidi,
+    double duration,
+  ) {
+    return Arrangement(
+      melody: [],
+      chords: [],
+      bass: [],
+      percussion: [],
+      tempoBpm: recipe.tempoBpm,
+      tonicMidi: tonicMidi,
+      totalDurationSeconds: duration,
+    );
+  }
+
   // ── Tonic Detection ──
 
   /// Find the most likely tonic from melody pitch classes.
