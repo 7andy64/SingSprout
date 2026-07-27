@@ -10,6 +10,7 @@ import '../../shared/providers/app_state.dart';
 import '../../shared/widgets/temperature_dial.dart';
 import '../../shared/widgets/speed_race_track.dart';
 import '../../shared/widgets/instrument_mixer.dart';
+import 'widgets/save_work_dialog.dart';
 
 /// 作品编辑器 — 播放预览 + 具象化微调 + 保存/分享
 ///
@@ -82,12 +83,21 @@ class _EditorPageState extends State<EditorPage> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      // 将编辑参数写入作品的 note 字段（MVP 阶段简单序列化）
+      if (!mounted) return;
+      final work = await SaveWorkDialog.show(
+        context,
+        audioPath: _work.audioPath,
+        styleSeed: _work.styleSeed,
+        duration: _work.duration,
+        defaultTitle: _work.title,
+      );
+      if (work == null) return; // 用户取消
+
+      // 将编辑参数追加到 note
       final params =
           '温度:${_temperature.toStringAsFixed(2)}|速度:${_speed.toStringAsFixed(2)}|乐器比重:${_instrumentMix.toStringAsFixed(2)}';
-      final saved = _work.copyWith(
-        title: _work.title,
-        note: _work.note != null ? '${_work.note}\n$params' : params,
+      final saved = work.copyWith(
+        note: work.note != null ? '${work.note}\n$params' : params,
       );
       await context.read<AppState>().addWork(saved);
       if (!mounted) return;

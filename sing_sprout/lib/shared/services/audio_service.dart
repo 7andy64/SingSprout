@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:record/record.dart' show AudioRecorder, RecordConfig, AudioEncoder, Amplitude;
 import 'package:permission_handler/permission_handler.dart';
 import '../services/file_storage_service.dart';
@@ -396,8 +395,7 @@ class AudioService {
   /// 播放音频文件。
   Future<void> playAudio(String filePath) async {
     try {
-      await _player.setFilePath(filePath);
-      await _player.play();
+      await _player.play(DeviceFileSource(filePath));
       _isPlaying = true;
     } catch (e) {
       debugPrint('[AudioService] playAudio error: $e');
@@ -424,7 +422,7 @@ class AudioService {
 
   Future<void> resumePlayback() async {
     try {
-      await _player.play();
+      await _player.resume();
     } catch (e) {
       debugPrint('[AudioService] resumePlayback error: $e');
     }

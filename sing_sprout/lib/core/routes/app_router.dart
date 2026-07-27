@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../features/humming_garden/humming_garden_page.dart';
 import '../../features/humming_garden/creative_flow_page.dart';
 import '../../features/humming_garden/recording_page.dart';
@@ -20,6 +21,8 @@ import '../../features/profile/ledger_page.dart';
 import '../../features/profile/observation_page.dart';
 import '../../features/profile/storage_page.dart';
 import '../../features/onboarding/onboarding_page.dart';
+import '../../shared/widgets/notification_badge.dart';
+import '../../shared/providers/notification_provider.dart';
 import '../constants/app_routes.dart';
 import '../theme/app_theme.dart';
 
@@ -259,7 +262,7 @@ class _BottomNavBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(_tabs.length, (i) {
               final selected = i == index;
-              return GestureDetector(
+              final tabWidget = GestureDetector(
                 onTap: () => _onTap(context, i),
                 behavior: HitTestBehavior.opaque,
                 child: SizedBox(
@@ -284,6 +287,19 @@ class _BottomNavBar extends StatelessWidget {
                   ),
                 ),
               );
+
+              // 邮局 tab（index 3）加红点
+              if (i == 3) {
+                return Consumer<NotificationProvider>(
+                  builder: (context, notif, _) {
+                    return NotificationBadge(
+                      count: notif.unreadCount,
+                      child: tabWidget,
+                    );
+                  },
+                );
+              }
+              return tabWidget;
             }),
           ),
         ),
@@ -308,6 +324,10 @@ class _BottomNavBar extends StatelessWidget {
       AppRoutes.postOffice,
       AppRoutes.profile,
     ];
+    // 点击邮局时刷新通知计数
+    if (index == 3) {
+      context.read<NotificationProvider>().refresh();
+    }
     GoRouter.of(context).go(routes[index]);
   }
 }

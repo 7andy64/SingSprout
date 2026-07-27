@@ -18,60 +18,78 @@ class WaveParticlesPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rng = Random(42);
-    final particleCount = 8 + (volume * 20).round(); // 8-28 个粒子
-    final baseSpeed = 0.5 + volume * 1.5; // 速度随音量增大
+    final particleCount = 10 + (volume * 30).round(); // 10-40 个粒子
+    final baseSpeed = 0.4 + volume * 2.0; // 速度随音量增大
 
     for (int i = 0; i < particleCount; i++) {
       final seed = rng.nextDouble();
-      final x = size.width * (0.1 + rng.nextDouble() * 0.8);
-      final baseY = (seed + time * baseSpeed) % 1.2 - 0.1;
+      final x = size.width * (0.05 + rng.nextDouble() * 0.9);
+      final baseY = (seed + time * baseSpeed) % 1.3 - 0.15;
       final y = size.height * (1.0 - baseY);
-      final radius = 2.0 + rng.nextDouble() * (3 + volume * 4);
-      final opacity = (0.3 + rng.nextDouble() * 0.4) * (1.0 - baseY).clamp(0.0, 1.0);
+      final radius = 2.5 + rng.nextDouble() * (4 + volume * 6);
+      final opacity = (0.25 + rng.nextDouble() * 0.5) * (1.0 - baseY).clamp(0.0, 1.0);
 
-      final color = Color.lerp(
+      // 绿色渐变粒子
+      final greenShade = Color.lerp(
+        const Color(0xFF8ED47A),
         AppTheme.primaryGreen,
-        AppTheme.primaryWarm,
-        rng.nextDouble() * volume,
+        rng.nextDouble(),
+      )!;
+      final color = Color.lerp(
+        greenShade,
+        const Color(0xFFC8E6C9),
+        volume * rng.nextDouble(),
       )!.withValues(alpha: opacity);
 
       final paint = Paint()
         ..color = color
         ..style = PaintingStyle.fill
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1);
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
 
       canvas.drawCircle(Offset(x, y), radius, paint);
     }
 
-    // 中央波形基线
+    // 中央波形基线（振幅随音量显著变化）
     final wavePaint = Paint()
-      ..color = AppTheme.primaryGreen.withValues(alpha: 0.15 + volume * 0.2)
+      ..color = AppTheme.primaryGreen.withValues(alpha: 0.12 + volume * 0.25)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = 2.5;
 
     final wavePath = Path();
     final centerY = size.height * 0.7;
     wavePath.moveTo(0, centerY);
 
-    for (double x = 0; x <= size.width; x += 4) {
-      final wave = sin((x / size.width) * pi * 2 + time * 4) * (8 + volume * 12);
+    for (double x = 0; x <= size.width; x += 3) {
+      final wave = sin((x / size.width) * pi * 2 + time * 5) * (15 + volume * 30);
       wavePath.lineTo(x, centerY + wave);
     }
 
     canvas.drawPath(wavePath, wavePaint);
 
-    // 录制指示圆环
-    if (volume > 0.1) {
+    // 外圈动态圆环（绿色，随音量放大）
+    if (volume > 0.05) {
       final ringPaint = Paint()
-        ..color = AppTheme.error.withValues(alpha: 0.3 + volume * 0.4)
+        ..color = AppTheme.primaryGreen.withValues(alpha: 0.2 + volume * 0.5)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
+        ..strokeWidth = 2 + volume * 2;
 
-      final ringRadius = 30 + volume * 20 + sin(time * 3) * 5;
+      final ringRadius = 40 + volume * 50 + sin(time * 2.5) * 8;
       canvas.drawCircle(
         Offset(size.width / 2, size.height * 0.5),
         ringRadius,
         ringPaint,
+      );
+
+      // 第二层更粗的外环光晕
+      final glowPaint = Paint()
+        ..color = AppTheme.primaryGreen.withValues(alpha: 0.06 + volume * 0.12)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6 + volume * 4;
+
+      canvas.drawCircle(
+        Offset(size.width / 2, size.height * 0.5),
+        ringRadius + 4,
+        glowPaint,
       );
     }
   }

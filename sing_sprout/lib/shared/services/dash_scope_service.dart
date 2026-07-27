@@ -181,19 +181,19 @@ chord_style 可选: arpeggiated, pad, staccato。
   }
 
   AiBassStyle _parseBassStyle(String? s) {
-    return switch (s) {
-      'held' => AiBassStyle.held,
-      'alternating' => AiBassStyle.alternating,
-      _ => AiBassStyle.rootOnBeats,
-    };
+    switch (s) {
+      case 'held': return AiBassStyle.held;
+      case 'alternating': return AiBassStyle.alternating;
+      default: return AiBassStyle.rootOnBeats;
+    }
   }
 
   AiChordStyle _parseChordStyle(String? s) {
-    return switch (s) {
-      'pad' => AiChordStyle.pad,
-      'staccato' => AiChordStyle.staccato,
-      _ => AiChordStyle.arpeggiated,
-    };
+    switch (s) {
+      case 'pad': return AiChordStyle.pad;
+      case 'staccato': return AiChordStyle.staccato;
+      default: return AiChordStyle.arpeggiated;
+    }
   }
 
   /// Format melody notes as a brief text summary for the AI prompt.
