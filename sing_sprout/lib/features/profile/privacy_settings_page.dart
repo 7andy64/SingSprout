@@ -266,7 +266,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('保存')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('保存并验证')),
         ],
       ),
     );
@@ -276,6 +276,17 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
     if (key.isEmpty) return;
 
     setState(() => _aiLoading = true);
+
+    // First test the connection
+    final errMsg = await DashScopeService().testConnection(keyOverride: key);
+
+    if (errMsg != null) {
+      setState(() => _aiLoading = false);
+      if (mounted) _showError('API Key 验证失败: $errMsg');
+      return;
+    }
+
+    // Connection OK — save the key
     try {
       await DashScopeService().setApiKey(key);
       setState(() {
@@ -284,12 +295,26 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('AI 密钥已保存'), behavior: SnackBarBehavior.floating),
+          const SnackBar(content: Text('AI 密钥验证通过，已保存'), behavior: SnackBarBehavior.floating),
         );
       }
     } catch (e) {
       setState(() => _aiLoading = false);
       if (mounted) _showError('保存失败: $e');
+    }
+  }
+
+  Future<void> _testApiKey() async {
+    setState(() => _aiLoading = true);
+    final errMsg = await DashScopeService().testConnection();
+    setState(() => _aiLoading = false);
+    if (!mounted) return;
+    if (errMsg == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('连接成功！AI 密钥有效'), behavior: SnackBarBehavior.floating),
+      );
+    } else {
+      _showError('连接失败: $errMsg');
     }
   }
 
@@ -641,10 +666,12 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
                           ? PopupMenuButton<String>(
                               onSelected: (a) {
                                 if (a == 'change') _showApiKeyDialog();
+                                if (a == 'test') _testApiKey();
                                 if (a == 'remove') _removeApiKey();
                               },
                               itemBuilder: (_) => const [
                                 PopupMenuItem(value: 'change', child: Text('更换密钥')),
+                                PopupMenuItem(value: 'test', child: Text('测试连接')),
                                 PopupMenuItem(value: 'remove', child: Text('移除密钥', style: TextStyle(color: AppTheme.error))),
                               ],
                             )

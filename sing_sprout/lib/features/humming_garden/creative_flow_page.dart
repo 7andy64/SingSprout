@@ -13,10 +13,11 @@ import '../../shared/widgets/instrument_mixer.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/services/audio_service.dart';
+import '../../shared/services/dash_scope_service.dart';
+import '../../shared/services/speech_service.dart';
 import '../../shared/services/file_storage_service.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/utils/audio_generator.dart' show AudioGenerator, GenerationResult, PipelineProgress;
-import '../../shared/services/arrangement_engine.dart' show Arrangement;
 import '../../shared/services/wav_synthesizer.dart' show ModulationParams, WavSynthesizer;
 import '../../shared/widgets/tree_animation.dart';
 import '../../core/constants/app_routes.dart';
@@ -71,6 +72,10 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
 
   /// 编辑参数（滑杆变化时触发重新合成）
   ModulationParams _modParams = ModulationParams.neutral;
+
+  /// 说话模式 + 识别结果
+  bool _speechMode = false;
+  String? _speechText;
 
   /// 防抖计时器
   Timer? _reRenderTimer;
@@ -163,6 +168,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
             wavFilePath: _recordedFilePath!,
             styleSeed: _selectedStyle,
             recordingDuration: AudioService().lastDuration,
+            speechText: _speechText,
             onProgress: (p) {
               if (mounted) {
                 setState(() {
@@ -192,6 +198,24 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         );
       }
       _isGenerating = false;
+
+      // Notify user if AI wasn't used
+      if (_generationResult != null && !_generationResult!.aiEnhanced && mounted) {
+        final hasKey = await DashScopeService().isConfigured;
+        String hint;
+        if (!hasKey) {
+          hint = 'AI 未启用：请在隐私设置中配置 API Key';
+        } else {
+          hint = 'AI 未能响应，已使用离线规则引擎';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(hint),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
 
       if (mounted && _stage == _CreativeStage.generating) {
         Future.delayed(const Duration(milliseconds: 600), () {
