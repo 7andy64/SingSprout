@@ -332,13 +332,13 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage> {
   }
 
   static String _typeEmoji(SoundType type) {
-    return switch (type) {
-      SoundType.humanVoice => '🗣️',
-      SoundType.animal => '🐾',
-      SoundType.nature => '🌿',
-      SoundType.mechanical => '⚙️',
-      SoundType.unknown => '❓',
-    };
+    switch (type) {
+      case SoundType.humanVoice: return '🗣️';
+      case SoundType.animal: return '🐾';
+      case SoundType.nature: return '🌿';
+      case SoundType.mechanical: return '⚙️';
+      case SoundType.unknown: return '❓';
+    }
   }
 }
 
@@ -399,23 +399,23 @@ class _SoundCard extends StatelessWidget {
   });
 
   Color get _typeColor {
-    return switch (sound.type) {
-      SoundType.humanVoice => const Color(0xFFFF6B6B),
-      SoundType.animal => const Color(0xFFFFB347),
-      SoundType.nature => AppTheme.primaryGreen,
-      SoundType.mechanical => const Color(0xFF7C4DFF),
-      SoundType.unknown => AppTheme.textSecondary,
-    };
+    switch (sound.type) {
+      case SoundType.humanVoice: return const Color(0xFFFF6B6B);
+      case SoundType.animal: return const Color(0xFFFFB347);
+      case SoundType.nature: return AppTheme.primaryGreen;
+      case SoundType.mechanical: return const Color(0xFF7C4DFF);
+      case SoundType.unknown: return AppTheme.textSecondary;
+    }
   }
 
   String get _typeEmoji {
-    return switch (sound.type) {
-      SoundType.humanVoice => '🗣️',
-      SoundType.animal => '🐾',
-      SoundType.nature => '🌿',
-      SoundType.mechanical => '⚙️',
-      SoundType.unknown => '❓',
-    };
+    switch (sound.type) {
+      case SoundType.humanVoice: return '🗣️';
+      case SoundType.animal: return '🐾';
+      case SoundType.nature: return '🌿';
+      case SoundType.mechanical: return '⚙️';
+      case SoundType.unknown: return '❓';
+    }
   }
 
   @override

@@ -7,6 +7,8 @@ import '../../core/constants/app_routes.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/models/voice_card.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/providers/connectivity_provider.dart';
+import '../../shared/services/outbox_queue_service.dart';
 import '../../shared/utils/postcard_generator.dart';
 
 /// 撰写音乐明信片 — 选择作品 + 写一句话 → 生成卡片 → 微信分享
@@ -64,6 +66,7 @@ class _ComposePageState extends State<ComposePage> {
       final appState = context.read<AppState>();
       final profile = appState.userProfile;
       final senderName = profile?.nickname ?? '声芽用户';
+      final isOnline = context.read<ConnectivityProvider>().isConnected;
 
       // 1. 生成明信片图片
       final imagePath = await PostcardGenerator.generate(
@@ -72,7 +75,7 @@ class _ComposePageState extends State<ComposePage> {
         senderName: senderName,
       );
 
-      // 2. 保存明信片记录到数据库
+      // 2. 保存明信片记录
       final card = VoiceCard.send(
         senderId: profile?.localId ?? 'anonymous',
         workId: _selectedWork!.id,
@@ -84,16 +87,26 @@ class _ComposePageState extends State<ComposePage> {
 
       if (!mounted) return;
 
-      // 3. 分享到微信/系统分享
-      await Share.shareXFiles(
-        [XFile(imagePath)],
-        text: '🎵 ${_selectedWork!.title} — ${_messageController.text.trim()}',
-      );
+      if (isOnline) {
+        // 3. 在线：直接分享
+        await Share.shareXFiles(
+          [XFile(imagePath)],
+          text: '🎵 ${_selectedWork!.title} — ${_messageController.text.trim()}',
+        );
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('明信片已生成，可通过微信分享给家人')),
-      );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('明信片已生成，可通过微信分享给家人')),
+        );
+      } else {
+        // 3. 离线：缓存到发件箱
+        await OutboxQueueService().enqueue(card);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已保存到发件箱，联网后自动发送')),
+        );
+      }
       context.pop();
     } catch (e) {
       if (!mounted) return;

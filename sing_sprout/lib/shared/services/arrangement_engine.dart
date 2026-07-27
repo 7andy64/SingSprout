@@ -181,17 +181,19 @@ class ArrangementEngine {
         (melody.map((n) => n.startSeconds + n.durationSeconds).reduce(max) + 1.0).clamp(3.0, 30.0);
 
     // Convert AI style enums to internal types
-    final chordRhythm = switch (recipe.chordStyle) {
-      AiChordStyle.arpeggiated => _ChordRhythm.arpeggiated,
-      AiChordStyle.pad => _ChordRhythm.pad,
-      AiChordStyle.staccato => _ChordRhythm.staccato,
-    };
+    _ChordRhythm chordRhythm;
+    switch (recipe.chordStyle) {
+      case AiChordStyle.arpeggiated: chordRhythm = _ChordRhythm.arpeggiated; break;
+      case AiChordStyle.pad: chordRhythm = _ChordRhythm.pad; break;
+      case AiChordStyle.staccato: chordRhythm = _ChordRhythm.staccato; break;
+    }
 
-    final bassPattern = switch (recipe.bassStyle) {
-      AiBassStyle.rootOnBeats => _BassPattern.rootOnOneAndThree,
-      AiBassStyle.held => _BassPattern.heldRoot,
-      AiBassStyle.alternating => _BassPattern.rootFifth,
-    };
+    _BassPattern bassPattern;
+    switch (recipe.bassStyle) {
+      case AiBassStyle.rootOnBeats: bassPattern = _BassPattern.rootOnOneAndThree; break;
+      case AiBassStyle.held: bassPattern = _BassPattern.heldRoot; break;
+      case AiBassStyle.alternating: bassPattern = _BassPattern.rootFifth; break;
+    }
 
     final profile = _StyleProfile(
       progression: recipe.chordProgression,

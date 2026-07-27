@@ -18,6 +18,9 @@ import '../../shared/providers/app_state.dart';
 import '../../shared/utils/audio_generator.dart' show AudioGenerator, GenerationResult, PipelineProgress;
 import '../../shared/services/arrangement_engine.dart' show Arrangement;
 import '../../shared/services/wav_synthesizer.dart' show ModulationParams, WavSynthesizer;
+import '../../shared/widgets/tree_animation.dart';
+import '../../core/constants/app_routes.dart';
+import 'widgets/save_work_dialog.dart';
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 
@@ -73,6 +76,18 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   Timer? _reRenderTimer;
   bool _isReRendering = false;
 
+  /// 录音页面：长按交互状态
+  bool _isLongPressing = false;
+  bool _isFingerInside = true;
+  double _currentAmplitude = 0.0;
+  double _smoothAmplitude = 0.0; // EMA 平滑滤波，过滤环境噪音
+  DateTime? _lastSoundTime;
+  DateTime? _recordingStartTime;
+  StreamSubscription<double>? _ampSub;
+  late AnimationController _pressScaleController;
+  late AnimationController _ringRotateController;
+  late AnimationController _breatheController;
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +99,11 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     _waveController.addStatusListener((status) {
       if (status == AnimationStatus.completed) _waveController.repeat();
     });
+
+    _pressScaleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
+    _ringRotateController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+    _breatheController = AnimationController(vsync: this, duration: const Duration(seconds: 2))
+      ..repeat(reverse: true);
 
     _audioPlayer.positionStream.listen((p) {
       if (mounted) setState(() => _playPosition = p);
@@ -109,43 +129,28 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     _transitionController.dispose();
     _audioPlayer.dispose();
     _reRenderTimer?.cancel();
+    _ampSub?.cancel();
+    _pressScaleController.dispose();
+    _ringRotateController.dispose();
+    _breatheController.dispose();
     super.dispose();
   }
 
   void _goToStage(_CreativeStage stage) async {
-    // ── 开始录音 (WAV) ──
+    // ── 开始录音 ──
     if (stage == _CreativeStage.recording) {
-      _waveController.repeat();
-      try {
-        final path = await AudioService().startWavRecording();
-        _recordedFilePath = path;
-        debugPrint('[CreativeFlow] 开始 WAV 录音: $path');
-      } catch (e) {
-        debugPrint('[CreativeFlow] 启动录音失败: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('录音失败: $e'), behavior: SnackBarBehavior.floating),
-          );
-        }
-        return;
-      }
+      await _startRecording();
     }
 
-    // ── 停止录音 ──
+    // ── 停止录音（通过长按松手触发，这里处理其他情况比如 idle→stylePick 跳过录音阶段）──
     if (_stage == _CreativeStage.recording && stage != _CreativeStage.recording) {
-      _waveController.stop();
-      final path = await AudioService().stopRecording();
-      _recordedFilePath = path;
-      debugPrint('[CreativeFlow] 停止录音: $path');
-      if (path == null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('录音未保存，请重试'), behavior: SnackBarBehavior.floating),
-        );
-      }
+      // 仅当还在录音中但 stage 要切换时才停止（例如异常流程）
+      await _cleanupRecording();
     }
 
     // ── AI 生成 ──
     if (stage == _CreativeStage.generating) {
+      setState(() => _stage = _CreativeStage.generating);
       _growthController.forward(from: 0);
       _isGenerating = true;
       _generationResult = null;
@@ -208,7 +213,99 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     }
   }
 
-  /// 保存作品到本地数据库并关闭创作页。
+  // ── 录音：长按触发 ──
+
+  Future<void> _startRecording() async {
+    _recordingStartTime = DateTime.now();
+    _lastSoundTime = DateTime.now();
+    _smoothAmplitude = 0.0;
+    _waveController.repeat();
+    _ringRotateController.repeat();
+    _breatheController.repeat(reverse: true);
+    _ampSub?.cancel();
+    _ampSub = AudioService().amplitude.listen((amp) {
+      final normAmp = (amp + 60) / 60;
+      if (!mounted) return;
+      // EMA 平滑滤波：削弱突发噪音尖峰，保留持续真实声音
+      _smoothAmplitude = _smoothAmplitude * 0.75 + normAmp * 0.25;
+      setState(() => _currentAmplitude = _smoothAmplitude);
+      if (_smoothAmplitude > 0.10) {
+        _lastSoundTime = DateTime.now();
+      } else {
+        // 持续无声超过 4 秒：自动停止并温柔提示
+        final silentSec = DateTime.now().difference(_lastSoundTime!).inSeconds;
+        if (silentSec >= 4 && _stage == _CreativeStage.recording && _isLongPressing) {
+          _pressScaleController.reverse();
+          setState(() { _isLongPressing = false; _isFingerInside = true; });
+          _cleanupRecording();
+          if (mounted) {
+            setState(() => _stage = _CreativeStage.idle);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('🎵 没有听到声音呢～试着轻轻哼唱吧'),
+                duration: const Duration(seconds: 3),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.85),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
+          }
+        }
+      }
+    });
+    try {
+      final path = await AudioService().startWavRecording();
+      _recordedFilePath = path;
+      debugPrint('[CreativeFlow] 开始录音: $path');
+    } catch (e) {
+      debugPrint('[CreativeFlow] 启动录音失败: $e');
+      _ampSub?.cancel();
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    _ringRotateController.stop();
+    _breatheController.stop();
+    _ampSub?.cancel();
+    _currentAmplitude = 0.0;
+    _recordingStartTime = null;
+    final path = await AudioService().stopRecording();
+    _recordedFilePath = path;
+    final dur = AudioService().lastDuration;
+    debugPrint('[CreativeFlow] 停止录音: $path, 时长: $dur');
+
+    if (!mounted) return;
+
+    if (dur == null || dur.inSeconds < 2) {
+      _waveController.stop();
+      _currentAmplitude = 0.0;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('🎵 再试一次吧～对着手机哼一段旋律'),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.85),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } else {
+      _waveController.stop();
+      setState(() {});
+      _goToStage(_CreativeStage.stylePick);
+    }
+  }
+
+  Future<void> _cleanupRecording() async {
+    _waveController.stop();
+    _ringRotateController.stop();
+    _breatheController.stop();
+    _ampSub?.cancel();
+    _currentAmplitude = 0.0;
+    _recordingStartTime = null;
+    await AudioService().stopRecording();
+  }
+
+  /// 保存作品到本地数据库，可选择跳转邮局。
   Future<void> _saveWork({required bool thenShare}) async {
     // 优先使用 AI 生成的完整音乐，回退到录音文件或应急音调
     String? audioPath = _generationResult?.audioPath;
@@ -218,29 +315,32 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       durationSec: 3.0,
     )).audioPath;
 
-    final work = MusicWork.create(
-      title: '${_selectedStyle.label}作品',
+    if (!mounted) return;
+    final work = await SaveWorkDialog.show(
+      context,
       audioPath: audioPath,
       styleSeed: _selectedStyle,
-      moodSticker: _selectedMood,
       duration: AudioService().lastDuration ?? const Duration(seconds: 3),
-      sourceModule: 'humming_garden',
+      defaultTitle: '${_selectedStyle.label}作品',
     );
 
-    if (!mounted) return;
+    if (work == null || !mounted) return; // 用户取消
     await context.read<AppState>().addWork(work);
+
+    // 树苗生长动画
+    if (mounted) {
+      await TreeGrowAnimation.show(context, state: TreeState.sprouting);
+    }
 
     if (!mounted) return;
     if (thenShare) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('作品已保存！去邮局寄给爸妈吧 📮')),
-      );
+      context.push('${AppRoutes.composeCard}?workId=${work.id}');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('作品已保存到本地')),
       );
+      context.pop();
     }
-    context.pop();
   }
 
   Color _styleAccentColor() {
@@ -342,7 +442,24 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   Widget _buildStage() {
     switch (_stage) {
       case _CreativeStage.idle: return _buildIdleStage();
-      case _CreativeStage.recording: return _buildRecordingStage();
+      case _CreativeStage.recording:
+        return Listener(
+          onPointerUp: (_) {
+            if (_isLongPressing) {
+              _pressScaleController.reverse();
+              _transitionController.reverse();
+              setState(() => _isLongPressing = false);
+              if (_isFingerInside) {
+                _stopRecording();
+              } else {
+                _cleanupRecording().then((_) {
+                  if (mounted) setState(() => _stage = _CreativeStage.idle);
+                });
+              }
+            }
+          },
+          child: _buildRecordingStage(),
+        );
       case _CreativeStage.stylePick: return _buildStylePickStage();
       case _CreativeStage.generating: return _buildGeneratingStage();
       case _CreativeStage.editing: return _buildEditingStage();
@@ -352,35 +469,313 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   // ═══ 阶段 1：准备录音 ═══
 
   Widget _buildIdleStage() {
-    return SizedBox(
-      width: double.infinity,
-      child: Column(
-        key: const ValueKey('idle'),
-        mainAxisAlignment: MainAxisAlignment.center,
+    return AnimatedBuilder(
+      animation: _transitionController,
+      builder: (context, child) {
+        final t = _isLongPressing
+            ? Curves.easeOut.transform((_pressScaleController.value * 0.4).clamp(0.0, 0.4) / 0.4)
+            : Curves.easeIn.transform((1.0 - _transitionController.value).clamp(0.0, 1.0));
+        return Column(
+          key: const ValueKey('idle'),
+          children: [
+            const SizedBox(height: 25),
+            // 「声芽」
+            const Text('声芽', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w300, color: Color(0xFF639960), letterSpacing: 4)),
+            const SizedBox(height: 12),
+            // 副标题
+            const Text('用声音种一棵音乐树', style: TextStyle(fontSize: 16, color: Color(0xFF888888), letterSpacing: 1)),
+            const SizedBox(height: 60),
+            // 对话气泡
+            Opacity(
+              opacity: 1.0 - t * 0.6,
+              child: Transform.translate(
+                offset: Offset(0, -t * 20),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                  ),
+                  child: const Text(
+                    '轻轻按住麦克风哼一段小调，你的声音会长出专属音乐小树，还能做成明信片送给家人',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF444444), height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 35),
+            // 熊猫头像（呼吸动画）
+            Opacity(
+              opacity: 1.0 - t * 0.4,
+              child: Transform.translate(
+                offset: Offset(0, -t * 30),
+                child: AnimatedBuilder(
+                  animation: _breatheController,
+                  builder: (context, child) => Transform.scale(
+                    scale: 1.0 + _breatheController.value * 0.03,
+                    child: child,
+                  ),
+                  child: const AnimalAvatar(animal: GuardianAnimal.panda, size: 80, speechBubble: null),
+                ),
+              ),
+            ),
+            const SizedBox(height: 60),
+            // 绿色麦克风按钮
+            Transform.scale(
+              scale: 1.0 + t * 0.3,
+              child: GestureDetector(
+                onTap: () async {
+                  setState(() { _isLongPressing = true; _isFingerInside = true; });
+                  _pressScaleController.forward();
+                  _transitionController.forward();
+                  await _startRecording();
+                  if (mounted) setState(() => _stage = _CreativeStage.recording);
+                },
+                onLongPressStart: (_) async {
+                  setState(() { _isLongPressing = true; _isFingerInside = true; });
+                  _pressScaleController.forward();
+                  _transitionController.forward();
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  if (!_isLongPressing || !mounted) return;
+                  await _startRecording();
+                  if (mounted) setState(() => _stage = _CreativeStage.recording);
+                },
+                onLongPressEnd: (_) async {
+                  _pressScaleController.reverse();
+                  _transitionController.reverse();
+                  setState(() => _isLongPressing = false);
+                  if (_stage == _CreativeStage.recording) {
+                    if (_isFingerInside) {
+                      await _stopRecording();
+                    } else {
+                      // 手指上滑取消
+                      await _cleanupRecording();
+                      if (mounted) setState(() => _stage = _CreativeStage.idle);
+                    }
+                  }
+                },
+                onLongPressMoveUpdate: (details) {
+                  // 向上滑动超过 60px 判定为取消
+                  final isInside = details.localPosition.dy > -60;
+                  if (isInside != _isFingerInside) {
+                    setState(() => _isFingerInside = isInside);
+                  }
+                },
+                child: AnimatedBuilder(
+                  animation: _pressScaleController,
+                  builder: (context, child) => Transform.scale(
+                    scale: _isLongPressing ? 1.0 + _pressScaleController.value * 0.12 : 1.0,
+                    child: child,
+                  ),
+                  child: Container(
+                    width: 88, height: 88,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                        colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _isLongPressing
+                              ? const Color(0xFF6BAF4B).withValues(alpha: 0.55)
+                              : const Color(0xFF6BAF4B).withValues(alpha: 0.3),
+                          blurRadius: _isLongPressing ? 28 : 16,
+                          spreadRadius: _isLongPressing ? 8 : 2,
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text('🎤', style: TextStyle(color: Colors.white, fontSize: 36)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text('轻点开始录音', style: TextStyle(fontSize: 12, color: Color(0xFFAAAAAA))),
+            const Spacer(),
+            // 底部居中引导小字
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Text('多录制几段旋律，花园页面就能长满小树啦',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA))),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ═══ 阶段 2：正在录音 ═══
+
+  Widget _buildRecordingStage() {
+    final silentSec = _lastSoundTime != null
+        ? DateTime.now().difference(_lastSoundTime!).inSeconds
+        : 0;
+    final elapsedSec = _recordingStartTime != null
+        ? DateTime.now().difference(_recordingStartTime!).inSeconds
+        : 0;
+    final elapsedStr = '${(elapsedSec ~/ 60)}:${(elapsedSec % 60).toString().padLeft(2, '0')}';
+    final ringProgress = (elapsedSec / 15.0).clamp(0.0, 1.0);
+    final showSilentGuide = _smoothAmplitude < 0.10 && silentSec >= 2;
+    final hint = showSilentGuide ? '🎵 试着轻轻哼唱～' : '🎵 $elapsedStr';
+
+    return _buildStageShell(
+      key: const ValueKey('recording'),
+      topText: hint,
+      centerContent: Stack(
+        alignment: Alignment.center,
         children: [
-          const Center(
-            child: AnimalAvatar(
-              animal: GuardianAnimal.panda,
-              size: 72,
-              speechBubble: '来，对着手机\n哼一段旋律吧～',
+          // 波形粒子（音量越大越多）
+          AnimatedBuilder(
+            animation: _waveController,
+            builder: (context, _) => CustomPaint(
+              painter: WaveParticlesPainter(volume: _currentAmplitude, time: _waveController.value),
+              size: Size.infinite,
             ),
           ),
-          const SizedBox(height: 48),
-          Center(
-            child: GestureDetector(
-              onTap: () => _goToStage(_CreativeStage.recording),
+          // 熊猫呼吸 + 进度光环
+          AnimatedBuilder(
+            animation: _breatheController,
+            builder: (context, child) => Transform.scale(
+              scale: 1.0 + _breatheController.value * 0.04,
+              child: child,
+            ),
+            child: SizedBox(
+              width: 140, height: 140,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  AnimatedBuilder(
+                    animation: _ringRotateController,
+                    builder: (context, _) => CustomPaint(
+                      size: const Size(140, 140),
+                      painter: _GreenRingPainter(
+                        progress: ringProgress,
+                        volume: _currentAmplitude,
+                        rotation: _ringRotateController.value * 2 * 3.14159,
+                      ),
+                    ),
+                  ),
+                  const AnimalAvatar(animal: GuardianAnimal.panda, size: 72, speechBubble: null),
+                ],
+              ),
+            ),
+          ),
+          // 建议时长提示
+          if (elapsedSec < 2)
+            Positioned(
+              bottom: 24,
+              child: Text('建议哼唱 5-15 秒',
+                  style: TextStyle(fontSize: 11, color: AppTheme.textSecondary.withValues(alpha: 0.7))),
+            ),
+        ],
+      ),
+      buttonColor: const Color(0xFFFF6B6B),
+      buttonColorDark: const Color(0xFFE55A5A),
+      buttonShadowColor: AppTheme.error,
+      buttonOnLongPressEnd: (_) async {
+        _pressScaleController.reverse();
+        setState(() => _isLongPressing = false);
+        if (_isFingerInside) {
+          await _stopRecording();
+        } else {
+          await _cleanupRecording();
+          if (mounted) setState(() => _stage = _CreativeStage.idle);
+        }
+      },
+      buttonOnLongPressMoveUpdate: (details) {
+        final isInside = details.localPosition.dy > -60;
+        if (isInside != _isFingerInside) {
+          setState(() => _isFingerInside = isInside);
+        }
+      },
+      cancelHint: !_isFingerInside ? '松开取消录音' : null,
+      bottomHint: '点击开始录音',
+    );
+  }
+
+  /// 统一的阶段布局壳：顶部文字 + 中心区域 + 底部按钮
+  /// idle 和 recording 共用此布局，确保按钮位置一致，衔接自然
+  Widget _buildStageShell({
+    required Key key,
+    String? title,
+    String? subtitle,
+    String? topText,
+    required Widget centerContent,
+    required Color buttonColor,
+    required Color buttonColorDark,
+    required Color buttonShadowColor,
+    Function(LongPressStartDetails)? buttonOnLongPressStart,
+    Function(LongPressEndDetails)? buttonOnLongPressEnd,
+    Function(LongPressMoveUpdateDetails)? buttonOnLongPressMoveUpdate,
+    String? bottomHint,
+    String? cancelHint,
+  }) {
+    final showLongPressHint = _stage == _CreativeStage.recording && _isLongPressing;
+
+    return Column(
+      key: key,
+      children: [
+        const SizedBox(height: 24),
+        // 顶部文字
+        if (title != null) ...[
+          Text(title, style: const TextStyle(
+              fontSize: 28, fontWeight: FontWeight.w300,
+              color: AppTheme.primaryGreen, letterSpacing: 4)),
+          const SizedBox(height: 4),
+        ],
+        if (subtitle != null) ...[
+          Text(subtitle, style: const TextStyle(
+              fontSize: 13, color: AppTheme.textSecondary, letterSpacing: 1)),
+          const SizedBox(height: 28),
+        ],
+        if (topText != null) ...[
+          Text(topText, style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+          const SizedBox(height: 12),
+        ],
+        // 中心区域（自适应高度）
+        Expanded(child: centerContent),
+        const SizedBox(height: 16),
+        // 底部按钮（固定位置）
+        Center(
+          child: GestureDetector(
+            onLongPressStart: buttonOnLongPressStart != null
+                ? (d) => buttonOnLongPressStart(d)
+                : null,
+            onLongPressEnd: buttonOnLongPressEnd != null
+                ? (d) => buttonOnLongPressEnd(d)
+                : null,
+            onLongPressMoveUpdate: buttonOnLongPressMoveUpdate ?? (details) {
+              final isInside = details.localPosition.dy > -60;
+              if (isInside != _isFingerInside) {
+                setState(() => _isFingerInside = isInside);
+              }
+            },
+            child: AnimatedBuilder(
+              animation: _pressScaleController,
+              builder: (context, child) => Transform.scale(
+                scale: _isLongPressing ? 1.0 + _pressScaleController.value * 0.1 : 1.0,
+                child: child,
+              ),
               child: Container(
-                width: 88,
-                height: 88,
+                width: 88, height: 88,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    colors: [buttonColor, buttonColorDark],
                   ),
                   boxShadow: [
-                    BoxShadow(color: AppTheme.primaryGreen.withOpacity(0.35), blurRadius: 16, spreadRadius: 2),
+                    BoxShadow(
+                      color: buttonShadowColor.withValues(alpha: _isLongPressing ? 0.5 : 0.35),
+                      blurRadius: _isLongPressing ? 24 : 16,
+                      spreadRadius: _isLongPressing ? 6 : 2,
+                    ),
                   ],
                 ),
                 alignment: Alignment.center,
@@ -388,56 +783,16 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          const Center(
-            child: Text('点击开始哼唱', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
-          ),
-          const SizedBox(height: 40),
-        ],
-      ),
-    );
-  }
-
-  // ═══ 阶段 2：正在录音 ═══
-
-  Widget _buildRecordingStage() {
-    return Column(
-      key: const ValueKey('recording'),
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const SizedBox(height: 32),
-        const Text('正在听你哼唱...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-        const SizedBox(height: 8),
-        const Text('松开手指完成录音', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
-        const SizedBox(height: 16),
-        Expanded(
-          child: AnimatedBuilder(
-            animation: _waveController,
-            builder: (context, _) => CustomPaint(
-              painter: WaveParticlesPainter(volume: 0.6, time: _waveController.value),
-              size: Size.infinite,
-            ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          cancelHint ?? (showLongPressHint ? '点击完成录音' : (bottomHint ?? '')),
+          style: TextStyle(
+            fontSize: 12,
+            color: cancelHint != null ? AppTheme.error.withValues(alpha: 0.7) : AppTheme.textSecondary,
           ),
         ),
-        GestureDetector(
-          onTap: () => _goToStage(_CreativeStage.stylePick),
-          child: Container(
-            width: 80, height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-                colors: [Color(0xFFFF6B6B), Color(0xFFE55A5A)],
-              ),
-              boxShadow: [BoxShadow(color: AppTheme.error.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 4)],
-            ),
-            alignment: Alignment.center,
-            child: const Text('🎤', style: TextStyle(color: Colors.white, fontSize: 34)),
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text('点击完成录音', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
-        const SizedBox(height: 40),
+        const SizedBox(height: 36),
       ],
     );
   }
@@ -469,7 +824,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                 ],
               ),
               child: const Center(
-                child: Text('🎵 已经记下你的旋律！', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                child: Text('选一种风格，让音符发芽', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
               ),
             ),
           ),
@@ -798,11 +1153,6 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                              color: Colors.white,
-                              size: 30,
-                            ),
                             alignment: Alignment.center,
                             child: Text(_isPlaying ? '⏸' : '▶', style: const TextStyle(color: Colors.white, fontSize: 22)),
                           ),
@@ -949,6 +1299,21 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          // 做成音乐明信片
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _saveWork(thenShare: true),
+              icon: const Text('📮', style: TextStyle(fontSize: 18)),
+              label: const Text('做成音乐明信片\n把这首歌寄给远方爸爸妈妈'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 56),
+                side: const BorderSide(color: AppTheme.primaryWarm, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
         ],
       ),
@@ -1002,4 +1367,63 @@ class _PulseIconState extends State<_PulseIcon> with SingleTickerProviderStateMi
       ),
     );
   }
+}
+
+/// 录音页面：熊猫外圈渐变绿光环 —— 兼作录音时长进度条
+class _GreenRingPainter extends CustomPainter {
+  final double progress; // 0-1 录音时长进度
+  final double volume;   // 0-1 实时音量（影响光环亮度）
+  final double rotation; // 自旋转角度
+
+  _GreenRingPainter({this.progress = 0.0, this.volume = 0.0, this.rotation = 0.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 4;
+    final sweepAngle = (progress * 2 * 3.14159).clamp(0.0, 2 * 3.14159);
+    final alpha = 0.3 + volume * 0.5;
+
+    // 背景轨道（浅灰绿）
+    final trackPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = AppTheme.primaryGreen.withValues(alpha: 0.12);
+    canvas.drawCircle(center, radius, trackPaint);
+
+    // 进度光环（随录音时长填充）
+    final progressPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round
+      ..shader = SweepGradient(
+        startAngle: -3.14159 / 2,
+        endAngle: -3.14159 / 2 + 2 * 3.14159,
+        colors: [
+          AppTheme.primaryGreen.withValues(alpha: 0.3 * alpha),
+          AppTheme.primaryGreen.withValues(alpha: 0.7 * alpha),
+          AppTheme.primaryGreen.withValues(alpha: alpha),
+          AppTheme.primaryGreen.withValues(alpha: 0.7 * alpha),
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -3.14159 / 2 + rotation * 0.3, // 缓慢自旋转
+      sweepAngle,
+      false,
+      progressPaint,
+    );
+
+    // 音量外圈光晕（音量越大越亮）
+    final glowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6 + volume * 4
+      ..color = AppTheme.primaryGreen.withValues(alpha: 0.04 + volume * 0.12);
+    canvas.drawCircle(center, radius + 2, glowPaint);
+  }
+
+  @override
+  bool shouldRepaint(_GreenRingPainter oldDelegate) =>
+      progress != oldDelegate.progress || volume != oldDelegate.volume || rotation != oldDelegate.rotation;
 }

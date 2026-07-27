@@ -3,7 +3,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'shared/providers/app_state.dart';
 import 'shared/providers/audio_provider.dart';
+import 'shared/providers/notification_provider.dart';
 import 'shared/services/audio_service.dart';
+import 'shared/services/outbox_queue_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 
@@ -23,6 +25,7 @@ class _SingSproutAppState extends State<SingSproutApp>
     // 启动时从本地数据库加载用户数据
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().loadLocalData();
+      context.read<NotificationProvider>().loadInitialCount();
     });
   }
 
@@ -66,6 +69,13 @@ class _SingSproutAppState extends State<SingSproutApp>
       debugPrint('[Lifecycle] 应用恢复，存在已保存的录音片段');
       // 不在此处弹窗，由录音页面负责展示恢复提示
     }
+
+    // 处理离线发件箱 + 刷新通知
+    OutboxQueueService().processQueue().then((_) {
+      if (mounted) {
+        context.read<NotificationProvider>().refresh();
+      }
+    });
   }
 
   @override
