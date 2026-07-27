@@ -28,12 +28,150 @@ class Arrangement {
 
 /// Rule-based arrangement engine (0MB model).
 ///
-/// Takes a melody (from YIN→MIDI) + StyleSeed and generates
-/// style-specific accompaniment: chord progressions, bass, percussion.
-///
-/// Replaces what would be a large generative AI model with DSP-grade
-/// music theory templates. Per optimization plan: "离线规则引擎生成基础伴奏".
+/// Two modes:
+/// 1. AI-driven — `arrangeFromAiScore()` converts AI's per-bar score
+///    directly to note events. No templates. AI controls every note.
+/// 2. Pure rule — `arrange()` uses music-theory templates for offline mode.
 class ArrangementEngine {
+
+  // ── AI Score → Arrangement (no templates) ──
+
+  /// Convert AI-written per-bar score directly to a playable arrangement.
+  /// No templates or rule-based filling — the AI controls every note.
+  ///
+  /// If [score] includes melody fields, those replace the [melody] parameter
+  /// (speech mode — AI composed the melody too).
+  static Arrangement arrangeFromAiScore({
+    required List<MidiNoteEvent> melody,
+    required AiFullScore score,
+    required int tonicMidi,
+    double? durationOverride,
+  }) {
+    final beatDuration = 60.0 / score.tempoBpm;
+    final barDuration = beatDuration * 4.0;
+
+    // Use AI-composed melody if available
+    List<MidiNoteEvent> finalMelody;
+    if (score.melody != null && score.melody!.isNotEmpty && score.melodyRhythm != null) {
+      finalMelody = _aiMelodyToEvents(score, beatDuration);
+    } else {
+      finalMelody = melody;
+    }
+
+    final totalDuration = durationOverride ??
+        (finalMelody.isNotEmpty
+            ? (finalMelody.map((n) => n.startSeconds + n.durationSeconds).reduce(max) + 1.0).clamp(3.0, 30.0)
+            : score.bars.length * barDuration);
+
+    final chordNotes = <MidiNoteEvent>[];
+    final bassNotes = <MidiNoteEvent>[];
+    final percNotes = <MidiNoteEvent>[];
+
+    for (var i = 0; i < score.bars.length; i++) {
+      final bar = score.bars[i];
+      final barStart = i * barDuration;
+      if (barStart >= totalDuration) break;
+
+      final dyn = bar.dynamic_;
+
+      // ── Chords: AI wrote voicing + rhythm ──
+      if (bar.chord.isNotEmpty && bar.chordRhythm.isNotEmpty) {
+        var chordTime = barStart;
+        for (final dur in bar.chordRhythm) {
+          if (chordTime >= totalDuration) break;
+          // Cycle through chord notes for arpeggiation variety
+          final noteIdx = ((chordTime - barStart) / beatDuration * bar.chord.length).round() % bar.chord.length;
+          final midi = bar.chord[noteIdx % bar.chord.length];
+          chordNotes.add(MidiNoteEvent(
+            noteNumber: midi,
+            startSeconds: chordTime,
+            durationSeconds: (dur * beatDuration * 0.9).clamp(0.05, barDuration),
+            velocity: (0.35 * dyn).clamp(0.15, 0.6),
+          ));
+          chordTime += dur * beatDuration;
+        }
+      }
+
+      // ── Bass: AI wrote notes + rhythm ──
+      if (bar.bass.isNotEmpty && bar.bassRhythm.isNotEmpty) {
+        var bassTime = barStart;
+        for (var j = 0; j < bar.bass.length && j < bar.bassRhythm.length; j++) {
+          if (bassTime >= totalDuration) break;
+          bassNotes.add(MidiNoteEvent(
+            noteNumber: bar.bass[j].clamp(28, 72),
+            startSeconds: bassTime,
+            durationSeconds: (bar.bassRhythm[j] * beatDuration * 0.85).clamp(0.05, barDuration),
+            velocity: (0.5 * dyn).clamp(0.25, 0.7),
+          ));
+          bassTime += bar.bassRhythm[j] * beatDuration;
+        }
+      }
+
+      // ── Percussion: AI wrote per-8th-note pattern ──
+      if (bar.percussion.isNotEmpty) {
+        final eighthDuration = beatDuration * 0.5;
+        for (var j = 0; j < bar.percussion.length; j++) {
+          final hitTime = barStart + j * eighthDuration;
+          if (hitTime >= totalDuration) break;
+          final hit = bar.percussion[j];
+          if (hit == null || hit.isEmpty) continue;
+
+          final vel = (0.6 * dyn).clamp(0.3, 0.8);
+          if (hit.contains('kick')) {
+            percNotes.add(MidiNoteEvent(
+              noteNumber: _kick, startSeconds: hitTime,
+              durationSeconds: 0.1, velocity: vel,
+            ));
+          }
+          if (hit.contains('snare')) {
+            percNotes.add(MidiNoteEvent(
+              noteNumber: _snare, startSeconds: hitTime,
+              durationSeconds: 0.08, velocity: vel * 0.95,
+            ));
+          }
+          if (hit.contains('hh')) {
+            percNotes.add(MidiNoteEvent(
+              noteNumber: _hihat, startSeconds: hitTime,
+              durationSeconds: 0.03, velocity: vel * 0.6,
+            ));
+          }
+        }
+      }
+    }
+
+    return Arrangement(
+      melody: finalMelody,
+      chords: chordNotes,
+      bass: bassNotes,
+      percussion: percNotes,
+      tempoBpm: score.tempoBpm,
+      tonicMidi: tonicMidi,
+      totalDurationSeconds: totalDuration,
+    );
+  }
+
+  /// Convert AI-composed melody (MIDI note list + rhythm) to MidiNoteEvents.
+  static List<MidiNoteEvent> _aiMelodyToEvents(AiFullScore score, double beatDuration) {
+    final events = <MidiNoteEvent>[];
+    final notes = score.melody!;
+    final rhythm = score.melodyRhythm!;
+    var time = 0.0;
+
+    for (var i = 0; i < notes.length && i < rhythm.length; i++) {
+      final dur = rhythm[i] * beatDuration;
+      events.add(MidiNoteEvent(
+        noteNumber: notes[i].clamp(48, 84),
+        startSeconds: time,
+        durationSeconds: dur * 0.85,
+        velocity: 0.65,
+      ));
+      time += dur;
+    }
+
+    return events;
+  }
+
+  // ── Rule-based arrangement (offline fallback) ──
   // ── Major scale intervals (semitones from tonic) ──
   static const _majorScale = [0, 2, 4, 5, 7, 9, 11];
   static const _pentatonic = [0, 2, 4, 7, 9];
@@ -160,81 +298,6 @@ class ArrangementEngine {
       tempoBpm: profile.tempo,
       tonicMidi: tonicMidi,
       totalDurationSeconds: totalDuration,
-    );
-  }
-
-  /// Arrange using AI recipe + rule engine for note generation.
-  ///
-  /// The [recipe] provides creative decisions (chord progression, tempo,
-  /// style) while the rule engine handles reliable MIDI note generation.
-  static Arrangement arrangeWithRecipe({
-    required List<MidiNoteEvent> melody,
-    required AiArrangementRecipe recipe,
-    required int tonicMidi,
-    double? durationOverride,
-  }) {
-    if (melody.isEmpty) {
-      return _emptyArrangementWithRecipe(recipe, tonicMidi, durationOverride ?? 4.0);
-    }
-
-    final totalDuration = durationOverride ??
-        (melody.map((n) => n.startSeconds + n.durationSeconds).reduce(max) + 1.0).clamp(3.0, 30.0);
-
-    // Convert AI style enums to internal types
-    final chordRhythm = switch (recipe.chordStyle) {
-      AiChordStyle.arpeggiated => _ChordRhythm.arpeggiated,
-      AiChordStyle.pad => _ChordRhythm.pad,
-      AiChordStyle.staccato => _ChordRhythm.staccato,
-    };
-
-    final bassPattern = switch (recipe.bassStyle) {
-      AiBassStyle.rootOnBeats => _BassPattern.rootOnOneAndThree,
-      AiBassStyle.held => _BassPattern.heldRoot,
-      AiBassStyle.alternating => _BassPattern.rootFifth,
-    };
-
-    final profile = _StyleProfile(
-      progression: recipe.chordProgression,
-      tempo: recipe.tempoBpm,
-      chordRhythm: chordRhythm,
-      chordDurationBeats: recipe.chordStyle == AiChordStyle.pad ? 8.0 : 4.0,
-      bassPattern: bassPattern,
-      scale: _majorScale,
-      hasPercussion: recipe.addPercussion,
-    );
-
-    final chordNotes = _generateChords(tonicMidi, profile, totalDuration, profile.scale);
-    final bassNotes = _generateBass(tonicMidi, profile, totalDuration, profile.scale);
-
-    List<MidiNoteEvent> percNotes = [];
-    if (profile.hasPercussion) {
-      percNotes = _generatePercussion(totalDuration, profile.tempo);
-    }
-
-    return Arrangement(
-      melody: melody,
-      chords: chordNotes,
-      bass: bassNotes,
-      percussion: percNotes,
-      tempoBpm: profile.tempo,
-      tonicMidi: tonicMidi,
-      totalDurationSeconds: totalDuration,
-    );
-  }
-
-  static Arrangement _emptyArrangementWithRecipe(
-    AiArrangementRecipe recipe,
-    int tonicMidi,
-    double duration,
-  ) {
-    return Arrangement(
-      melody: [],
-      chords: [],
-      bass: [],
-      percussion: [],
-      tempoBpm: recipe.tempoBpm,
-      tonicMidi: tonicMidi,
-      totalDurationSeconds: duration,
     );
   }
 

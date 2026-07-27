@@ -8,6 +8,8 @@ import '../../shared/models/music_work.dart';
 import '../../shared/providers/audio_provider.dart';
 import '../../shared/services/audio_service.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/services/dash_scope_service.dart';
+import '../../shared/services/speech_service.dart';
 import '../../shared/utils/audio_generator.dart';
 import '../../shared/widgets/mood_color_picker.dart';
 
@@ -22,6 +24,8 @@ class _RecordingPageState extends State<RecordingPage> {
   StyleSeed _selectedStyle = StyleSeed.morningDew;
   MoodColor? _selectedMood;
   bool _showRecoveryBanner = false;
+  bool _speechMode = false;
+  String? _speechText;
 
   @override
   void initState() {
@@ -144,6 +148,26 @@ class _RecordingPageState extends State<RecordingPage> {
                 onSelected: (mood) => setState(() => _selectedMood = mood),
               ),
 
+              const SizedBox(height: 12),
+
+              // 说话 / 哼唱 切换
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('哼唱', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                  Switch(
+                    value: _speechMode,
+                    onChanged: (v) => setState(() => _speechMode = v),
+                    activeColor: AppTheme.primaryGreen,
+                  ),
+                  const Text('说话', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                  if (_speechText != null && _speechText!.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.check_circle, size: 16, color: AppTheme.primaryGreen),
+                  ],
+                ],
+              ),
+
               const Spacer(),
 
               // 生成按钮
@@ -151,7 +175,7 @@ class _RecordingPageState extends State<RecordingPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // Not recording yet → start recording
+                    // Not recording yet → start recording (+ speech recog if enabled)
                     if (!context.read<AudioProvider>().isRecording) {
                       final hasPermission = await AudioService().requestMicPermission();
                       if (!hasPermission) {
@@ -162,26 +186,67 @@ class _RecordingPageState extends State<RecordingPage> {
                         }
                         return;
                       }
+                      _speechText = null;
                       await context.read<AudioProvider>().startWavRecording();
                       return;
                     }
 
-                    // Currently recording → stop and generate
+                    // Currently recording → stop, transcribe if speech mode, then generate
                     final recordedPath = await context.read<AudioProvider>().stopRecording();
+
+                    // Speech mode: transcribe recorded audio (file-based, no mic conflict)
+                    if (_speechMode && recordedPath != null) {
+                      final text = await SpeechService().transcribe(recordedPath);
+                      if (text != null && mounted) {
+                        setState(() => _speechText = text);
+                      } else if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('语音识别未成功，将使用离线模式'),
+                            behavior: SnackBarBehavior.floating,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
 
                     // AI 流水线：哼唱 WAV → 完整音乐
                     String? audioPath;
+                    bool aiUsed = false;
                     if (recordedPath != null) {
                       try {
                         final result = await AudioGenerator.generateFromHumming(
                           wavFilePath: recordedPath,
                           styleSeed: _selectedStyle,
                           recordingDuration: AudioService().lastDuration,
+                          speechText: _speechText,
                         );
                         audioPath = result.audioPath;
+                        aiUsed = result.aiEnhanced;
                       } catch (e) {
                         debugPrint('[RecordingPage] AI 生成失败: $e');
                       }
+                    }
+
+                    if (!aiUsed && context.mounted) {
+                      final hasKey = await DashScopeService().isConfigured;
+                      final hint = hasKey
+                          ? 'AI 未能响应，已使用离线规则引擎'
+                          : 'AI 未启用：请在隐私设置中配置 API Key';
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(hint), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)),
+                      );
+                    }
+
+                    // Show speech result if any
+                    if (_speechText != null && _speechText!.isNotEmpty && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('识别到你说: "${_speechText}"'),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
                     }
                     // 回退
                     if (audioPath == null) {
@@ -207,7 +272,11 @@ class _RecordingPageState extends State<RecordingPage> {
                     if (!context.mounted) return;
                     context.push(AppRoutes.editor, extra: work);
                   },
-                  child: Text(audioProvider.isRecording ? '⏹ 停止并生成' : '🎤 开始哼唱'),
+                  child: Text(audioProvider.isRecording
+                      ? '⏹ 停止并生成'
+                      : _speechMode
+                          ? '🎙 开始说话'
+                          : '🎤 开始哼唱'),
                 ),
               ),
               const SizedBox(height: 16),

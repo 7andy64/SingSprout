@@ -13,10 +13,11 @@ import '../../shared/widgets/instrument_mixer.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/services/audio_service.dart';
+import '../../shared/services/dash_scope_service.dart';
+import '../../shared/services/speech_service.dart';
 import '../../shared/services/file_storage_service.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/utils/audio_generator.dart' show AudioGenerator, GenerationResult, PipelineProgress;
-import '../../shared/services/arrangement_engine.dart' show Arrangement;
 import '../../shared/services/wav_synthesizer.dart' show ModulationParams, WavSynthesizer;
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
@@ -69,6 +70,10 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   /// 编辑参数（滑杆变化时触发重新合成）
   ModulationParams _modParams = ModulationParams.neutral;
 
+  /// 说话模式 + 识别结果
+  bool _speechMode = false;
+  String? _speechText;
+
   /// 防抖计时器
   Timer? _reRenderTimer;
   bool _isReRendering = false;
@@ -116,6 +121,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     // ── 开始录音 (WAV) ──
     if (stage == _CreativeStage.recording) {
       _waveController.repeat();
+      _speechText = null;
       try {
         final path = await AudioService().startWavRecording();
         _recordedFilePath = path;
@@ -129,6 +135,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         }
         return;
       }
+
     }
 
     // ── 停止录音 ──
@@ -137,6 +144,24 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       final path = await AudioService().stopRecording();
       _recordedFilePath = path;
       debugPrint('[CreativeFlow] 停止录音: $path');
+
+      // Speech mode: transcribe recorded audio (file-based, no mic conflict)
+      if (_speechMode && path != null) {
+        final text = await SpeechService().transcribe(path);
+        if (text != null && mounted) {
+          setState(() => _speechText = text);
+          debugPrint('[CreativeFlow] Transcription: $text');
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('语音识别未成功，将使用离线模式'),
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+
       if (path == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('录音未保存，请重试'), behavior: SnackBarBehavior.floating),
@@ -158,6 +183,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
             wavFilePath: _recordedFilePath!,
             styleSeed: _selectedStyle,
             recordingDuration: AudioService().lastDuration,
+            speechText: _speechText,
             onProgress: (p) {
               if (mounted) {
                 setState(() {
@@ -187,6 +213,24 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         );
       }
       _isGenerating = false;
+
+      // Notify user if AI wasn't used
+      if (_generationResult != null && !_generationResult!.aiEnhanced && mounted) {
+        final hasKey = await DashScopeService().isConfigured;
+        String hint;
+        if (!hasKey) {
+          hint = 'AI 未启用：请在隐私设置中配置 API Key';
+        } else {
+          hint = 'AI 未能响应，已使用离线规则引擎';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(hint),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
 
       if (mounted && _stage == _CreativeStage.generating) {
         Future.delayed(const Duration(milliseconds: 600), () {
@@ -392,6 +436,20 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
           const Center(
             child: Text('点击开始哼唱', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
           ),
+          const SizedBox(height: 12),
+          // 说话 / 哼唱 切换
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('哼唱', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+              Switch(
+                value: _speechMode,
+                onChanged: (v) => setState(() => _speechMode = v),
+                activeColor: AppTheme.primaryGreen,
+              ),
+              const Text('说话', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+            ],
+          ),
           const SizedBox(height: 40),
         ],
       ),
@@ -406,9 +464,12 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: 32),
-        const Text('正在听你哼唱...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+        Text(
+          _speechMode ? '正在听你说话...' : '正在听你哼唱...',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
+        ),
         const SizedBox(height: 8),
-        const Text('松开手指完成录音', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+        const Text('点击完成录音', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
         const SizedBox(height: 16),
         Expanded(
           child: AnimatedBuilder(
@@ -797,11 +858,6 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                                   offset: const Offset(0, 2),
                                 ),
                               ],
-                            ),
-                            child: Icon(
-                              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                              color: Colors.white,
-                              size: 30,
                             ),
                             alignment: Alignment.center,
                             child: Text(_isPlaying ? '⏸' : '▶', style: const TextStyle(color: Colors.white, fontSize: 22)),

@@ -13,12 +13,16 @@ class GenerationResult {
   final Arrangement arrangement;
   final List<MidiNoteEvent> melody;
   final int melodyNoteCount;
+  final bool aiEnhanced;
+  final String? aiMoodNote;
 
   const GenerationResult({
     required this.audioPath,
     required this.arrangement,
     required this.melody,
     required this.melodyNoteCount,
+    this.aiEnhanced = false,
+    this.aiMoodNote,
   });
 }
 
@@ -27,7 +31,7 @@ class PipelineProgress {
   final String stageName;
   final String icon;
   final double fraction; // 0.0–1.0
-  final String? detail;  // e.g. "找到 7 个音符"
+  final String? detail;
 
   const PipelineProgress({
     required this.stageName,
@@ -38,11 +42,11 @@ class PipelineProgress {
 
   static const stages = [
     PipelineProgress(stageName: '正在听你的旋律...', icon: '🌱', fraction: 0.08),
-    PipelineProgress(stageName: '在旋律中寻找音符', icon: '🔍', fraction: 0.25),
-    PipelineProgress(stageName: '找到音符了！',       icon: '🎵', fraction: 0.42),
-    PipelineProgress(stageName: 'AI 正在构思编排…',  icon: '🤖', fraction: 0.55),
-    PipelineProgress(stageName: '正在编织和弦',       icon: '🎹', fraction: 0.72),
-    PipelineProgress(stageName: '音乐马上就好',       icon: '✨', fraction: 0.90),
+    PipelineProgress(stageName: '在旋律中寻找音符', icon: '🔍', fraction: 0.20),
+    PipelineProgress(stageName: '找到音符了！',       icon: '🎵', fraction: 0.35),
+    PipelineProgress(stageName: 'AI 正在逐小节编排…',  icon: '🤖', fraction: 0.50),
+    PipelineProgress(stageName: '正在编织和弦与节奏', icon: '🎹', fraction: 0.75),
+    PipelineProgress(stageName: '音乐马上就好',       icon: '✨', fraction: 0.92),
   ];
 }
 
@@ -51,22 +55,27 @@ typedef ProgressCallback = void Function(PipelineProgress progress);
 /// AI music generation pipeline orchestrator.
 ///
 /// Full chain: WAV recording → YIN pitch detection → MIDI quantization
-/// → rule-based arrangement → WAV synthesis → output file.
+/// → [AI full-score generation] → WAV synthesis → output file.
 ///
-/// Per optimization plan: 0MB model, fully offline, pure DSP + rules.
+/// When AI is available, it writes per-bar accompaniment (bass, chords,
+/// percussion, dynamics) directly — no rule templates. Falls back to
+/// rule engine when offline or on error.
 class AudioGenerator {
   /// Generate a complete music piece from a humming recording.
   ///
   /// [wavFilePath] — 16-bit 44100Hz mono WAV.
+  /// [speechText] — optional speech-to-text result from the same recording.
   /// [onProgress] — called at each pipeline stage for UI feedback.
   static Future<GenerationResult> generateFromHumming({
     required String wavFilePath,
     required StyleSeed styleSeed,
     Duration? recordingDuration,
+    String? speechText,
     ProgressCallback? onProgress,
   }) async {
     debugPrint('[AudioGenerator] === Pipeline start ===');
-    debugPrint('[AudioGenerator] Input: $wavFilePath, style: ${styleSeed.label}');
+    debugPrint('[AudioGenerator] Input: $wavFilePath, style: ${styleSeed.label}'
+        '${speechText != null ? ', speech: "$speechText"' : ''}');
 
     final stopwatch = Stopwatch()..start();
     int melodyNoteCount = 0;
@@ -75,13 +84,16 @@ class AudioGenerator {
       // ── Stage 1: Read WAV ──
       onProgress?.call(PipelineProgress.stages[0]);
       final samples = await AudioProcessor.readWav(wavFilePath);
-      debugPrint('[AudioGenerator] Stage 1: Read ${samples.length} samples (${(samples.length / 44100).toStringAsFixed(1)}s)');
+      debugPrint('[AudioGenerator] Stage 1: Read ${samples.length} samples');
 
       // ── Stage 2: YIN pitch detection ──
       onProgress?.call(PipelineProgress.stages[1]);
       final pitchContour = AudioProcessor.detectPitch(samples, 44100);
       final voicedFrames = pitchContour.where((p) => p.frequencyHz > 0).length;
-      debugPrint('[AudioGenerator] Stage 2: YIN → ${pitchContour.length} frames, $voicedFrames voiced');
+      final voicedRatio = pitchContour.isNotEmpty
+          ? voicedFrames / pitchContour.length
+          : 0.0;
+      debugPrint('[AudioGenerator] Stage 2: YIN → ${pitchContour.length} frames, voiced ratio: ${(voicedRatio * 100).toStringAsFixed(0)}%');
 
       // ── Stage 3: MIDI quantization ──
       var melody = AudioProcessor.pitchToMidi(pitchContour);
@@ -90,20 +102,30 @@ class AudioGenerator {
       onProgress?.call(PipelineProgress(
         stageName: '找到音符了！',
         icon: '🎵',
-        fraction: 0.50,
-        detail: melodyNoteCount > 0 ? '发现了 $melodyNoteCount 个音符' : '正在创作一段旋律...',
+        fraction: 0.38,
+        detail: melodyNoteCount > 0
+            ? '发现了 $melodyNoteCount 个音符'
+            : (speechText != null ? '正在理解你说的话...' : '正在创作一段旋律...'),
       ));
 
-      // Fallback: silent / too short
-      if (melody.isEmpty) {
-        debugPrint('[AudioGenerator] ⚠️ No melody detected, generating fallback');
+      // Low voiced ratio + speech text = user was speaking, not humming
+      final isSpeaking = speechText != null && (voicedRatio < 0.3 || melodyNoteCount < 3);
+
+      // Fallback melody for silent/too-short recordings (or pure speech)
+      if (melody.isEmpty || isSpeaking) {
+        if (isSpeaking) {
+          debugPrint('[AudioGenerator] Detected speech input, generating melody from text');
+        } else {
+          debugPrint('[AudioGenerator] No melody detected, generating fallback');
+        }
         melody = _generateFallbackMelody(
           (recordingDuration?.inSeconds ?? 4).clamp(2, 10).toDouble(),
+          seed: speechText ?? styleSeed.name,
         );
         melodyNoteCount = melody.length;
       }
 
-      // ── Stage 3.5: AI enhancement (optional, graceful fallback) ──
+      // ── Stage 4: AI full-score generation ──
       onProgress?.call(PipelineProgress.stages[3]);
       final totalDuration = melody.isNotEmpty
           ? (melody.map((n) => n.startSeconds + n.durationSeconds).reduce(max) + 1.0).clamp(3.0, 30.0)
@@ -112,6 +134,7 @@ class AudioGenerator {
 
       Arrangement arrangement;
       String? aiMoodNote;
+      bool aiEnhanced = false;
       final melodyData = melody.map((n) => {
         'noteNumber': n.noteNumber,
         'startSeconds': n.startSeconds,
@@ -120,38 +143,40 @@ class AudioGenerator {
       }).toList();
 
       try {
-        final recipe = await DashScopeService().enhanceArrangement(
+        final score = await DashScopeService().generateFullScore(
           melodyNotes: melodyData,
-          styleLabel: styleSeed.label,
           totalDuration: totalDuration,
           tonicMidi: tonicMidi,
+          speechText: speechText,
+          needsMelody: isSpeaking,
         );
 
-        if (recipe != null) {
-          arrangement = ArrangementEngine.arrangeWithRecipe(
+        if (score != null && score.bars.isNotEmpty) {
+          arrangement = ArrangementEngine.arrangeFromAiScore(
             melody: melody,
-            recipe: recipe,
+            score: score,
             tonicMidi: tonicMidi,
             durationOverride: totalDuration,
           );
-          aiMoodNote = recipe.moodNote;
-          debugPrint('[AudioGenerator] Stage 3.5: AI-enhanced arrangement used');
+          aiMoodNote = score.mood;
+          aiEnhanced = true;
+          debugPrint('[AudioGenerator] Stage 4: AI full-score used (${score.bars.length} bars, mood: ${score.mood})');
         } else {
           arrangement = ArrangementEngine.arrange(melody: melody, style: styleSeed, durationOverride: totalDuration);
-          debugPrint('[AudioGenerator] Stage 3.5: AI unavailable, using rule engine');
+          debugPrint('[AudioGenerator] Stage 4: AI unavailable, using rule engine');
         }
-      } catch (_) {
+      } catch (e) {
         arrangement = ArrangementEngine.arrange(melody: melody, style: styleSeed, durationOverride: totalDuration);
-        debugPrint('[AudioGenerator] Stage 3.5: AI failed, using rule engine');
+        debugPrint('[AudioGenerator] Stage 4: AI error ($e), using rule engine');
       }
 
-      debugPrint('[AudioGenerator] Stage 4: Arranged → mel:${arrangement.melody.length} '
+      debugPrint('[AudioGenerator] Arranged: mel:${arrangement.melody.length} '
           'chd:${arrangement.chords.length} bass:${arrangement.bass.length} '
           'perc:${arrangement.percussion.length}');
 
       // ── Stage 5: WAV synthesis ──
       onProgress?.call(PipelineProgress.stages[4]);
-      if (aiMoodNote != null) {
+      if (aiMoodNote != null && aiMoodNote.isNotEmpty) {
         onProgress?.call(PipelineProgress(
           stageName: 'AI 说: $aiMoodNote',
           icon: '🤖',
@@ -171,7 +196,7 @@ class AudioGenerator {
       );
 
       stopwatch.stop();
-      debugPrint('[AudioGenerator] Stage 5: Synthesized → $outputPath '
+      debugPrint('[AudioGenerator] Synthesized → $outputPath '
           '(${arrangement.totalDurationSeconds.toStringAsFixed(1)}s)');
       debugPrint('[AudioGenerator] === Pipeline complete in ${stopwatch.elapsedMilliseconds}ms ===');
 
@@ -187,12 +212,14 @@ class AudioGenerator {
         arrangement: arrangement,
         melody: melody,
         melodyNoteCount: melodyNoteCount,
+        aiEnhanced: aiEnhanced,
+        aiMoodNote: aiMoodNote,
       );
     } catch (e) {
       stopwatch.stop();
       debugPrint('[AudioGenerator] Pipeline error (${stopwatch.elapsedMilliseconds}ms): $e');
       final fallbackPath = await _generateEmergencyPath(styleSeed: styleSeed.name);
-      final fallbackMelody = _generateFallbackMelody((recordingDuration?.inSeconds ?? 4).clamp(2, 10).toDouble());
+      final fallbackMelody = _generateFallbackMelody((recordingDuration?.inSeconds ?? 4).clamp(2, 10).toDouble(), seed: 'emergency');
       final fallbackArr = ArrangementEngine.arrange(melody: fallbackMelody, style: styleSeed);
       return GenerationResult(
         audioPath: fallbackPath,
@@ -221,26 +248,54 @@ class AudioGenerator {
 
   // ── Fallback generators ──
 
-  /// Quick tonic guess from melody for AI prompt.
   static int _guessTonic(List<MidiNoteEvent> melody) {
     if (melody.isEmpty) return 60;
     final avg = melody.map((n) => n.noteNumber).reduce((a, b) => a + b) ~/ melody.length;
-    return (avg ~/ 12) * 12 + (avg % 12); // round to pitch class
+    return (avg ~/ 12) * 12 + (avg % 12);
   }
 
-  static List<MidiNoteEvent> _generateFallbackMelody(double durationSeconds) {
-    final noteLen = (durationSeconds / 4).clamp(0.4, 1.5);
+  /// Generate a varied fallback melody using pentatonic scale.
+  ///
+  /// Uses a simple hash of [seed] (e.g. speech text or duration) to pick
+  /// different note sequences, so different inputs produce different melodies
+  /// even when AI is unavailable.
+  static List<MidiNoteEvent> _generateFallbackMelody(double durationSeconds, {String? seed}) {
+    // C pentatonic: C D E G A  (MIDI 60-84 range)
+    const pentatonic = [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84];
+    final rng = _simpleRng(seed ?? durationSeconds.toString());
+
+    final numNotes = (durationSeconds / 0.35).round().clamp(6, 24);
     final notes = <MidiNoteEvent>[];
-    final baseNotes = [62, 65, 69, 67];
-    for (var i = 0; i < baseNotes.length && i * noteLen < durationSeconds; i++) {
+    var time = 0.0;
+    var lastIdx = pentatonic.length ~/ 2; // start mid-range
+
+    for (var i = 0; i < numNotes && time < durationSeconds; i++) {
+      // Walk around the pentatonic scale, preferring small steps
+      final step = (rng.next() % 5) - 2; // -2 to +2
+      lastIdx = (lastIdx + step).clamp(0, pentatonic.length - 1);
+
+      // Vary rhythm: mix of quarter notes (0.5) and eighth notes (0.25)
+      final dur = (rng.next() % 3 == 0) ? 0.5 : 0.25;
+      if (time + dur > durationSeconds) break;
+
       notes.add(MidiNoteEvent(
-        noteNumber: baseNotes[i],
-        startSeconds: i * noteLen,
-        durationSeconds: noteLen * 0.85,
-        velocity: 0.7,
+        noteNumber: pentatonic[lastIdx],
+        startSeconds: time,
+        durationSeconds: dur * 0.8,
+        velocity: 0.55 + (rng.next() % 30) / 100.0,
       ));
+      time += dur;
     }
     return notes;
+  }
+
+  /// Trivial LCG for deterministic pseudo-random numbers.
+  static _SimpleRng _simpleRng(String seed) {
+    var h = 0;
+    for (var i = 0; i < seed.length; i++) {
+      h = (h * 31 + seed.codeUnitAt(i)) & 0x7FFFFFFF;
+    }
+    return _SimpleRng(h);
   }
 
   static Future<String> _generateEmergencyPath({
@@ -267,5 +322,16 @@ class AudioGenerator {
     final outPath = FileStorageService().generateMusicPath(styleSeed: styleSeed, extension: 'wav');
     await AudioProcessor.writeWav(outPath, samples, sampleRate);
     return outPath;
+  }
+}
+
+/// Simple LCG-based pseudo-random number generator.
+class _SimpleRng {
+  int _state;
+  _SimpleRng(this._state);
+
+  int next() {
+    _state = (_state * 1103515245 + 12345) & 0x7FFFFFFF;
+    return _state;
   }
 }
