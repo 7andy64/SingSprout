@@ -22,6 +22,20 @@ class MidiNoteEvent {
     required this.durationSeconds,
     this.velocity = 0.8,
   });
+
+  Map<String, dynamic> toMap() => {
+    'n': noteNumber,
+    's': startSeconds,
+    'd': durationSeconds,
+    'v': velocity,
+  };
+
+  factory MidiNoteEvent.fromMap(Map<String, dynamic> m) => MidiNoteEvent(
+    noteNumber: m['n'] as int,
+    startSeconds: (m['s'] as num).toDouble(),
+    durationSeconds: (m['d'] as num).toDouble(),
+    velocity: (m['v'] as num).toDouble(),
+  );
 }
 
 /// Pure-Dart audio analysis: WAV reading, YIN pitch detection, silence gating.

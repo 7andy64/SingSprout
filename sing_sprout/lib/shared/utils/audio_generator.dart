@@ -4,7 +4,7 @@ import '../../core/constants/enums.dart';
 import '../services/audio_processor.dart';
 import '../services/arrangement_engine.dart';
 import '../services/dash_scope_service.dart';
-import '../services/wav_synthesizer.dart';
+import '../services/wav_synthesizer_isolate.dart';
 import '../services/file_storage_service.dart';
 
 /// Result of the full generation pipeline.
@@ -188,11 +188,10 @@ class AudioGenerator {
         styleSeed: styleSeed.name,
         extension: 'wav',
       );
-      await WavSynthesizer.renderToFile(
-        arrangementOrNotes: arrangement,
+      await WavSynthesizerIsolate.renderToFile(
+        arrangement: arrangement,
         style: styleSeed,
         outputPath: outputPath,
-        totalDuration: arrangement.totalDurationSeconds,
       );
 
       stopwatch.stop();

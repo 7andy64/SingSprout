@@ -24,6 +24,26 @@ class Arrangement {
   });
 
   List<MidiNoteEvent> get allNotes => [...melody, ...chords, ...bass, ...percussion];
+
+  Map<String, dynamic> toMap() => {
+    'melody': melody.map((e) => e.toMap()).toList(),
+    'chords': chords.map((e) => e.toMap()).toList(),
+    'bass': bass.map((e) => e.toMap()).toList(),
+    'percussion': percussion.map((e) => e.toMap()).toList(),
+    'tempoBpm': tempoBpm,
+    'tonicMidi': tonicMidi,
+    'totalDurationSeconds': totalDurationSeconds,
+  };
+
+  factory Arrangement.fromMap(Map<String, dynamic> m) => Arrangement(
+    melody: (m['melody'] as List).map((e) => MidiNoteEvent.fromMap(e as Map<String, dynamic>)).toList(),
+    chords: (m['chords'] as List).map((e) => MidiNoteEvent.fromMap(e as Map<String, dynamic>)).toList(),
+    bass: (m['bass'] as List).map((e) => MidiNoteEvent.fromMap(e as Map<String, dynamic>)).toList(),
+    percussion: (m['percussion'] as List).map((e) => MidiNoteEvent.fromMap(e as Map<String, dynamic>)).toList(),
+    tempoBpm: (m['tempoBpm'] as num).toDouble(),
+    tonicMidi: m['tonicMidi'] as int,
+    totalDurationSeconds: (m['totalDurationSeconds'] as num).toDouble(),
+  );
 }
 
 /// Rule-based arrangement engine (0MB model).
