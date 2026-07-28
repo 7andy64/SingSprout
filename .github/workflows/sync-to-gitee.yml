@@ -1,0 +1,25 @@
+name: Sync to Gitee
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+      - fix/*
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full clone)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror push to Gitee
+        uses: wearerequired/git-mirror-action@v1
+        with:
+          source-repo: git@github.com:nanbujiwanfeng/SingSprout.git
+          destination-repo: https://gitee.com/nanbujiwanfeng/SingSprout.git
+          destination-repo-username: nanbujiwanfeng
+          destination-repo-password: ${{ secrets.GITEE_TOKEN }}
