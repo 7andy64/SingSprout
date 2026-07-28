@@ -63,9 +63,9 @@ class AudioProvider extends ChangeNotifier {
     _savedFragmentPath = null;
     notifyListeners();
 
-    _ampSub = _service.amplitude.listen((amp) {
-      _currentAmplitude = amp;
-      _waveformData!.add((amp + 60) / 60);
+    _ampSub = _service.amplitudeStream.listen((amp) {
+      _currentAmplitude = amp.current;
+      _waveformData!.add((amp.current + 60) / 60);
       notifyListeners();
     });
 
