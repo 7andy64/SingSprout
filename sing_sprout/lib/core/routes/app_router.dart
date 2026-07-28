@@ -249,7 +249,7 @@ class _BottomNavBar extends StatelessWidget {
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -329,80 +329,5 @@ class _BottomNavBar extends StatelessWidget {
       context.read<NotificationProvider>().refresh();
     }
     GoRouter.of(context).go(routes[index]);
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final String emoji;
-  final String label;
-  final double fontSize;
-  final double labelFontSize;
-  final bool isSelected;
-  final Animation<double> scaleAnimation;
-  final bool showBadge;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.emoji,
-    required this.label,
-    required this.fontSize,
-    required this.labelFontSize,
-    required this.isSelected,
-    required this.scaleAnimation,
-    required this.showBadge,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedBuilder(
-        animation: scaleAnimation,
-        builder: (context, child) => Transform.scale(
-          scale: scaleAnimation.value,
-          child: child,
-        ),
-        child: SizedBox(
-          width: 56,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Text(emoji, style: TextStyle(fontSize: fontSize)),
-                  if (showBadge)
-                    Positioned(
-                      right: -4,
-                      top: -2,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppTheme.error,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: labelFontSize,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected
-                      ? AppTheme.primaryGreen
-                      : AppTheme.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

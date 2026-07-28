@@ -40,10 +40,8 @@ class _FakePathProvider extends PathProviderPlatform {
   @override
   Future<String?> getExternalStoragePath() async => _tempDir;
 
-  @override
   Future<List<String>?> getExternalCacheDirectories() async => [_tempDir];
 
-  @override
   Future<List<String>?> getExternalStorageDirectories({StorageDirectory? type}) async =>
       [_tempDir];
 
@@ -67,8 +65,6 @@ void main() {
   //  声芽 SingSprout — 本地存储技术基础层验证测试
   //  覆盖: Database / Encryption / FileStorage / 4×Repository
   // ================================================================
-
-  late String _testTempDir;
 
   setUpAll(() {
     // 初始化 Flutter 绑定
@@ -365,7 +361,8 @@ void main() {
     });
 
     test('fileExists 对不存在文件返回 false', () async {
-      final exists = await fileService.fileExists('/nonexistent/file.xyz');
+      final path = '${fileService.recordingsDir}/nonexistent.file';
+      final exists = await fileService.fileExists(path);
       expect(exists, isFalse);
     });
 

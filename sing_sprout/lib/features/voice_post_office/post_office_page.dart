@@ -5,7 +5,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
 import '../../shared/models/voice_card.dart';
-import '../../shared/models/music_work.dart';
 import '../../shared/providers/app_state.dart';
 
 /// 声音邮局 — 亲子音乐明信片收发

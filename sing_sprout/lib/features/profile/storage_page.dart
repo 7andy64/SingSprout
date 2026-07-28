@@ -25,7 +25,6 @@ class _StoragePageState extends State<StoragePage> {
   int _generatedBytes = 0;
   int _coversBytes = 0;
   int _exportsBytes = 0;
-  int _worksBytes = 0; // 作品音频文件总计
   List<_FileEntry> _exportFiles = [];
   bool _clearing = false;
 
@@ -43,7 +42,6 @@ class _StoragePageState extends State<StoragePage> {
       _generatedBytes = await _dirSize(_storage.generatedDir);
       _coversBytes = await _dirSize(_storage.coversDir);
       _exportsBytes = await _dirSize(_storage.exportsDir);
-      _worksBytes = _recordingsBytes + _generatedBytes;
 
       // 列出导出文件详情
       _exportFiles = await _listFiles(_storage.exportsDir);

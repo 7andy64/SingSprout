@@ -4,11 +4,11 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/constants/app_config.dart';
-import '../../shared/widgets/animal_avatar.dart';
 import '../../shared/widgets/update_dialog.dart';
+import '../../shared/models/user_profile.dart';
+import 'widgets/profile_widgets.dart';
 import '../../shared/services/update_service.dart';
 import '../../shared/services/file_storage_service.dart';
-import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
 
 /// 个人中心 — MVP P0 功能
@@ -65,28 +65,28 @@ class _ProfilePageState extends State<ProfilePage> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     children: [
                       // 用户信息卡片
-                      _ProfileHeader(profile: profile, loading: !dataLoaded),
+                      ProfileHeader(profile: profile, loading: !dataLoaded),
 
                       const SizedBox(height: 16),
 
                       // 数据统计区
                       if (dataLoaded) ...[
-                        _StatsSection(appState: appState),
+                        StatsSection(appState: appState),
                         const SizedBox(height: 16),
                       ],
 
                       // 低存储警告
                       if (_storageChecked && _totalStorageBytes > 100 * 1024 * 1024)
-                        _LowStorageBanner(
+                        LowStorageBanner(
                           totalBytes: _totalStorageBytes,
                           onTap: () => context.push(AppRoutes.storage),
                         ),
 
                       // 菜单列表
-                      _MenuSection(
+                      MenuSection(
                         title: '创作',
                         items: [
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.music_note_rounded,
                             label: '我的作品集',
                             trailing: dataLoaded
@@ -100,7 +100,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null,
                             onTap: () => context.push(AppRoutes.works),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.library_music_outlined,
                             label: '我的声音库',
                             trailing: dataLoaded
@@ -117,10 +117,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
 
-                      _MenuSection(
+                      MenuSection(
                         title: '连接',
                         items: [
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.mail_outline_rounded,
                             label: '家庭音乐账本',
                             trailing: dataLoaded
@@ -134,7 +134,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null,
                             onTap: () => context.push(AppRoutes.ledger),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.people_outline_rounded,
                             label: '教师/家长观察窗',
                             onTap: () => context.push(AppRoutes.observation),
@@ -142,30 +142,30 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
 
-                      _MenuSection(
+                      MenuSection(
                         title: '设置',
                         items: [
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.pets_outlined,
                             label: '换一只守护动物',
                             onTap: () => _showAnimalPicker(profile),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.edit_outlined,
                             label: '编辑资料',
                             onTap: () => _showEditProfile(profile),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.lock_outline_rounded,
                             label: '隐私与安全',
                             onTap: () => context.push(AppRoutes.privacySettings),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.storage_rounded,
                             label: '存储管理',
                             onTap: () => _showStorageManagement(),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.help_outline_rounded,
                             label: '帮助与反馈',
                             onTap: () => _showHelpDialog(),
@@ -173,10 +173,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
 
-                      _MenuSection(
+                      MenuSection(
                         title: '',
                         items: [
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.info_outline_rounded,
                             label: '关于声芽',
                             trailing: Text(
@@ -420,350 +420,6 @@ class _ProfilePageState extends State<ProfilePage> {
             child: const Text('知道了'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// 子组件
-// ══════════════════════════════════════════════════════════════════════════════
-
-/// 用户信息头部 — 头像、昵称、角色、陪伴动物
-class _ProfileHeader extends StatelessWidget {
-  final UserProfile? profile;
-  final bool loading;
-
-  const _ProfileHeader({required this.profile, this.loading = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final hasProfile = profile != null;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-      child: Column(
-        children: [
-          AnimalAvatar(
-            animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
-            size: 80,
-            speechBubble: hasProfile ? '嘿！今天想做什么？' : null,
-          ),
-          const SizedBox(height: 12),
-          if (loading)
-            Column(
-              children: const [
-                SizedBox(
-                  width: 120,
-                  height: 20,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF0F0F0),
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 8),
-                SizedBox(
-                  width: 80,
-                  height: 14,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF0F0F0),
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          else ...[
-            Text(
-              profile?.nickname ?? '新朋友',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-          ],
-          if (!loading && hasProfile) ...[
-            // 角色徽章
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${profile!.role.emoji} ${profile!.role.label}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.primaryGreen,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${profile!.guardianAnimal.displayName} 陪伴你',
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${_formatDate(profile!.createdAt)} 加入',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ] else if (!loading && !hasProfile) ...[
-            Text(
-              '${GuardianAnimal.panda.displayName} 陪伴你',
-              style: const TextStyle(color: AppTheme.textSecondary),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
-  }
-}
-
-/// 数据统计区 — 作品、声音、明信片计数
-class _StatsSection extends StatelessWidget {
-  final AppState appState;
-  const _StatsSection({required this.appState});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        children: [
-          _StatCard(
-            icon: Icons.music_note_rounded,
-            label: '作品',
-            count: appState.totalWorks,
-            color: AppTheme.primaryGreen,
-          ),
-          const SizedBox(width: 12),
-          _StatCard(
-            icon: Icons.graphic_eq_rounded,
-            label: '声音',
-            count: appState.totalSounds,
-            color: const Color(0xFF7C4DFF),
-          ),
-          const SizedBox(width: 12),
-          _StatCard(
-            icon: Icons.mail_outline_rounded,
-            label: '明信片',
-            count: appState.totalCards,
-            color: const Color(0xFFFF6D00),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 统计卡片
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int count;
-  final Color color;
-
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.count,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(height: 6),
-            Text(
-              '$count',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 菜单分组
-class _MenuSection extends StatelessWidget {
-  final String title;
-  final List<_MenuItem> items;
-
-  const _MenuSection({required this.title, required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8, top: 12),
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: items,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 低存储警告横幅
-class _LowStorageBanner extends StatelessWidget {
-  final int totalBytes;
-  final VoidCallback onTap;
-
-  const _LowStorageBanner({required this.totalBytes, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final mb = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF3CD),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFFC107).withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.storage_rounded, size: 20, color: Color(0xFFE67E22)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '存储空间已使用 $mb MB',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF856404),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      '点击管理存储，不会自动删除你的作品',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF856404)),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: Color(0xFF856404), size: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 菜单项
-class _MenuItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Widget? trailing;
-  final VoidCallback onTap;
-
-  const _MenuItem({
-    required this.icon,
-    required this.label,
-    this.trailing,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, size: 22, color: AppTheme.textSecondary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ),
-            if (trailing != null) trailing!,
-            const Icon(
-              Icons.chevron_right,
-              color: AppTheme.divider,
-              size: 20,
-            ),
-          ],
-        ),
       ),
     );
   }

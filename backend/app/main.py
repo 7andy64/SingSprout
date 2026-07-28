@@ -11,7 +11,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
-from app.api.routes import share, messages, health, updates
+from app.api.routes import share, messages, health, updates, storage
 
 
 @asynccontextmanager
@@ -32,7 +32,7 @@ app = FastAPI(
 # 中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,6 +44,7 @@ app.include_router(health.router, tags=["Health"])
 app.include_router(share.router, prefix="/v1/share", tags=["Share"])
 app.include_router(messages.router, prefix="/v1/messages", tags=["Messages"])
 app.include_router(updates.router, prefix="/v1/updates", tags=["Updates"])
+app.include_router(storage.router, prefix="/v1/storage", tags=["Storage"])
 
 # 静态文件 — APK 下载
 import os

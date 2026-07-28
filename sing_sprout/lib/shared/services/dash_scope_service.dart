@@ -476,22 +476,6 @@ class DashScopeService {
     }
   }
 
-  AiBassStyle _parseBassStyle(String? s) {
-    switch (s) {
-      case 'held': return AiBassStyle.held;
-      case 'alternating': return AiBassStyle.alternating;
-      default: return AiBassStyle.rootOnBeats;
-    }
-  }
-
-  AiChordStyle _parseChordStyle(String? s) {
-    switch (s) {
-      case 'pad': return AiChordStyle.pad;
-      case 'staccato': return AiChordStyle.staccato;
-      default: return AiChordStyle.arpeggiated;
-    }
-  }
-
   /// Format melody notes as a brief text summary for the AI prompt.
   String _formatMelody(List<Map<String, dynamic>> notes, double totalDuration) {
     if (notes.isEmpty) return '无旋律音符';

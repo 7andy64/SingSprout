@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart' show AudioRecorder, RecordConfig, AudioEncoder, Amplitude;
 import 'package:permission_handler/permission_handler.dart';
@@ -192,19 +193,6 @@ class AudioService {
 
       debugPrint('[AudioService] ✅ 开始录音 → $filePath');
       return filePath;
-    } on Exception catch (e) {
-      _isRecording = false;
-      _recordingStartedAt = null;
-      _currentRecordingPath = null;
-      throw AudioRecordException('录音启动失败: $e');
-    } on FileSystemException catch (e) {
-      // 存储空间不足或路径不可写
-      _isRecording = false;
-      _recordingStartedAt = null;
-      _currentRecordingPath = null;
-      throw AudioRecordException(
-        '存储空间不足或文件写入失败: ${e.message}。请清理存储后重试。',
-      );
     } catch (e) {
       _isRecording = false;
       _recordingStartedAt = null;
@@ -395,7 +383,8 @@ class AudioService {
   /// 播放音频文件。
   Future<void> playAudio(String filePath) async {
     try {
-      await _player.play(DeviceFileSource(filePath));
+      await _player.setFilePath(filePath);
+      await _player.play();
       _isPlaying = true;
     } catch (e) {
       debugPrint('[AudioService] playAudio error: $e');
@@ -422,7 +411,7 @@ class AudioService {
 
   Future<void> resumePlayback() async {
     try {
-      await _player.resume();
+      await _player.play();
     } catch (e) {
       debugPrint('[AudioService] resumePlayback error: $e');
     }

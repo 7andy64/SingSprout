@@ -131,10 +131,10 @@ class _SaveWorkDialogState extends State<SaveWorkDialog> {
                         duration: const Duration(milliseconds: 200),
                         width: 44, height: 44,
                         decoration: BoxDecoration(
-                          color: color.withOpacity(isSelected ? 1 : 0.15),
+                          color: color.withValues(alpha: isSelected ? 1 : 0.15),
                           shape: BoxShape.circle,
                           border: Border.all(color: color, width: isSelected ? 3 : 0),
-                          boxShadow: isSelected ? [BoxShadow(color: color.withOpacity(0.3), blurRadius: 6)] : null,
+                          boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 6)] : null,
                         ),
                         child: Center(child: Text(mood.emoji, style: const TextStyle(fontSize: 20))),
                       ),
@@ -156,9 +156,9 @@ class _SaveWorkDialogState extends State<SaveWorkDialog> {
                     decoration: InputDecoration(
                       hintText: '比如：今天好开心呀～',
                       isDense: true,
-                      hintStyle: TextStyle(color: AppTheme.textSecondary.withOpacity(0.5), fontSize: 13),
+                      hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.5), fontSize: 13),
                       filled: true,
-                      fillColor: AppTheme.primaryGreen.withOpacity(0.05),
+                      fillColor: AppTheme.primaryGreen.withValues(alpha: 0.05),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.all(12),
                       counterStyle: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
@@ -169,7 +169,7 @@ class _SaveWorkDialogState extends State<SaveWorkDialog> {
                 // 私密标记
                 Container(
                   decoration: BoxDecoration(
-                    color: AppTheme.moodGrey.withOpacity(0.08),
+                    color: AppTheme.moodGrey.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: CheckboxListTile(
