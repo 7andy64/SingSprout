@@ -1,6 +1,6 @@
 name: sing_sprout
 description: 声芽 SingSprout - AI音乐启蒙创作工具
-version: 0.6.0+1
+version: 0.8.0+1
 publish_to: none
 
 environment:

@@ -418,9 +418,6 @@ class AudioGenerator {
       final step = contourDir;
       noteIdx = (noteIdx + step).clamp(0, pentFreqs.length - 1);
 
-      // Per-note ADSR
-      final attackSamples = (0.02 * sampleRate).round();
-      final releaseSamples = (0.08 * sampleRate).round();
       final noteDuration = noteEnd - samplePos;
 
       for (var i = samplePos; i < noteEnd; i++) {
