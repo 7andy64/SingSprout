@@ -381,10 +381,13 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                       ),
                     ),
                   ),
-                  const AnimalAvatar(
-                      animal: GuardianAnimal.panda,
-                      size: 72,
-                      speechBubble: null),
+                  Consumer<AppState>(
+                    builder: (_, app, __) => AnimalAvatar(
+                        animal: app.userProfile?.guardianAnimal ??
+                            GuardianAnimal.panda,
+                        size: 72,
+                        speechBubble: null),
+                  ),
                 ],
               ),
             ),

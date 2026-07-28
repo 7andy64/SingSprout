@@ -69,9 +69,9 @@ class AppRouter {
             ),
           ),
           GoRoute(
-            path: AppRoutes.moodRadio,
+            path: AppRoutes.fieldSoundLab,
             pageBuilder: (context, state) => _buildTabPage(
-              const MoodRadioPage(),
+              const FieldSoundLabPage(),
             ),
           ),
           GoRoute(
@@ -96,6 +96,11 @@ class AppRouter {
       ),
 
       // ── 独立子页面 ──
+      GoRoute(
+        path: AppRoutes.moodRadio,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const MoodRadioPage(),
+      ),
       GoRoute(
         path: AppRoutes.onboarding,
         parentNavigatorKey: rootNavigatorKey,
@@ -233,7 +238,7 @@ class _BottomNavBar extends StatelessWidget {
   // emoji + 标签映射
   static const _tabs = [
     ('🎤', '哼唱'),
-    ('💜', '心情'),
+    ('🎧', '田野'),
     ('🌳', '音乐树'),
     ('📮', '邮局'),
     ('👤', '我的'),
@@ -309,7 +314,7 @@ class _BottomNavBar extends StatelessWidget {
 
   int _calculateIndex(String location) {
     if (location.startsWith(AppRoutes.hummingGarden)) return 0;
-    if (location.startsWith(AppRoutes.moodRadio)) return 1;
+    if (location.startsWith(AppRoutes.fieldSoundLab)) return 1;
     if (location.startsWith(AppRoutes.musicTree)) return 2;
     if (location.startsWith(AppRoutes.postOffice)) return 3;
     if (location.startsWith(AppRoutes.profile)) return 4;
@@ -319,7 +324,7 @@ class _BottomNavBar extends StatelessWidget {
   void _onTap(BuildContext context, int index) {
     final routes = [
       AppRoutes.hummingGarden,
-      AppRoutes.moodRadio,
+      AppRoutes.fieldSoundLab,
       AppRoutes.musicTree,
       AppRoutes.postOffice,
       AppRoutes.profile,

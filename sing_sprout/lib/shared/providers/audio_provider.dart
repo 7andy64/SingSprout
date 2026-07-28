@@ -8,7 +8,7 @@ enum AudioStatus { idle, recording, processing, playing, paused }
 class AudioProvider extends ChangeNotifier {
   final _service = AudioService();
   StreamSubscription<dynamic>? _recordSub;
-  StreamSubscription<double>? _ampSub;
+  StreamSubscription<dynamic>? _ampSub;
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<Duration>? _durationSub;

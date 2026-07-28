@@ -87,10 +87,13 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                 builder: (context, _) {
                   return Transform.scale(
                     scale: 1.0 + _animalBreatheController.value * 0.03,
-                    child: const AnimalAvatar(
-                      animal: GuardianAnimal.panda,
-                      size: 72,
-                      speechBubble: '嘿！今天想哼点什么？\n试试用音乐种一棵树吧～',
+                    child: Consumer<AppState>(
+                      builder: (_, app, __) => AnimalAvatar(
+                          animal: app.userProfile?.guardianAnimal ??
+                              GuardianAnimal.panda,
+                          size: 72,
+                          speechBubble:
+                              '嘿！今天想哼点什么？\n试试用音乐种一棵树吧～'),
                     ),
                   );
                 },
