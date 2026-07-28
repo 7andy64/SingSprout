@@ -70,8 +70,8 @@ class _SingSproutAppState extends State<SingSproutApp>
       // 不在此处弹窗，由录音页面负责展示恢复提示
     }
 
-    // 处理离线发件箱 + 刷新通知
-    OutboxQueueService().processQueue().then((_) {
+    // 处理离线发件箱 + 刷新通知（deviceId 由 OutboxQueueService 内部从缓存读取）
+    OutboxQueueService().processQueue(deviceId: 'default').then((_) {
       if (mounted) {
         context.read<NotificationProvider>().refresh();
       }

@@ -249,15 +249,8 @@ class ArrangementEngine {
         _styleProfiles[StyleSeed.frogDrum]!,
       ];
       profile = templates[rng.nextInt(3)];
-      // Randomize progression
-      final allProgs = [
-        [1, 5, 6, 4],
-        [1, 4, 1, 5],
-        [1, 6, 4, 5],
-        [4, 5, 1, 1],
-      ];
       profile = _StyleProfile(
-        progression: allProgs[rng.nextInt(allProgs.length)],
+        progression: _allProgressions[rng.nextInt(_allProgressions.length)],
         tempo: 60 + rng.nextInt(50).toDouble(),
         chordRhythm: profile.chordRhythm,
         chordDurationBeats: profile.chordDurationBeats,
@@ -271,110 +264,78 @@ class ArrangementEngine {
     final tonicMidi = _detectTonic(melody);
 
     // ── 2. Calculate duration ──
-    final totalDuration = durationOverride ??
+    final melodyDuration = durationOverride ??
         (melody.map((n) => n.startSeconds + n.durationSeconds).reduce(max) + 1.0).clamp(3.0, 30.0);
 
-    // ── 3. Generate chord track ──
-    final chordNotes = _generateChords(
-      tonicMidi, profile, totalDuration, profile.scale,
+    // ── 2a. Intro & outro ──
+    final beatDuration = 60.0 / profile.tempo;
+    final barDuration = beatDuration * 4.0;
+    final hasIntro = melodyDuration >= 6.0; // only add intro for longer pieces
+    final hasOutro = melodyDuration >= 4.0;
+    final introDuration = hasIntro ? barDuration : 0.0;
+    final outroDuration = hasOutro ? barDuration : 0.0;
+    final totalDuration = melodyDuration + introDuration + outroDuration;
+
+    // Offset melody by intro
+    final offsetMelody = hasIntro
+        ? melody.map((n) => MidiNoteEvent(
+              noteNumber: n.noteNumber,
+              startSeconds: n.startSeconds + introDuration,
+              durationSeconds: n.durationSeconds,
+              velocity: n.velocity,
+            )).toList()
+        : melody;
+
+    // ── 3. Select progression dynamically from melody contour ──
+    final selectedProgression = _selectProgression(melody, profile.progression);
+
+    // ── 4. Generate chord track (offset by intro) ──
+    final chordNotes = _generateChordsWithProgression(
+      tonicMidi, profile, melodyDuration, profile.scale, selectedProgression,
+      timeOffset: introDuration,
     );
 
-    // ── 4. Generate bass track ──
-    final bassNotes = _generateBass(
-      tonicMidi, profile, totalDuration, profile.scale,
+    // ── 5. Generate bass track (offset by intro) ──
+    final bassNotes = _generateBassWithProgression(
+      tonicMidi, profile, melodyDuration, profile.scale, selectedProgression,
+      timeOffset: introDuration,
     );
 
-    // ── 5. Generate percussion ──
+    // ── 6. Generate percussion (offset by intro) ──
     List<MidiNoteEvent> percNotes = [];
     if (profile.hasPercussion) {
-      percNotes = _generatePercussion(totalDuration, profile.tempo);
+      percNotes = _generatePercussion(melodyDuration, profile.tempo, timeOffset: introDuration);
+    }
+
+    // ── 7. Intro section ──
+    if (hasIntro) {
+      final introNotes = _generateIntro(tonicMidi, profile, barDuration);
+      chordNotes.insertAll(0, introNotes.where((n) => n.noteNumber >= 48)); // chords
+      bassNotes.insertAll(0, introNotes.where((n) => n.noteNumber < 48));   // bass
+      if (profile.hasPercussion) {
+        percNotes.insertAll(0, _generateIntroPercussion(barDuration, profile.tempo));
+      }
+    }
+
+    // ── 8. Outro section ──
+    if (hasOutro) {
+      final outroStart = totalDuration - outroDuration;
+      final outroNotes = _generateOutro(tonicMidi, profile, outroDuration, outroStart);
+      chordNotes.addAll(outroNotes.where((n) => n.noteNumber >= 48));
+      bassNotes.addAll(outroNotes.where((n) => n.noteNumber < 48));
+      if (profile.hasPercussion) {
+        percNotes.addAll(_generateOutroPercussion(outroDuration, outroStart, profile.tempo));
+      }
     }
 
     return Arrangement(
-      melody: melody,
+      melody: offsetMelody,
       chords: chordNotes,
       bass: bassNotes,
       percussion: percNotes,
       tempoBpm: profile.tempo,
       tonicMidi: tonicMidi,
       totalDurationSeconds: totalDuration,
-    );
-  }
-
-  /// Arrange using AI recipe + rule engine for note generation.
-  ///
-  /// The [recipe] provides creative decisions (chord progression, tempo,
-  /// style) while the rule engine handles reliable MIDI note generation.
-  static Arrangement arrangeWithRecipe({
-    required List<MidiNoteEvent> melody,
-    required AiArrangementRecipe recipe,
-    required int tonicMidi,
-    double? durationOverride,
-  }) {
-    if (melody.isEmpty) {
-      return _emptyArrangementWithRecipe(recipe, tonicMidi, durationOverride ?? 4.0);
-    }
-
-    final totalDuration = durationOverride ??
-        (melody.map((n) => n.startSeconds + n.durationSeconds).reduce(max) + 1.0).clamp(3.0, 30.0);
-
-    // Convert AI style enums to internal types
-    _ChordRhythm chordRhythm;
-    switch (recipe.chordStyle) {
-      case AiChordStyle.arpeggiated: chordRhythm = _ChordRhythm.arpeggiated; break;
-      case AiChordStyle.pad: chordRhythm = _ChordRhythm.pad; break;
-      case AiChordStyle.staccato: chordRhythm = _ChordRhythm.staccato; break;
-    }
-
-    _BassPattern bassPattern;
-    switch (recipe.bassStyle) {
-      case AiBassStyle.rootOnBeats: bassPattern = _BassPattern.rootOnOneAndThree; break;
-      case AiBassStyle.held: bassPattern = _BassPattern.heldRoot; break;
-      case AiBassStyle.alternating: bassPattern = _BassPattern.rootFifth; break;
-    }
-
-    final profile = _StyleProfile(
-      progression: recipe.chordProgression,
-      tempo: recipe.tempoBpm,
-      chordRhythm: chordRhythm,
-      chordDurationBeats: recipe.chordStyle == AiChordStyle.pad ? 8.0 : 4.0,
-      bassPattern: bassPattern,
-      scale: _majorScale,
-      hasPercussion: recipe.addPercussion,
-    );
-
-    final chordNotes = _generateChords(tonicMidi, profile, totalDuration, profile.scale);
-    final bassNotes = _generateBass(tonicMidi, profile, totalDuration, profile.scale);
-
-    List<MidiNoteEvent> percNotes = [];
-    if (profile.hasPercussion) {
-      percNotes = _generatePercussion(totalDuration, profile.tempo);
-    }
-
-    return Arrangement(
-      melody: melody,
-      chords: chordNotes,
-      bass: bassNotes,
-      percussion: percNotes,
-      tempoBpm: profile.tempo,
-      tonicMidi: tonicMidi,
-      totalDurationSeconds: totalDuration,
-    );
-  }
-
-  static Arrangement _emptyArrangementWithRecipe(
-    AiArrangementRecipe recipe,
-    int tonicMidi,
-    double duration,
-  ) {
-    return Arrangement(
-      melody: [],
-      chords: [],
-      bass: [],
-      percussion: [],
-      tempoBpm: recipe.tempoBpm,
-      tonicMidi: tonicMidi,
-      totalDurationSeconds: duration,
     );
   }
 
@@ -395,21 +356,28 @@ class ArrangementEngine {
 
     if (totalWeight == 0) return 60; // default C4
 
-    // Major key profiles (Krumhansl-Schmuckler, simplified)
+    // Krumhansl-Kessler key profiles
     const majorProfile = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+    const minorProfile = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
 
-    // Try each possible tonic, correlate with major profile
+    // Try all 24 keys (12 major + 12 minor)
     var bestTonic = 0;
     var bestScore = -1.0;
 
     for (var tonic = 0; tonic < 12; tonic++) {
-      var score = 0.0;
+      var majorScore = 0.0;
+      var minorScore = 0.0;
       for (var i = 0; i < 12; i++) {
         final pc = (i - tonic + 12) % 12;
-        score += pitchClassWeight[i] * majorProfile[pc];
+        majorScore += pitchClassWeight[i] * majorProfile[pc];
+        minorScore += pitchClassWeight[i] * minorProfile[pc];
       }
-      if (score > bestScore) {
-        bestScore = score;
+      if (majorScore > bestScore) {
+        bestScore = majorScore;
+        bestTonic = tonic;
+      }
+      if (minorScore > bestScore) {
+        bestScore = minorScore;
         bestTonic = tonic;
       }
     }
@@ -422,38 +390,91 @@ class ArrangementEngine {
 
   // ── Chord Generation ──
 
-  static List<MidiNoteEvent> _generateChords(
+  /// Select chord progression based on melody contour.
+  static List<int> _selectProgression(List<MidiNoteEvent> melody, List<int> defaultProg) {
+    if (melody.length < 2) return defaultProg;
+
+    final intervals = <int>[];
+    for (var i = 1; i < melody.length; i++) {
+      intervals.add(melody[i].noteNumber - melody[i - 1].noteNumber);
+    }
+    if (intervals.isEmpty) return defaultProg;
+
+    final risingRatio = intervals.where((i) => i > 0).length / intervals.length;
+    final avgInterval = intervals.fold<int>(0, (a, b) => a + b.abs()) ~/ intervals.length;
+
+    // Wide-interval melody → more dynamic progressions
+    if (avgInterval > 3) {
+      if (risingRatio > 0.5) return [1, 4, 5, 1];   // Rising & wide → I-IV-V-I
+      return [4, 5, 1, 1];                            // Wide & falling → IV-V-I-I
+    }
+
+    if (risingRatio > 0.6) {
+      return [1, 5, 4, 5];   // Rising melody → I-V-IV-V
+    } else if (risingRatio < 0.4) {
+      return [1, 6, 2, 5];   // Falling melody → I-vi-ii-V
+    } else {
+      return [1, 5, 6, 4];   // Balanced → I-V-vi-IV
+    }
+  }
+
+  static List<MidiNoteEvent> _generateChordsWithProgression(
     int tonicMidi,
     _StyleProfile profile,
     double totalDuration,
     List<int> scale,
-  ) {
+    List<int> progression, {
+    double timeOffset = 0.0,
+  }) {
+    return _generateChordTrack(tonicMidi, profile, totalDuration, scale, progression, timeOffset: timeOffset);
+  }
+
+  static List<MidiNoteEvent> _generateBassWithProgression(
+    int tonicMidi,
+    _StyleProfile profile,
+    double totalDuration,
+    List<int> scale,
+    List<int> progression, {
+    double timeOffset = 0.0,
+  }) {
+    return _generateBassTrack(tonicMidi, profile, totalDuration, scale, progression, timeOffset: timeOffset);
+  }
+
+  static List<MidiNoteEvent> _generateChordTrack(
+    int tonicMidi,
+    _StyleProfile profile,
+    double totalDuration,
+    List<int> scale,
+    List<int> progression, {
+    double timeOffset = 0.0,
+  }) {
     final notes = <MidiNoteEvent>[];
     final beatDuration = 60.0 / profile.tempo;
     final barBeats = 4.0;
     final barDuration = beatDuration * barBeats;
 
     var barIndex = 0;
-    var time = 0.0;
+    var time = timeOffset;
+    final endTime = timeOffset + totalDuration;
 
-    while (time < totalDuration) {
-      final degree = profile.progression[barIndex % profile.progression.length];
+    while (time < endTime) {
+      final degree = progression[barIndex % progression.length];
       final offsets = _chordOffsets[degree]!;
 
-      // Build chord note numbers
+      // Build chord note numbers with voice-leading variety
+      final octaveShift = (barIndex ~/ progression.length) % 2; // alternate voicing each repeat
       final chordMidi = offsets.map((offset) {
         var midi = tonicMidi + scale[offset % scale.length];
-        if (offset >= scale.length) midi += 12; // octave up
+        if (offset >= scale.length) midi += 12;
         while (midi > tonicMidi + 24) midi -= 12;
         if (midi < tonicMidi - 12) midi += 12;
-        return midi;
+        return midi + octaveShift * 12;
       }).toList();
 
       switch (profile.chordRhythm) {
         case _ChordRhythm.arpeggiated:
-          // Broken chord: play each note as eighth notes
           final noteLen = beatDuration * 0.5;
-          for (var subTime = time; subTime < time + barDuration && subTime < totalDuration; subTime += noteLen) {
+          for (var subTime = time; subTime < time + barDuration && subTime < endTime; subTime += noteLen) {
             final idx = ((subTime - time) / noteLen).round() % chordMidi.length;
             notes.add(MidiNoteEvent(
               noteNumber: chordMidi[idx],
@@ -465,22 +486,20 @@ class ArrangementEngine {
           break;
 
         case _ChordRhythm.pad:
-          // Held chord pad: all notes held for full duration
           for (final midi in chordMidi) {
             notes.add(MidiNoteEvent(
               noteNumber: midi,
               startSeconds: time,
-              durationSeconds: (barDuration * 0.95).clamp(0, totalDuration - time),
+              durationSeconds: (barDuration * 0.95).clamp(0, endTime - time),
               velocity: 0.2,
             ));
           }
           break;
 
         case _ChordRhythm.staccato:
-          // Short staccato hits on each beat
           for (var beat = 0; beat < barBeats; beat++) {
             final hitTime = time + beat * beatDuration;
-            if (hitTime >= totalDuration) break;
+            if (hitTime >= endTime) break;
             for (final midi in chordMidi) {
               notes.add(MidiNoteEvent(
                 noteNumber: midi,
@@ -502,21 +521,24 @@ class ArrangementEngine {
 
   // ── Bass Generation ──
 
-  static List<MidiNoteEvent> _generateBass(
+  static List<MidiNoteEvent> _generateBassTrack(
     int tonicMidi,
     _StyleProfile profile,
     double totalDuration,
     List<int> scale,
-  ) {
+    List<int> progression, {
+    double timeOffset = 0.0,
+  }) {
     final notes = <MidiNoteEvent>[];
     final beatDuration = 60.0 / profile.tempo;
     final barDuration = beatDuration * 4;
 
     var barIndex = 0;
-    var time = 0.0;
+    var time = timeOffset;
+    final endTime = timeOffset + totalDuration;
 
-    while (time < totalDuration) {
-      final degree = profile.progression[barIndex % profile.progression.length];
+    while (time < endTime) {
+      final degree = progression[barIndex % progression.length];
       final rootOffset = scale[degree - 1]; // degree 1 = index 0
       final rootMidi = tonicMidi + rootOffset - 12; // bass octave
 
@@ -528,7 +550,7 @@ class ArrangementEngine {
             durationSeconds: beatDuration * 1.8,
             velocity: 0.5,
           ));
-          if (time + beatDuration * 2 < totalDuration) {
+          if (time + beatDuration * 2 < endTime) {
             notes.add(MidiNoteEvent(
               noteNumber: rootMidi,
               startSeconds: time + beatDuration * 2,
@@ -542,7 +564,7 @@ class ArrangementEngine {
           notes.add(MidiNoteEvent(
             noteNumber: rootMidi,
             startSeconds: time,
-            durationSeconds: (barDuration * 0.95).clamp(0, totalDuration - time),
+            durationSeconds: (barDuration * 0.95).clamp(0, endTime - time),
             velocity: 0.3,
           ));
           break;
@@ -552,7 +574,7 @@ class ArrangementEngine {
           final fifthMidi = tonicMidi + fifthOffset - 12;
           for (var beat = 0; beat < 4; beat++) {
             final noteTime = time + beat * beatDuration;
-            if (noteTime >= totalDuration) break;
+            if (noteTime >= endTime) break;
             notes.add(MidiNoteEvent(
               noteNumber: beat.isEven ? rootMidi : fifthMidi,
               startSeconds: noteTime,
@@ -577,12 +599,15 @@ class ArrangementEngine {
   static const _snare = 38;
   static const _hihat = 42;
 
-  static List<MidiNoteEvent> _generatePercussion(double totalDuration, double tempo) {
+  static List<MidiNoteEvent> _generatePercussion(double totalDuration, double tempo, {double timeOffset = 0.0}) {
     final notes = <MidiNoteEvent>[];
     final beatDuration = 60.0 / tempo;
-    var time = 0.0;
+    final barDuration = beatDuration * 4;
+    var time = timeOffset;
+    final endTime = timeOffset + totalDuration;
+    var barCount = 0;
 
-    while (time < totalDuration) {
+    while (time < endTime) {
       // Kick on beats 1 and 3
       notes.add(MidiNoteEvent(
         noteNumber: _kick,
@@ -594,7 +619,7 @@ class ArrangementEngine {
         noteNumber: _kick,
         startSeconds: time + beatDuration * 2,
         durationSeconds: 0.1,
-        velocity: 0.6,
+        velocity: barCount.isEven ? 0.6 : 0.65,
       ));
 
       // Snare on beats 2 and 4
@@ -614,18 +639,147 @@ class ArrangementEngine {
       // Hi-hat eighth notes
       for (var i = 0; i < 8; i++) {
         final ht = time + i * beatDuration * 0.5;
-        if (ht >= totalDuration) break;
+        if (ht >= endTime) break;
+        final accent = (i == 0 || i == 4) ? 1.0 : 0.7;
         notes.add(MidiNoteEvent(
           noteNumber: _hihat,
           startSeconds: ht,
           durationSeconds: 0.03,
-          velocity: 0.4,
+          velocity: 0.4 * accent,
         ));
       }
 
-      time += beatDuration * 4;
+      barCount++;
+      final nextBarStart = time + barDuration;
+
+      // Fill at every 4th bar (phrase boundary)
+      if (barCount % 4 == 0 && nextBarStart < endTime) {
+        final fillStart = nextBarStart - beatDuration;
+        for (var i = 0; i < 4; i++) {
+          final ft = fillStart + i * beatDuration * 0.25;
+          if (ft >= endTime) break;
+          notes.add(MidiNoteEvent(
+            noteNumber: i == 3 ? _kick : _snare,
+            startSeconds: ft,
+            durationSeconds: 0.06,
+            velocity: 0.75,
+          ));
+        }
+      }
+
+      time = nextBarStart;
     }
 
+    return notes;
+  }
+
+  // ── Intro / Outro ──
+
+  static final _allProgressions = const [
+    [1, 5, 6, 4],
+    [1, 4, 1, 5],
+    [1, 6, 4, 5],
+    [4, 5, 1, 1],
+    [1, 5, 4, 5],
+    [1, 6, 2, 5],
+  ];
+
+  /// Soft intro: tonic bass + held chord, percussion enters gradually.
+  static List<MidiNoteEvent> _generateIntro(int tonicMidi, _StyleProfile profile, double barDuration) {
+    final notes = <MidiNoteEvent>[];
+    final beatDuration = barDuration / 4;
+
+    // Held tonic chord (soft pad)
+    final chordMidi = [
+      tonicMidi,
+      tonicMidi + 4,
+      tonicMidi + 7,
+    ];
+    for (final midi in chordMidi) {
+      notes.add(MidiNoteEvent(
+        noteNumber: midi,
+        startSeconds: 0,
+        durationSeconds: barDuration * 0.9,
+        velocity: 0.15,
+      ));
+    }
+
+    // Bass: root on beat 1, rising approach to the melody entry
+    notes.add(MidiNoteEvent(
+      noteNumber: tonicMidi - 12,
+      startSeconds: 0,
+      durationSeconds: beatDuration * 3.5,
+      velocity: 0.25,
+    ));
+
+    return notes;
+  }
+
+  /// Light hihat count-in for intro.
+  static List<MidiNoteEvent> _generateIntroPercussion(double barDuration, double tempo) {
+    final notes = <MidiNoteEvent>[];
+    final beatDuration = 60.0 / tempo;
+    // Hihat on each beat, getting louder (count-in feel)
+    for (var beat = 0; beat < 4; beat++) {
+      notes.add(MidiNoteEvent(
+        noteNumber: _hihat,
+        startSeconds: beat * beatDuration,
+        durationSeconds: 0.04,
+        velocity: 0.2 + beat * 0.1,
+      ));
+    }
+    return notes;
+  }
+
+  /// Outro: held final chord with gradual decay, final bass note.
+  static List<MidiNoteEvent> _generateOutro(int tonicMidi, _StyleProfile profile, double barDuration, double startTime) {
+    final notes = <MidiNoteEvent>[];
+
+    // Held tonic chord fading out
+    final chordMidi = [
+      tonicMidi,
+      tonicMidi + 4,
+      tonicMidi + 7,
+    ];
+    for (final midi in chordMidi) {
+      notes.add(MidiNoteEvent(
+        noteNumber: midi,
+        startSeconds: startTime,
+        durationSeconds: barDuration * 0.85,
+        velocity: 0.1,
+      ));
+    }
+
+    // Final bass note on beat 1, held
+    notes.add(MidiNoteEvent(
+      noteNumber: tonicMidi - 12,
+      startSeconds: startTime,
+      durationSeconds: barDuration * 0.9,
+      velocity: 0.2,
+    ));
+
+    return notes;
+  }
+
+  /// Single final hit for outro percussion.
+  static List<MidiNoteEvent> _generateOutroPercussion(double barDuration, double startTime, double tempo) {
+    final notes = <MidiNoteEvent>[];
+    // Soft kick on beat 1, then hihat fade
+    notes.add(MidiNoteEvent(
+      noteNumber: _kick,
+      startSeconds: startTime,
+      durationSeconds: 0.12,
+      velocity: 0.5,
+    ));
+    final beatDuration = 60.0 / tempo;
+    for (var beat = 1; beat < 4; beat++) {
+      notes.add(MidiNoteEvent(
+        noteNumber: _hihat,
+        startSeconds: startTime + beat * beatDuration,
+        durationSeconds: 0.03,
+        velocity: 0.2,
+      ));
+    }
     return notes;
   }
 

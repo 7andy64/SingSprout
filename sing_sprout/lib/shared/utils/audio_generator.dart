@@ -259,33 +259,110 @@ class AudioGenerator {
   /// Uses a simple hash of [seed] (e.g. speech text or duration) to pick
   /// different note sequences, so different inputs produce different melodies
   /// even when AI is unavailable.
+  ///
+  /// Builds phrase-structured melodies with varied rhythms (eighth, triplet,
+  /// quarter, dotted, half), occasional rests, directional contour, and
+  /// style-appropriate pentatonic scales.
   static List<MidiNoteEvent> _generateFallbackMelody(double durationSeconds, {String? seed}) {
-    // C pentatonic: C D E G A  (MIDI 60-84 range)
-    const pentatonic = [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84];
     final rng = _simpleRng(seed ?? durationSeconds.toString());
 
-    final numNotes = (durationSeconds / 0.35).round().clamp(6, 24);
+    // Pick a pentatonic scale based on seed — C, G, F, or D pentatonic
+    const scales = [
+      [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84], // C pentatonic
+      [55, 59, 62, 67, 69, 71, 74, 76, 79, 83, 86], // G pentatonic
+      [53, 57, 60, 65, 67, 69, 72, 74, 77, 81, 84], // F pentatonic
+      [57, 59, 62, 66, 69, 71, 74, 78, 81, 83, 86], // D pentatonic
+    ];
+    final pentatonic = scales[rng.next() % scales.length];
+
+    // Rhythmic values (in seconds at ~120bpm feel)
+    const rhythms = [
+      0.25, // eighth note
+      0.25,
+      0.25,
+      0.33, // triplet
+      0.33,
+      0.5,  // quarter note
+      0.5,
+      0.5,
+      0.5,
+      0.75, // dotted quarter
+      1.0,  // half note
+    ];
+
     final notes = <MidiNoteEvent>[];
     var time = 0.0;
-    var lastIdx = pentatonic.length ~/ 2; // start mid-range
+    var lastIdx = pentatonic.length ~/ 2;
+    var notesInPhrase = 0;
+    // Phrase length: 3-6 notes before a rest
+    final phraseLen = 3 + (rng.next() % 4);
+    // Overall contour direction for this phrase: +1 rising, -1 falling, 0 arch
+    var contourDir = (rng.next() % 3) - 1;
+    var contourSteps = 0;
 
-    for (var i = 0; i < numNotes && time < durationSeconds; i++) {
-      // Walk around the pentatonic scale, preferring small steps
-      final step = (rng.next() % 5) - 2; // -2 to +2
+    while (time < durationSeconds) {
+      // ── Phrase break: insert a rest every phraseLen notes ──
+      if (notesInPhrase >= phraseLen && notes.isNotEmpty) {
+        final restDur = rhythms[rng.next() % 4]; // 0.25-0.5 rest
+        time += restDur;
+        notesInPhrase = 0;
+        // New phrase: reset contour direction, re-center position
+        contourDir = (rng.next() % 3) - 1;
+        contourSteps = 0;
+        // Tend to return toward mid-range
+        final mid = pentatonic.length ~/ 2;
+        if ((lastIdx - mid).abs() > 2) {
+          lastIdx = (lastIdx + (mid > lastIdx ? 1 : -1)).clamp(0, pentatonic.length - 1);
+        }
+        if (time >= durationSeconds) break;
+      }
+
+      // ── Choose step size ──
+      final stepRoll = rng.next() % 10;
+      int step;
+      if (stepRoll < 5) {
+        step = contourDir; // follow phrase contour
+      } else if (stepRoll < 8) {
+        step = (rng.next() % 5) - 2; // small random walk
+      } else {
+        step = (rng.next() % 7) - 3; // occasional leap
+      }
+      contourSteps++;
+
+      // Reverse contour direction occasionally
+      if (contourSteps > 4) {
+        contourDir = -contourDir;
+        contourSteps = 0;
+      }
+
       lastIdx = (lastIdx + step).clamp(0, pentatonic.length - 1);
 
-      // Vary rhythm: mix of quarter notes (0.5) and eighth notes (0.25)
-      final dur = (rng.next() % 3 == 0) ? 0.5 : 0.25;
-      if (time + dur > durationSeconds) break;
+      // ── Choose duration ──
+      final dur = rhythms[rng.next() % rhythms.length];
+      final noteEnd = time + dur;
+      if (noteEnd > durationSeconds) {
+        // Final note: fill remaining time
+        final remaining = durationSeconds - time;
+        if (remaining < 0.15) break;
+        notes.add(MidiNoteEvent(
+          noteNumber: pentatonic[lastIdx],
+          startSeconds: time,
+          durationSeconds: remaining * 0.85,
+          velocity: 0.5 + (rng.next() % 35) / 100.0,
+        ));
+        break;
+      }
 
       notes.add(MidiNoteEvent(
         noteNumber: pentatonic[lastIdx],
         startSeconds: time,
-        durationSeconds: dur * 0.8,
-        velocity: 0.55 + (rng.next() % 30) / 100.0,
+        durationSeconds: dur * 0.82,
+        velocity: 0.45 + (rng.next() % 40) / 100.0,
       ));
       time += dur;
+      notesInPhrase++;
     }
+
     return notes;
   }
 
@@ -303,22 +380,81 @@ class AudioGenerator {
     double durationSec = 3.0,
   }) async {
     const sampleRate = 44100;
-    final numSamples = (sampleRate * durationSec).round();
+
+    // Pentatonic scale frequencies based on style
     double baseFreq;
     switch (styleSeed) {
-      case 'morningDew': baseFreq = 523.25; break;
-      case 'mountainStream': baseFreq = 329.63; break;
-      case 'frogDrum': baseFreq = 440.0; break;
+      case 'morningDew': baseFreq = 523.25; break; // C5
+      case 'mountainStream': baseFreq = 329.63; break; // E4
+      case 'frogDrum': baseFreq = 440.0; break; // A4
       default: baseFreq = 440.0;
     }
-    final frequencies = [baseFreq, baseFreq * 1.25, baseFreq * 1.5];
+    // Build a 2-octave pentatonic scale (freq ratios: 1, 9/8, 5/4, 3/2, 5/3, 2)
+    final pentRatios = [1.0, 1.125, 1.25, 1.5, 1.667, 2.0, 2.25, 2.5, 3.0, 3.334];
+    final pentFreqs = pentRatios.map((r) => baseFreq * r).toList();
+
+    final numSamples = (sampleRate * durationSec).round();
     final samples = Float64List(numSamples);
-    final notesPerNote = numSamples ~/ frequencies.length;
-    for (var i = 0; i < numSamples; i++) {
-      final noteIndex = (i ~/ notesPerNote).clamp(0, frequencies.length - 1);
-      final envelope = i < 2205 ? i / 2205.0 : (i > numSamples - 2205 ? (numSamples - i) / 2205.0 : 1.0);
-      samples[i] = sin(2 * pi * frequencies[noteIndex] * i / sampleRate) * envelope * 0.6;
+
+    // Walk pentatonic scale with melody-like contour
+    final rng = _simpleRng(styleSeed);
+    var noteIdx = pentFreqs.length ~/ 3; // start lower-mid
+    var contourDir = 1;
+    var contourSteps = 0;
+    var samplePos = 0;
+
+    while (samplePos < numSamples) {
+      // Note duration: 0.2-0.6 seconds
+      final noteLenSamples = ((0.2 + (rng.next() % 5) * 0.1) * sampleRate).round();
+      final noteEnd = (samplePos + noteLenSamples).clamp(0, numSamples);
+      final freq = pentFreqs[noteIdx];
+
+      // Walk contour
+      contourSteps++;
+      if (contourSteps > 3) {
+        contourDir = -contourDir;
+        contourSteps = 0;
+      }
+      final step = contourDir;
+      noteIdx = (noteIdx + step).clamp(0, pentFreqs.length - 1);
+
+      // Per-note ADSR
+      final attackSamples = (0.02 * sampleRate).round();
+      final releaseSamples = (0.08 * sampleRate).round();
+      final noteDuration = noteEnd - samplePos;
+
+      for (var i = samplePos; i < noteEnd; i++) {
+        final t = (i - samplePos) / sampleRate;
+        final totalDuration = noteDuration / sampleRate;
+
+        // ADSR envelope
+        double env;
+        if (t < 0.02) {
+          env = t / 0.02; // attack
+        } else if (t < totalDuration - 0.08) {
+          env = 0.85; // sustain (slight decay from 1.0 peak)
+        } else {
+          env = 0.85 * (1.0 - (t - (totalDuration - 0.08)) / 0.08); // release
+        }
+
+        // Fundamental + 2 harmonics for richer tone
+        final fundamental = sin(2 * pi * freq * i / sampleRate);
+        final harmonic2 = sin(2 * pi * freq * 2 * i / sampleRate) * 0.15;
+        final harmonic3 = sin(2 * pi * freq * 3 * i / sampleRate) * 0.06;
+
+        samples[i] += (fundamental + harmonic2 + harmonic3) * env * 0.5;
+      }
+
+      samplePos = noteEnd;
     }
+
+    // Global fade in/out
+    final fadeLen = (0.05 * sampleRate).round();
+    for (var i = 0; i < fadeLen && i < numSamples; i++) {
+      samples[i] *= i / fadeLen;
+      samples[numSamples - 1 - i] *= i / fadeLen;
+    }
+
     final outPath = FileStorageService().generateMusicPath(styleSeed: styleSeed, extension: 'wav');
     await AudioProcessor.writeWav(outPath, samples, sampleRate);
     return outPath;

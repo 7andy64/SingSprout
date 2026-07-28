@@ -29,9 +29,18 @@ dependencies:
   record: ^7.1.1
   audioplayers: ^5.2.1
   permission_handler: ^11.3.1
+  tflite_flutter: ^0.10.4
+
+flutter:
+  # TFLite model (assets/models/crepe_tiny.tflite) not included yet —
+  # requires TensorFlow which doesn't support Python 3.14.
+  # PitchDetectionService falls back to YIN algorithm gracefully.
+  # assets:
+  #   - assets/models/crepe_tiny.tflite
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
   sqflite_common_ffi: ^2.3.3
+  mocktail: ^1.0.4

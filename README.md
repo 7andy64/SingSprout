@@ -21,9 +21,9 @@ AI 音乐启蒙创作工具 — 为 9-12 岁乡村留守儿童打造
 | 层 | 技术 |
 |---|---|
 | 客户端 | Flutter 3.16+, Dart 3.2+ |
-| 端侧 AI | TFLite / ONNX (离线推理) |
-| 后端 | Python FastAPI |
-| 数据库 | PostgreSQL 16 |
+| 端侧 DSP | 纯 Dart YIN 音高检测 + 规则编曲引擎 + WAV 多轨合成（0MB 模型，完全离线） |
+| 云端 AI | 阿里云 DashScope qwen-plus（编曲生成，可选增强） |
+| 后端 | Python FastAPI, PostgreSQL 16 |
 | 存储 | 阿里云 OSS / 本地加密存储 |
 | 部署 | Docker Compose |
 

@@ -44,19 +44,15 @@ class WavSynthesizer {
     required ModulationParams params,
     required String outputPath,
   }) async {
-    // Speed change → re-arrange
+    // Speed change → time-scale existing arrangement (preserves AI work)
     List<MidiNoteEvent> chords, bass, percussion;
     double totalDuration;
+    final speedFactor = 1.0 / params.speed;
     if ((params.speed - 1.0).abs() > 0.01) {
-      final rearranged = ArrangementEngine.arrange(
-        melody: melody,
-        style: style,
-        durationOverride: baseArrangement.totalDurationSeconds / params.speed,
-      );
-      chords = rearranged.chords;
-      bass = rearranged.bass;
-      percussion = rearranged.percussion;
-      totalDuration = rearranged.totalDurationSeconds;
+      chords = _scaleTiming(baseArrangement.chords, speedFactor);
+      bass = _scaleTiming(baseArrangement.bass, speedFactor);
+      percussion = _scaleTiming(baseArrangement.percussion, speedFactor);
+      totalDuration = baseArrangement.totalDurationSeconds * speedFactor;
     } else {
       chords = baseArrangement.chords;
       bass = baseArrangement.bass;
@@ -90,7 +86,7 @@ class WavSynthesizer {
     _renderTrack(buffer, bass, bassAdsr, _WaveType.sine, gain: bassGain);
     _renderTrack(buffer, chords, chordAdsr, chordWave, gain: chordGain);
     if (percussion.isNotEmpty && percGain > 0.05) {
-      _renderPercussion(buffer, percussion);
+      _renderPercussion(buffer, percussion, seed: _percussionSeed(melody));
     }
     _renderTrack(buffer, melody, melodyAdsr, _WaveType.sine, gain: melodyGain);
 
@@ -122,7 +118,7 @@ class WavSynthesizer {
     _renderTrack(buffer, chords, chordAdsr, chordWave, gain: chordGain);
 
     if (percussion.isNotEmpty) {
-      _renderPercussion(buffer, percussion);
+      _renderPercussion(buffer, percussion, seed: _percussionSeed(melody));
     }
 
     _renderTrack(buffer, melody, _AdsrPreset.melody, _WaveType.sine, gain: 0.75);
@@ -165,6 +161,18 @@ class WavSynthesizer {
     return outputPath;
   }
 
+  // ── Speed scaling ──
+
+  /// Scale start and duration of every note by [factor].
+  static List<MidiNoteEvent> _scaleTiming(List<MidiNoteEvent> notes, double factor) {
+    return notes.map((n) => MidiNoteEvent(
+      noteNumber: n.noteNumber,
+      startSeconds: n.startSeconds * factor,
+      durationSeconds: n.durationSeconds * factor,
+      velocity: n.velocity,
+    )).toList();
+  }
+
   // ── ADSR interpolation (temperature → warmth) ──
 
   /// temperature 0=cold(staccato) → 1=warm(legato, long release)
@@ -198,8 +206,16 @@ class WavSynthesizer {
 
   // ── Percussion ──
 
-  static void _renderPercussion(Float64List buffer, List<MidiNoteEvent> notes) {
-    final rng = Random(42);
+  static int _percussionSeed(List<MidiNoteEvent> melody) {
+    var h = 0;
+    for (final n in melody) {
+      h = (h * 31 + n.noteNumber) & 0x7FFFFFFF;
+    }
+    return h == 0 ? 42 : h;
+  }
+
+  static void _renderPercussion(Float64List buffer, List<MidiNoteEvent> notes, {int seed = 42}) {
+    final rng = Random(seed);
     for (final note in notes) {
       final startSample = (note.startSeconds * sampleRate).round().clamp(0, buffer.length - 1);
       final endSample = (startSample + (note.durationSeconds * sampleRate).round()).clamp(0, buffer.length);

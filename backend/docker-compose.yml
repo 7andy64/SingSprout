@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/singsprout
+      - OSS_ENDPOINT=${OSS_ENDPOINT}
+      - OSS_ACCESS_KEY=${OSS_ACCESS_KEY}
+      - OSS_SECRET_KEY=${OSS_SECRET_KEY}
+      - OSS_BUCKET=${OSS_BUCKET:-singsprout-audio}
+      - OSS_REGION=${OSS_REGION:-cn-hangzhou}
+      - OSS_STS_ROLE_ARN=${OSS_STS_ROLE_ARN}
+      - WECHAT_APP_ID=${WECHAT_APP_ID}
+      - WECHAT_APP_SECRET=${WECHAT_APP_SECRET}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - TTS_MODEL=${TTS_MODEL:-sambert-zhichu-v1}
+      - SECRET_KEY=${SECRET_KEY}
+      - SHARE_LINK_BASE_URL=${SHARE_LINK_BASE_URL:-https://singsprout.app/s}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: singsprout
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d singsprout"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
