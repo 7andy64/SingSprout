@@ -21,3 +21,9 @@
 # path_provider
 -keep class io.flutter.plugin.editing.** { *; }
 -keep class com.baseflow.permissionhandler.** { *; }
+
+# TensorFlow Lite
+-keep class org.tensorflow.lite.** { *; }
+-dontwarn org.tensorflow.lite.gpu.GpuDelegateFactory$Options
+-dontwarn org.tensorflow.lite.gpu.GpuDelegateFactory
+-dontwarn org.tensorflow.lite.gpu.GpuDelegate
