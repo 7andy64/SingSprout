@@ -23,14 +23,29 @@ class _ProfilePageState extends State<ProfilePage> {
   int _totalStorageBytes = 0;
   bool _storageChecked = false;
 
+  bool _needsRefresh = false;
+
   @override
   void initState() {
     super.initState();
-    // 进入页面时从本地数据库加载用户数据
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().loadLocalData();
       _checkStorage();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkForUpdates();
+  }
+
+  void _checkForUpdates() {
+    if (!_needsRefresh) return;
+    _needsRefresh = false;
+    if (mounted) {
+      context.read<AppState>().loadLocalData(force: true);
+    }
   }
 
   Future<void> _checkStorage() async {
@@ -345,56 +360,60 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // ── 编辑资料弹窗 ──
 
-  void _showEditProfile(UserProfile? profile) {
+  Future<void> _showEditProfile(UserProfile? profile) async {
     if (profile == null) return;
 
     final controller = TextEditingController(text: profile.nickname);
-    var disposed = false;
 
-    void disposeController() {
-      if (!disposed) {
-        controller.dispose();
-        disposed = true;
-      }
-    }
-
-    showDialog(
+    final shouldRefresh = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('编辑资料'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '昵称',
-            hintText: '输入你的昵称',
+        content: SingleChildScrollView(
+          child: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: '昵称',
+              hintText: '输入你的昵称',
+            ),
+            maxLength: 12,
+            autofocus: true,
           ),
-          maxLength: 12,
-          autofocus: true,
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              disposeController();
-              Navigator.pop(ctx);
-            },
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('取消'),
           ),
           TextButton(
             onPressed: () async {
               final newName = controller.text.trim();
-              if (newName.isNotEmpty && newName != profile.nickname) {
-                await context
-                    .read<AppState>()
-                    .setUserProfile(profile.copyWith(nickname: newName));
+              if (newName.isNotEmpty) {
+                await _saveNickname(newName);
+                if (ctx.mounted) Navigator.pop(ctx, true);
               }
-              disposeController();
-              Navigator.pop(ctx);
             },
             child: const Text('保存'),
           ),
         ],
       ),
-    ).then((_) => disposeController());
+    );
+
+    controller.dispose();
+
+    // 返回数据，让页面知道需要刷新
+    if (shouldRefresh == true) {
+      _needsRefresh = true;
+      _checkForUpdates();
+    }
+  }
+
+  Future<void> _saveNickname(String newNickname) async {
+    final appState = context.read<AppState>();
+    final current = appState.userProfile;
+    if (current != null && newNickname != current.nickname) {
+      await appState.setUserProfile(current.copyWith(nickname: newNickname));
+    }
   }
 
   // ── 存储管理 ──
