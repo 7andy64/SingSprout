@@ -23,14 +23,29 @@ class _ProfilePageState extends State<ProfilePage> {
   int _totalStorageBytes = 0;
   bool _storageChecked = false;
 
+  bool _needsRefresh = false;
+
   @override
   void initState() {
     super.initState();
-    // 进入页面时从本地数据库加载用户数据
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().loadLocalData();
       _checkStorage();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkForUpdates();
+  }
+
+  void _checkForUpdates() {
+    if (!_needsRefresh) return;
+    _needsRefresh = false;
+    if (mounted) {
+      context.read<AppState>().loadLocalData(force: true);
+    }
   }
 
   Future<void> _checkStorage() async {
@@ -345,12 +360,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // ── 编辑资料弹窗 ──
 
-  void _showEditProfile(UserProfile? profile) {
+  Future<void> _showEditProfile(UserProfile? profile) async {
     if (profile == null) return;
 
     final controller = TextEditingController(text: profile.nickname);
 
-    showDialog<String>(
+    final shouldRefresh = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('编辑资料'),
@@ -371,24 +386,34 @@ class _ProfilePageState extends State<ProfilePage> {
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               final newName = controller.text.trim();
-              Navigator.pop(ctx, newName.isNotEmpty ? newName : null);
+              if (newName.isNotEmpty) {
+                await _saveNickname(newName);
+                if (ctx.mounted) Navigator.pop(ctx, true);
+              }
             },
             child: const Text('保存'),
           ),
         ],
       ),
-    ).then((newName) {
-      controller.dispose();
-      if (newName != null && mounted) {
-        // 使用 AppState 中的最新 profile 防止覆盖其他字段的并发修改
-        final currentProfile = context.read<AppState>().userProfile;
-        if (currentProfile != null && newName != currentProfile.nickname) {
-          context.read<AppState>().setUserProfile(currentProfile.copyWith(nickname: newName));
-        }
-      }
-    });
+    );
+
+    controller.dispose();
+
+    // 返回数据，让页面知道需要刷新
+    if (shouldRefresh == true) {
+      _needsRefresh = true;
+      _checkForUpdates();
+    }
+  }
+
+  Future<void> _saveNickname(String newNickname) async {
+    final appState = context.read<AppState>();
+    final current = appState.userProfile;
+    if (current != null && newNickname != current.nickname) {
+      await appState.setUserProfile(current.copyWith(nickname: newNickname));
+    }
   }
 
   // ── 存储管理 ──

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../view_models/field_sound_lab_view_model.dart';
+import 'audio_play_button.dart';
 
 /// 录音控制区 — 录音按钮 + 状态 HUD + 回放控制
 class RecordingControls extends StatelessWidget {
@@ -293,10 +294,21 @@ class _PlaybackBar extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Play / Pause
-              _PlayPauseButton(vm: vm),
+              // Play / Pause button (新设计)
+              AudioPlayButton(
+                isPlaying: vm.isPlaying,
+                onTap: () {
+                  if (vm.isPlaying) {
+                    vm.togglePlayPause();
+                  } else if (vm.playbackPosition > Duration.zero) {
+                    vm.togglePlayPause();
+                  } else {
+                    vm.playRecording();
+                  }
+                },
+              ),
 
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
 
               // Progress bar + time
               Expanded(
@@ -355,50 +367,5 @@ class _PlaybackBar extends StatelessWidget {
     final min = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final sec = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$min:$sec';
-  }
-}
-
-// ═══════════════════════════════════════════════
-//  Play / Pause Button
-// ═══════════════════════════════════════════════
-
-class _PlayPauseButton extends StatelessWidget {
-  final FieldSoundLabViewModel vm;
-  const _PlayPauseButton({required this.vm});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        if (vm.hasRecording) {
-          if (vm.isPlaying) {
-            vm.stopPlayback();
-          } else if (vm.playbackPosition > Duration.zero) {
-            vm.togglePlayPause();
-          } else {
-            vm.playRecording();
-          }
-        }
-      },
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: const Color(0xFF42A5F5),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Icon(
-          vm.isPlaying ? Icons.pause : Icons.play_arrow,
-          color: Colors.white,
-          size: 24,
-        ),
-      ),
-    );
   }
 }
