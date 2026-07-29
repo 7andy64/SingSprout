@@ -140,7 +140,7 @@ class DatabaseService {
     if (oldVersion < 2) {
       // v1 → v2: 添加私密作品字段
       await db.execute(
-        "ALTER TABLE works ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0",
+        'ALTER TABLE works ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0',
       );
     }
   }

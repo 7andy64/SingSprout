@@ -176,18 +176,19 @@ class UpdateService {
     }
   }
 
-  /// 校验文件 SHA256
+  /// 校验文件 SHA256。
+  /// 返回 true 仅当哈希完全匹配；没有提供哈希值或校验失败一律拒绝。
   Future<bool> verifySha256(File file, String expectedHash) async {
     if (expectedHash.isEmpty) {
-      debugPrint('[UpdateService] 未提供 SHA-256 校验值，跳过完整性检查');
-      return true;
+      debugPrint('[UpdateService] 未提供 SHA-256，拒绝安装（安全策略要求强制校验）');
+      return false;
     }
     try {
       final bytes = await file.readAsBytes();
       final hash = sha256.convert(bytes).toString();
       final match = hash == expectedHash;
       if (!match) {
-        debugPrint('[UpdateService] SHA-256 校验失败！下载文件可能已损坏或被篡改');
+        debugPrint('[UpdateService] SHA-256 校验失败！期望 $expectedHash，实际 $hash');
       }
       return match;
     } catch (e) {
@@ -207,10 +208,10 @@ class UpdateService {
   static bool _versionGreater(String a, String b) {
     try {
       // 去除预发布后缀（如 -beta.1），只比较数字版本号
-      final cleanVersion = (String v) {
+      String cleanVersion(String v) {
         final dashIndex = v.indexOf('-');
         return dashIndex > 0 ? v.substring(0, dashIndex) : v;
-      };
+      }
       final pa = cleanVersion(a).split('.').map(int.parse).toList();
       final pb = cleanVersion(b).split('.').map(int.parse).toList();
       while (pa.length < 3) { pa.add(0); }

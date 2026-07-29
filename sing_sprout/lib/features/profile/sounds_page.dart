@@ -37,13 +37,13 @@ class SoundsPage extends StatelessWidget {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('🎤', style: TextStyle(fontSize: 64)),
-          const SizedBox(height: 16),
-          const Text(
+          Text('🎤', style: TextStyle(fontSize: 64)),
+          SizedBox(height: 16),
+          Text(
             '还没有采集声音',
             style: TextStyle(
               fontSize: 18,
@@ -51,8 +51,8 @@ class SoundsPage extends StatelessWidget {
               color: AppTheme.textPrimary,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 8),
+          Text(
             '去田野声音实验室采集你的第一个声音吧',
             style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
           ),

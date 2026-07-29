@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
@@ -196,12 +195,12 @@ class _EditorPageState extends State<EditorPage> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: _saving ? null : _saveWork,
-                      child: const Text('保存'),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 52),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                         side: const BorderSide(color: AppTheme.primaryGreen),
                       ),
+                      child: const Text('保存'),
                     ),
                   ),
                   const SizedBox(width: 16),

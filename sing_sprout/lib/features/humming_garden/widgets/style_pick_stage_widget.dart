@@ -33,18 +33,18 @@ class StylePickStageWidget extends StatelessWidget {
                 gradient: LinearGradient(colors: [
                   accent.withValues(alpha: 0.12),
                   accent.withValues(alpha: 0.04),
-                ]),
+                ],),
                 boxShadow: [
                   BoxShadow(
                       color: accent.withValues(alpha: 0.06),
                       blurRadius: 16,
-                      offset: const Offset(0, 2)),
+                      offset: const Offset(0, 2),),
                 ],
               ),
               child: const Center(
                 child: Text('选一种风格，让音符发芽',
                     style: TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 15)),
+                        color: AppTheme.textSecondary, fontSize: 15,),),
               ),
             ),
           ),
@@ -53,7 +53,7 @@ class StylePickStageWidget extends StatelessWidget {
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
+                  color: AppTheme.textPrimary,),),
           const SizedBox(height: 12),
           Row(
             children: StyleSeed.values.map((style) {
@@ -77,20 +77,20 @@ class StylePickStageWidget extends StatelessWidget {
                                     color:
                                         accent.withValues(alpha: 0.18),
                                     blurRadius: 10,
-                                    offset: const Offset(0, 2))
+                                    offset: const Offset(0, 2),),
                               ]
                             : [
                                 BoxShadow(
                                     color: Colors.black
                                         .withValues(alpha: 0.03),
                                     blurRadius: 4,
-                                    offset: const Offset(0, 1))
+                                    offset: const Offset(0, 1),),
                               ],
                       ),
                       child: Column(
                         children: [
                           Text(style.icon,
-                              style: const TextStyle(fontSize: 24)),
+                              style: const TextStyle(fontSize: 24),),
                           const SizedBox(height: 4),
                           Text(
                             style.label,
@@ -117,7 +117,7 @@ class StylePickStageWidget extends StatelessWidget {
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
+                  color: AppTheme.textPrimary,),),
           const SizedBox(height: 12),
           MoodColorPicker(
             selected: vm.selectedMood,

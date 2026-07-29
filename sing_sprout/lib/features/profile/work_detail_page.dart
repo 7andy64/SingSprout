@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
@@ -390,7 +389,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
       children: [
         _MetaChip(
           icon: Icons.palette_outlined,
-          label: work.styleSeed.icon + ' ' + work.styleSeed.label,
+          label: '${work.styleSeed.icon} ${work.styleSeed.label}',
         ),
         const SizedBox(width: 8),
         if (work.moodSticker != null) ...[

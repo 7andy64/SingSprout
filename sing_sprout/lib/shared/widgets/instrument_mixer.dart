@@ -105,6 +105,37 @@ class _InstrumentMixerState extends State<InstrumentMixer> {
                     _buildVertex(
                       i, angles[i] + angleOffset, cx, cy, r, btnSize,
                     ),
+                  ),
+
+                  // 乐器图标（半圆弧，以 Stack 中心为原点）
+                  ...List.generate(_instruments.length, (i) {
+                    final angle = -pi * 0.8 + (pi * 1.6 * i / (_instruments.length - 1));
+                    const radius = 42.0;
+                    final dx = radius * cos(angle);
+                    final dy = -radius * sin(angle) * 0.6 - 10;
+                    final isActive = _active[i];
+
+                    return Positioned(
+                      left: 140 + dx - 20,
+                      top: 40 + dy - 20,
+                      child: GestureDetector(
+                        onTap: () => _toggle(i),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isActive ? AppTheme.primaryGreen.withValues(alpha: 0.15) : AppTheme.divider.withValues(alpha: 0.3),
+                            border: Border.all(color: isActive ? AppTheme.primaryGreen : AppTheme.divider, width: isActive ? 2 : 1),
+                            boxShadow: isActive ? [BoxShadow(color: AppTheme.primaryGreen.withValues(alpha: 0.2), blurRadius: 6)] : null,
+                          ),
+                          child: Center(
+                            child: Text(_instruments[i].icon, style: TextStyle(fontSize: isActive ? 22 : 18)),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),

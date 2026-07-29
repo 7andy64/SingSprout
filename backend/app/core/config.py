@@ -37,8 +37,10 @@ class Settings(BaseSettings):
     # ── TTS (阿里云 DashScope，服务端调用) ──
     # 文字回信 → AI 朗读。走异步任务模式，避免 HTTP 同步等待超时
     DASHSCOPE_API_KEY: str = ""
-    TTS_MODEL: str = "sambert-zhichu-v1"
+    TTS_MODEL: str = "cosyvoice-v3-flash"
     TTS_TASK_TIMEOUT_SECONDS: int = 120
+    TTS_VOICE: str = "longxiaochun"  # 儿童友好音色
+    TTS_INSTRUCTION: str = ""  # 可选的自然语言风格指令，如"用温柔的语气"
 
     # ── 安全 ──
     # 无默认值 — 生产环境必须设置。开发环境 DEBUG 模式会自动生成。

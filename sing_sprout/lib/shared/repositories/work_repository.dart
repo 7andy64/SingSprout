@@ -12,7 +12,7 @@ class WorkRepository {
   Future<void> insert(MusicWork work) async {
     final db = await _db.database;
     await db.insert('works', work.toJson(),
-        conflictAlgorithm: ConflictAlgorithm.replace);
+        conflictAlgorithm: ConflictAlgorithm.replace,);
   }
 
   // ── 读取 ──

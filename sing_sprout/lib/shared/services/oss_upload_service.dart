@@ -39,7 +39,7 @@ class OSSUploadService {
       // 1. Request STS credentials from backend
       final stsResp = await _client
           .get(Uri.parse(
-              '${AppConfig.apiBaseUrl}/storage/sts?device_id=$deviceId'))
+              '${AppConfig.apiBaseUrl}/storage/sts?device_id=$deviceId',),)
           .timeout(const Duration(seconds: AppConfig.apiTimeoutSeconds));
 
       if (stsResp.statusCode != 200) {
@@ -59,13 +59,13 @@ class OSSUploadService {
       final file = File(filePath);
       final fileBytes = await file.readAsBytes();
       final ext = filePath.endsWith('.wav') ? 'wav' : 'm4a';
-      final objectKey = '${uploadPrefix}${cardId}_${_nonce()}.$ext';
+      final objectKey = '$uploadPrefix${cardId}_${_nonce()}.$ext';
 
       final putResp = await _client
           .put(
             Uri.parse('https://$bucket.$endpoint/$objectKey'),
             headers: _ossHeaders(accessKeyId, accessKeySecret, securityToken,
-                bucket, endpoint, objectKey, ext),
+                bucket, endpoint, objectKey, ext,),
             body: fileBytes,
           )
           .timeout(const Duration(seconds: 60));

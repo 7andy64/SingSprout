@@ -164,7 +164,7 @@ class ObservationPage extends StatelessWidget {
                             ),
                             const Text('发出明信片',
                                 style: TextStyle(
-                                    fontSize: 12, color: AppTheme.textSecondary)),
+                                    fontSize: 12, color: AppTheme.textSecondary,),),
                           ],
                         ),
                       ),
@@ -189,7 +189,7 @@ class ObservationPage extends StatelessWidget {
                             ),
                             const Text('收到回信',
                                 style: TextStyle(
-                                    fontSize: 12, color: AppTheme.textSecondary)),
+                                    fontSize: 12, color: AppTheme.textSecondary,),),
                           ],
                         ),
                       ),

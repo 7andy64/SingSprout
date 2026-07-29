@@ -299,7 +299,7 @@ class _WorkCardState extends State<WorkCard>
                         ],
                         const SizedBox(width: 10),
                         Icon(Icons.access_time_filled,
-                            size: 12, color: AppTheme.textSecondary.withValues(alpha: 0.6)),
+                            size: 12, color: AppTheme.textSecondary.withValues(alpha: 0.6),),
                         const SizedBox(width: 3),
                         Text(
                           durationStr,

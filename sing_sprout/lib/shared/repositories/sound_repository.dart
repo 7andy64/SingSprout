@@ -11,7 +11,7 @@ class SoundRepository {
   Future<void> insert(SoundSample sample) async {
     final db = await _db.database;
     await db.insert('sound_samples', sample.toJson(),
-        conflictAlgorithm: ConflictAlgorithm.replace);
+        conflictAlgorithm: ConflictAlgorithm.replace,);
   }
 
   // ── 读取 ──

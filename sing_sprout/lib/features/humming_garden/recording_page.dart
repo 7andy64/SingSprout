@@ -158,7 +158,7 @@ class _RecordingPageState extends State<RecordingPage> {
                   Switch(
                     value: _speechMode,
                     onChanged: (v) => setState(() => _speechMode = v),
-                    activeColor: AppTheme.primaryGreen,
+                    activeThumbColor: AppTheme.primaryGreen,
                   ),
                   const Text('说话', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                   if (_speechText != null && _speechText!.isNotEmpty) ...[
@@ -242,19 +242,17 @@ class _RecordingPageState extends State<RecordingPage> {
                     if (_speechText != null && _speechText!.isNotEmpty && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('识别到你说: "${_speechText}"'),
+                          content: Text('识别到你说: "$_speechText"'),
                           behavior: SnackBarBehavior.floating,
                           duration: const Duration(seconds: 2),
                         ),
                       );
                     }
                     // 回退
-                    if (audioPath == null) {
-                      audioPath = (await AudioGenerator.generateTestTone(
+                    audioPath ??= (await AudioGenerator.generateTestTone(
                         styleSeed: _selectedStyle.name,
                         durationSec: 3.0,
                       )).audioPath;
-                    }
 
                     final duration = AudioService().lastDuration ??
                         AudioService().recordingDuration ??
@@ -276,7 +274,7 @@ class _RecordingPageState extends State<RecordingPage> {
                       ? '⏹ 停止并生成'
                       : _speechMode
                           ? '🎙 开始说话'
-                          : '🎤 开始哼唱'),
+                          : '🎤 开始哼唱',),
                 ),
               ),
               const SizedBox(height: 16),
@@ -416,11 +414,11 @@ class _RecoveryBanner extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.phone_callback, size: 20, color: AppTheme.primaryGreen),
-              const SizedBox(width: 8),
-              const Expanded(
+              Icon(Icons.phone_callback, size: 20, color: AppTheme.primaryGreen),
+              SizedBox(width: 8),
+              Expanded(
                 child: Text(
                   '检测到上次录制被来电中断，已自动保存录音片段',
                   style: TextStyle(fontSize: 13, color: AppTheme.primaryGreen, height: 1.4),
