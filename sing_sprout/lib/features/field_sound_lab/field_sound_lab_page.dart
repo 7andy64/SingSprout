@@ -19,10 +19,6 @@ class FieldSoundLabPage extends StatefulWidget {
 class _FieldSoundLabPageState extends State<FieldSoundLabPage>
     with TickerProviderStateMixin {
   final _audioService = AudioService();
-  StreamSubscription<Duration>? _positionSub;
-  StreamSubscription<Duration?>? _durationSub;
-  Duration _playPosition = Duration.zero;
-  Duration _playDuration = Duration.zero;
 
   // ── Recording state ──
   bool _isRecording = false;
@@ -74,21 +70,12 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage>
       duration: const Duration(seconds: 2),
     )..repeat();
 
-    _positionSub = _audioService.position.listen((pos) {
-      if (mounted) setState(() => _playPosition = pos);
-    });
-    _durationSub = _audioService.duration.listen((dur) {
-      if (mounted) setState(() => _playDuration = dur ?? Duration.zero);
-    });
-
     _checkPermission();
   }
 
   @override
   void dispose() {
     _amplitudeSub?.cancel();
-    _positionSub?.cancel();
-    _durationSub?.cancel();
     _recordTimer?.cancel();
     _cardSlideController.dispose();
     _waveAnimController.dispose();
