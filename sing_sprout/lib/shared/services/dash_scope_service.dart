@@ -93,6 +93,57 @@ class DashScopeService {
     }
   }
 
+  /// 发送通用聊天请求。
+  ///
+  /// [systemPrompt] — 系统提示词
+  /// [userMessage] — 用户消息
+  /// [temperature] — 创造性温度 (0.0-1.0)
+  /// [maxTokens] — 最大返回 token 数
+  ///
+  /// 返回 AI 回复文本，或 null（失败时）
+  Future<String?> chatCompletion({
+    required String systemPrompt,
+    required String userMessage,
+    double temperature = 0.8,
+    int maxTokens = 500,
+  }) async {
+    final key = await _getKey();
+    if (key == null || key.isEmpty) return null;
+
+    try {
+      final response = await _client.post(
+        Uri.parse('$_baseUrl/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $key',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': _model,
+          'messages': [
+            {'role': 'system', 'content': systemPrompt},
+            {'role': 'user', 'content': userMessage},
+          ],
+          'temperature': temperature,
+          'max_tokens': maxTokens,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode != 200) {
+        debugPrint('[DashScope] chatCompletion error ${response.statusCode}');
+        return null;
+      }
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final choices = body['choices'] as List<dynamic>?;
+      if (choices == null || choices.isEmpty) return null;
+
+      return choices[0]['message']['content'] as String?;
+    } catch (e) {
+      debugPrint('[DashScope] chatCompletion exception: $e');
+      return null;
+    }
+  }
+
   // ═══════════════════════════════════════════
   // Speech transcription (file-based, no mic conflict)
   // ═══════════════════════════════════════════
