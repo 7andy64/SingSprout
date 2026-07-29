@@ -17,8 +17,16 @@ class DashScopeService {
   DashScopeService._();
 
   static const _baseUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-  static const _asrUrl = 'https://dashscope.aliyuncs.com/api/v1/services/audio/asr/paraformer-realtime-v2';
-  static const _asrFallbackUrl = 'https://dashscope.aliyuncs.com/api/v1/services/audio/asr/sensevoice-v1';
+  static const _asrBase = 'https://dashscope.aliyuncs.com/api/v1/services/audio/asr';
+
+  /// ASR model chain: tried in order. paraformer-mtl-v1 supports
+  /// Southwestern Mandarin, Cantonese, and Hakka dialects natively.
+  static const _asrModelChain = [
+    'paraformer-mtl-v1',
+    'paraformer-realtime-v2',
+    'sensevoice-v1',
+  ];
+
   static const _model = 'qwen-plus';
   static const _keyStorageKey = 'dashscope_api_key';
 
@@ -150,8 +158,8 @@ class DashScopeService {
 
   /// Transcribe a WAV file using DashScope's ASR APIs.
   ///
-  /// Tries Paraformer first, falls back to SenseVoice.
-  /// Called after recording completes — no mic conflict.
+  /// Tries models in chain order: paraformer-mtl-v1 (multi-dialect),
+  /// paraformer-realtime-v2, then sensevoice-v1.
   Future<String?> transcribeFile(String wavFilePath) async {
     final key = await _getKey();
     if (key == null || key.isEmpty) return null;
@@ -169,16 +177,13 @@ class DashScopeService {
       return null;
     }
 
-    // Try Paraformer first, then SenseVoice fallback
-    final result = await _tryAsrCall(
-      _asrUrl, 'paraformer-realtime-v2', pcm16k, key,
-    );
-    if (result != null) return result;
-
-    debugPrint('[DashScope] ASR: Paraformer failed, trying SenseVoice...');
-    return _tryAsrCall(
-      _asrFallbackUrl, 'sensevoice-v1', pcm16k, key,
-    );
+    for (final model in _asrModelChain) {
+      final url = '$_asrBase/$model';
+      final result = await _tryAsrCall(url, model, pcm16k, key);
+      if (result != null) return result;
+      debugPrint('[DashScope] ASR: $model failed, trying next...');
+    }
+    return null;
   }
 
   Future<String?> _tryAsrCall(
@@ -321,11 +326,90 @@ class DashScopeService {
   }
 
   // ═══════════════════════════════════════════
+  // Audio event detection (SenseVoice)
+  // ═══════════════════════════════════════════
+
+  /// Result of audio event / sound classification.
+  AudioEventResult? _lastEventCache;
+
+  /// Detect sound events in a short audio clip using SenseVoice.
+  ///
+  /// Returns structured event data — sound type, confidence, and
+  /// whether speech/music/environmental sounds are present.
+  /// Useful for "Field Sound Lab" auto-classification.
+  Future<AudioEventResult?> detectAudioEvents(String wavFilePath) async {
+    final key = await _getKey();
+    if (key == null || key.isEmpty) return null;
+
+    final file = File(wavFilePath);
+    if (!await file.exists()) return null;
+
+    final rawBytes = await file.readAsBytes();
+    final pcm16k = _wavToPcm16k(rawBytes);
+    if (pcm16k == null) return null;
+
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$_asrBase/sensevoice-v1'),
+            headers: {
+              'Authorization': 'Bearer $key',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'model': 'sensevoice-v1',
+              'input': {'audio': base64Encode(pcm16k)},
+              'parameters': {
+                'format': 'pcm',
+                'sample_rate': 16000,
+                'audio_event_detection': true,
+              },
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200) return null;
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final output = body['output'] as Map<String, dynamic>?;
+      if (output == null) return null;
+
+      final events = (output['events'] as List<dynamic>?)
+          ?.map((e) => AudioEvent(
+                label: (e['label'] as String?) ?? '',
+                confidence: (e['confidence'] as num?)?.toDouble() ?? 0.0,
+              ),)
+          .toList();
+
+      if (events != null && events.isNotEmpty) {
+        final result = AudioEventResult(
+          events: events,
+          hasSpeech: events.any((e) => e.label.contains('Speech')),
+          hasMusic: events.any((e) => e.label.contains('Music')),
+          hasEnvironmental: events.any((e) =>
+              e.label.contains('Nature') || e.label.contains('Animal'),),
+        );
+        _lastEventCache = result;
+        return result;
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('[DashScope] Audio event detection failed: $e');
+      return null;
+    }
+  }
+
+  /// Get the last cached event result (avoids re-calling API).
+  AudioEventResult? get lastEventResult => _lastEventCache;
+
+  // ═══════════════════════════════════════════
   // Full-score generation
   // ═══════════════════════════════════════════
 
   static const _fullScoreSystemPrompt = '''
-你是一个儿童音乐编曲家。给定一段哼唱旋律的MIDI音符序列（可能附带语音识别文本），
+你是一个儿童音乐编曲家，专门为中国乡村儿童创作温暖、纯真的音乐。
+给定一段哼唱旋律的MIDI音符序列（可能附带语音识别文本和环境声音描述），
 为这段旋律创作完整的伴奏乐谱。你需要逐小节决定和弦、贝斯、节奏和打击乐。
 
 返回纯JSON（不要markdown包裹）。格式如下：
@@ -333,6 +417,7 @@ class DashScopeService {
 {
   "tempo_bpm": 88,
   "mood": "活泼跳跃",
+  "key_tonality": "C大调",
   "bars": [
     {
       "bar": 1,
@@ -347,27 +432,38 @@ class DashScopeService {
 }
 
 规则：
-- chord: 该小节的和弦音MIDI编号列表（3-4个音）。根据旋律走向选择不同转位和高音。
-  不同小节的voicing应该有所变化，不要始终用相同的排列方式。
+- chord: 该小节的和弦音MIDI编号列表（3-4个音）。优先使用主和弦(I)、下属和弦(IV)、
+  属和弦(V)、关系小调和弦(vi)。根据旋律走向选择不同转位和高音。
+  五声音阶旋律偏好I-IV-V-I或I-vi-IV-V进行。前奏用主和弦定位调性，终止式用V-I。
 - bass: 该小节贝斯线的MIDI编号列表。通常每拍一个音。
-  根据旋律的情绪在根音、五音、八度音之间变化。上行旋律配下行贝斯，反之亦然。
+  根音(下方八度)为主，在旋律长音处用五音或经过音增加动感。
+  上行旋律配下行贝斯形成反向进行。BASS音高范围：MIDI 28-55。
 - bass_rhythm: 每个贝斯音的时值（以拍为单位）。例如4/4拍中[1,1,1,1]表示每拍一个音。
-- chord_rhythm: 和弦音的分解节奏（以拍为单位）。例如八分音符分解为8个0.5。
-  使用不同的节奏型让伴奏有变化：有时琶音上行，有时下行，有时柱式。
-- percussion: 每半拍的打击乐标识。可选项: "kick", "snare", "hh", "kick+hh", "snare+hh", null(休止)。
-  根据情绪设计节奏型：活泼多用密集的hh，沉稳少用打击乐。至少有2-3种不同的小节节奏型循环。
-- dynamic: 0.0-1.0 该小节力度。整个乐曲有强弱对比（如0.6→0.8→0.7→0.9）。
-- tempo_bpm: 根据旋律和情绪选择60-120之间的速度。
-- mood: 10字以内的情绪描述。
+  可在第3-4拍加入切分音[1, 0.5, 0.5, 1, 1]增加律动感。
+- chord_rhythm: 和弦音的分解节奏（以拍为单位）。使用至少3种节奏型轮换：
+  柱式和弦[4]、八分音符上行[0.5×8]、八分音符下行[0.5×8]、附点节奏[0.75,0.25,...]。
+  同一节奏型不超过连续2小节。
+- percussion: 每半拍的打击乐标识。可选项: "kick", "snare", "hh", "kick+hh", "snare+hh", "clap", null(休止)。
+  基本框架：kick在第1、3拍，snare在第2、4拍，hh填充八分音符。clap在第2、4拍加强。
+  每4小节为一个段落，第4小节加fill变化（如"kick", "snare", "kick+hh", "snare+hh", "kick", "kick", "snare+hh", "hh"）。
+  欢快风格hihat密集，抒情风格只用kick+snare骨架。
+- dynamic: 0.0-1.0 该小节力度。整曲有情绪弧线：
+  前奏(0.5-0.6) → 主题进入(0.7-0.75) → 高潮(0.8-0.9) → 收束(0.6-0.5)。
+  高潮通常在总小节数的60%-80%位置。
+- tempo_bpm: 根据旋律密度选择。密集→80-90，稀疏→90-110，中等→70-85。
+  儿童音乐一般偏快但不急促，以孩子能跟随拍手为宜。
+- mood: 8字以内的情绪描述（如"晨露初醒"、"溪水欢唱"、"雨后蛙鸣"）。
+- key_tonality: 调性描述（如"C大调"、"a小调"）。根据旋律尾音和主音MIDI判断。
 
 创作原则：
-1. 仔细分析旋律音符的音高走向和节奏特点
-2. 每个小节的伴奏都应该与对应位置的旋律音符相协调
-3. 和弦进行要有起伏，避免反复使用同样的和弦
-4. 贝斯线和旋律形成对位关系
-5. 力度和打击乐密度随乐曲发展而变化，形成高潮和收束
-6. 保持儿童音乐的纯真感，不要过于复杂
-7. 小节数量 = 旋律总时长(秒) × tempo_bpm / 60 / 4 ，向上取整，至少4小节''';
+1. 分析旋律音符的音高走向，判断是大调还是五声音阶，据此选择调性和和弦
+2. 和弦选配以五声音阶为主（大调：do-re-mi-sol-la；小调：la-do-re-mi-sol）
+3. 每4小节为一个乐句，偶数小节用V或IV制造"问句"，奇数终止用I制造"答句"
+4. 贝斯与旋律保持三度以上音程距离，形成清晰的对位层次
+5. 前2小节作为前奏（只有伴奏无旋律呼应），最后1小节渐慢收束
+6. 保持儿童音乐的纯真感：避免半音阶和过于复杂的和声
+7. 如果提供了环境声音信息（鸟鸣、水声等），在编曲中融入自然感
+8. 小节数量 = ceil(旋律总时长(秒) × tempo_bpm / 60 / 4)，至少4小节，最多16小节''';
 
   /// Generate a full accompaniment score from melody data.
   ///
@@ -376,12 +472,14 @@ class DashScopeService {
   /// [tonicMidi] — estimated tonic MIDI number.
   /// [speechText] — optional speech-to-text result.
   /// [needsMelody] — if true, AI should compose the melody too (speech mode).
+  /// [audioEvents] — optional description of detected sounds in the recording.
   Future<AiFullScore?> generateFullScore({
     required List<Map<String, dynamic>> melodyNotes,
     required double totalDuration,
     required int tonicMidi,
     String? speechText,
     bool needsMelody = false,
+    String? audioEvents,
   }) async {
     final key = await _getKey();
     if (key == null || key.isEmpty) return null;
@@ -394,6 +492,11 @@ class DashScopeService {
     userPrompt.writeln('时长: ${totalDuration.toStringAsFixed(1)}秒');
     userPrompt.writeln('预计小节数: $barCount');
     userPrompt.writeln('旋律音符: $melodySummary');
+
+    if (audioEvents != null && audioEvents.isNotEmpty) {
+      userPrompt.writeln('环境声音: $audioEvents');
+      userPrompt.writeln('请将这些自然声音的感觉融入编曲风格中。');
+    }
 
     final systemPrompt = StringBuffer(_fullScoreSystemPrompt);
 
@@ -616,4 +719,45 @@ class AiBarScore {
     required this.percussion,
     required this.dynamic_,
   });
+}
+
+/// A single sound event detected by SenseVoice.
+class AudioEvent {
+  final String label;
+  final double confidence;
+
+  const AudioEvent({required this.label, required this.confidence});
+
+  @override
+  String toString() => '$label (${(confidence * 100).toStringAsFixed(0)}%)';
+}
+
+/// Aggregated audio event detection result.
+class AudioEventResult {
+  final List<AudioEvent> events;
+  final bool hasSpeech;
+  final bool hasMusic;
+  final bool hasEnvironmental;
+
+  const AudioEventResult({
+    required this.events,
+    this.hasSpeech = false,
+    this.hasMusic = false,
+    this.hasEnvironmental = false,
+  });
+
+  /// Human-readable summary for use in prompts.
+  String get summary {
+    if (events.isEmpty) return '';
+    final labels = events.take(3).map((e) => e.toString()).join(', ');
+    final categories = <String>[];
+    if (hasSpeech) categories.add('人声');
+    if (hasMusic) categories.add('音乐');
+    if (hasEnvironmental) categories.add('自然环境声');
+    final catStr = categories.isNotEmpty ? ' (${categories.join('/')})' : '';
+    return '$labels$catStr';
+  }
+
+  @override
+  String toString() => summary;
 }
