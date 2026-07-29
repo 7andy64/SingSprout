@@ -94,10 +94,13 @@ class _RecordButtonState extends State<RecordButton>
                         ),
                       ],
                     ),
-                    child: Icon(
-                      _isPressed ? Icons.mic : Icons.mic_none,
-                      color: Colors.white,
-                      size: widget.size * 0.45,
+                    alignment: Alignment.center,
+                    child: Text(
+                      '🎤',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: widget.size * 0.45,
+                      ),
                     ),
                   ),
                 ),
