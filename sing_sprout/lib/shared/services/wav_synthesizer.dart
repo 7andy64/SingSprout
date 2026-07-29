@@ -34,17 +34,13 @@ class WavSynthesizer {
 
   // ── Public API ──
 
-  /// Render with modulation params applied.
-  /// [speed] changes require re-arranging; [temperature] and [instrumentMix]
-  /// affect ADSR and track gains during synthesis.
-  static Future<String> renderModulated({
+  /// Render modulated samples (CPU-only, no I/O). Suitable for isolate offloading.
+  static Float64List renderModulatedSamples({
     required Arrangement baseArrangement,
     required List<MidiNoteEvent> melody,
     required StyleSeed style,
     required ModulationParams params,
-    required String outputPath,
-  }) async {
-    // Speed change → time-scale existing arrangement (preserves AI work)
+  }) {
     List<MidiNoteEvent> chords, bass, percussion;
     double totalDuration;
     final speedFactor = 1.0 / params.speed;
@@ -60,7 +56,6 @@ class WavSynthesizer {
       totalDuration = baseArrangement.totalDurationSeconds;
     }
 
-    // Temperature → ADSR warmth
     final warmth = params.temperature;
     final melodyAdsr = _interpolateAdsr(_AdsrPreset.melody, warmth);
     final chordAdsr = style == StyleSeed.mountainStream
@@ -68,10 +63,8 @@ class WavSynthesizer {
         : _interpolateAdsr(_AdsrPreset.chord, warmth);
     final bassAdsr = _interpolateAdsr(_AdsrPreset.bass, warmth);
 
-    // Instrument mix → gain balance
-    // mix=0: melody only; mix=0.5: default; mix=1: full accompaniment
     final mix = params.instrumentMix;
-    final melodyGain = 0.75 - (mix - 0.5) * 0.15; // 0.825 at mix=0, 0.75 at mix=0.5, 0.675 at mix=1
+    final melodyGain = 0.75 - (mix - 0.5) * 0.15;
     final chordBaseGain = style == StyleSeed.mountainStream ? 0.18 : 0.35;
     final chordGain = chordBaseGain * (mix * 2).clamp(0.1, 1.0);
     final bassGain = 0.55 * (mix * 2).clamp(0.1, 1.0);
@@ -79,7 +72,6 @@ class WavSynthesizer {
 
     final chordWave = style == StyleSeed.frogDrum ? _WaveType.triangle : _WaveType.sine;
 
-    // ── Render ──
     final numSamples = (sampleRate * totalDuration).ceil();
     final buffer = Float64List(numSamples);
 
@@ -94,6 +86,23 @@ class WavSynthesizer {
       buffer[i] = tanh(buffer[i] * 1.3) * 0.85;
     }
 
+    return buffer;
+  }
+
+  /// Render with modulation params applied and write to file.
+  static Future<String> renderModulated({
+    required Arrangement baseArrangement,
+    required List<MidiNoteEvent> melody,
+    required StyleSeed style,
+    required ModulationParams params,
+    required String outputPath,
+  }) async {
+    final buffer = renderModulatedSamples(
+      baseArrangement: baseArrangement,
+      melody: melody,
+      style: style,
+      params: params,
+    );
     await AudioProcessor.writeWav(outputPath, buffer, sampleRate);
     return outputPath;
   }

@@ -11,11 +11,11 @@ class AudioProvider extends ChangeNotifier {
   StreamSubscription<dynamic>? _ampSub;
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<Duration>? _positionSub;
-  StreamSubscription<Duration>? _durationSub;
+  StreamSubscription<Duration?>? _durationSub;
 
   AudioStatus _status = AudioStatus.idle;
   Duration _currentPosition = Duration.zero;
-  Duration _totalDuration = Duration.zero;
+  Duration? _totalDuration = Duration.zero;
   List<double>? _waveformData;
   String? _currentRecordingPath;
   double _currentAmplitude = 0;
@@ -25,7 +25,7 @@ class AudioProvider extends ChangeNotifier {
 
   AudioStatus get status => _status;
   Duration get currentPosition => _currentPosition;
-  Duration get totalDuration => _totalDuration;
+  Duration get totalDuration => _totalDuration ?? Duration.zero;
   List<double>? get waveformData => _waveformData;
   String? get currentRecordingPath => _currentRecordingPath;
   double get currentAmplitude => _currentAmplitude;

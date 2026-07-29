@@ -36,7 +36,7 @@ void main() {
     when(() => mockPlayer.pause()).thenAnswer((_) async {});
     when(() => mockPlayer.dispose()).thenAnswer((_) async {});
     when(() => mockPlayer.seek(any())).thenAnswer((_) async {});
-    when(() => mockPlayer.setFilePath(any())).thenAnswer((_) async {});
+    when(() => mockPlayer.setFilePath(any())).thenAnswer((_) async => null);
   });
 
   tearDown(() async {

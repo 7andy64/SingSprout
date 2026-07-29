@@ -8,7 +8,8 @@ import '../../../core/constants/enums.dart';
 import '../../../shared/services/audio_service.dart';
 import '../../../shared/services/file_storage_service.dart';
 import '../../../shared/utils/audio_generator.dart' show AudioGenerator, GenerationResult, PipelineProgress;
-import '../../../shared/services/wav_synthesizer.dart' show ModulationParams, WavSynthesizer;
+import '../../../shared/services/wav_synthesizer.dart' show ModulationParams;
+import '../../../shared/services/wav_synthesizer_isolate.dart' show WavSynthesizerIsolate;
 
 /// ViewModel for CreativeFlowPage — manages all state and business logic.
 ///
@@ -224,7 +225,7 @@ class CreativeFlowViewModel extends ChangeNotifier {
           styleSeed: selectedStyle.name,
           extension: 'wav',
         );
-        await WavSynthesizer.renderModulated(
+        await WavSynthesizerIsolate.renderModulated(
           baseArrangement: generationResult!.arrangement,
           melody: generationResult!.melody,
           style: selectedStyle,
