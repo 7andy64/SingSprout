@@ -94,7 +94,7 @@ class _SaveWorkDialogState extends State<SaveWorkDialog> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Dialog(
-      insetPadding: EdgeInsets.fromLTRB(24, 40, 24, 24),
+      insetPadding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: AnimatedPadding(
         duration: const Duration(milliseconds: 200),
@@ -112,12 +112,12 @@ class _SaveWorkDialogState extends State<SaveWorkDialog> {
                   Text('🎵', style: TextStyle(fontSize: 22)),
                   SizedBox(width: 8),
                   Text('保存你的作品',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-                ]),
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),),
+                ],),
                 const SizedBox(height: 16),
                 // 心情贴纸
                 const Text('贴上心情贴纸',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 12,
@@ -144,7 +144,7 @@ class _SaveWorkDialogState extends State<SaveWorkDialog> {
                 const SizedBox(height: 14),
                 // 短句备注
                 const Text('写一句此刻的心情',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),),
                 const SizedBox(height: 6),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 80),

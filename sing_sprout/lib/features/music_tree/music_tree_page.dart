@@ -300,11 +300,11 @@ class _StatItem extends StatelessWidget {
           children: [
             Text(label,
                 style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 13)),
+                    color: AppTheme.textSecondary, fontSize: 13,),),
             if (subtitle != null)
               Text(subtitle!,
                   style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 11)),
+                      color: AppTheme.textSecondary, fontSize: 11,),),
           ],
         ),
         const Spacer(),

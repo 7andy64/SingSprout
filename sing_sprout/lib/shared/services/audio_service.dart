@@ -158,13 +158,13 @@ class AudioService {
     // ── 2. 权限检查 ──
     final hasPermission = await requestMicPermission();
     if (!hasPermission) {
-      throw AudioRecordException('麦克风权限未授予，无法开始录音。'
+      throw const AudioRecordException('麦克风权限未授予，无法开始录音。'
           '请在系统设置中允许声芽访问麦克风。');
     }
 
     // ── 3. 检查录音器是否可用 ──
     if (!await _audioRecorder.hasPermission()) {
-      throw AudioRecordException('录音权限检查失败，请确认系统设置中已授权。');
+      throw const AudioRecordException('录音权限检查失败，请确认系统设置中已授权。');
     }
 
     // ── 4. 生成文件路径 ──

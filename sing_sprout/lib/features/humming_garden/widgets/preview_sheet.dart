@@ -30,7 +30,7 @@ class _PreviewSheetState extends State<PreviewSheet>
     super.initState();
     _player = AudioPlayer();
     _swayCtrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 1));
+        vsync: this, duration: const Duration(seconds: 1),);
     _stateSub = _player.playerStateStream.listen((s) {
       if (mounted) setState(() => _isPlaying = s.playing);
       if (s.playing) {
@@ -81,13 +81,13 @@ class _PreviewSheetState extends State<PreviewSheet>
               height: 4,
               decoration: BoxDecoration(
                   color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2))),
+                  borderRadius: BorderRadius.circular(2),),),
           const SizedBox(height: 20),
           AnimatedBuilder(
             animation: _swayCtrl,
             builder: (_, child) => Transform.rotate(
                 angle: _swayCtrl.value * 0.08 - 0.04,
-                child: child),
+                child: child,),
             child: CustomPaint(
               size: const Size(80, 80),
               painter:
@@ -97,19 +97,19 @@ class _PreviewSheetState extends State<PreviewSheet>
           const SizedBox(height: 8),
           Text(widget.work.title,
               style: const TextStyle(
-                  fontSize: 17, fontWeight: FontWeight.w600)),
+                  fontSize: 17, fontWeight: FontWeight.w600,),),
           const SizedBox(height: 16),
           Row(children: [
             Text(_fmt(_pos),
                 style: const TextStyle(
                     fontSize: 12,
-                    color: AppTheme.textSecondary)),
+                    color: AppTheme.textSecondary,),),
             Expanded(
               child: SliderTheme(
                 data: const SliderThemeData(
                     trackHeight: 3,
                     thumbShape: RoundSliderThumbShape(
-                        enabledThumbRadius: 8)),
+                        enabledThumbRadius: 8,),),
                 child: Slider(
                   value: _dur.inMilliseconds > 0
                       ? _pos.inMilliseconds
@@ -120,7 +120,7 @@ class _PreviewSheetState extends State<PreviewSheet>
                       ? _dur.inMilliseconds.toDouble()
                       : 1,
                   onChanged: (v) => _player.seek(
-                      Duration(milliseconds: v.toInt())),
+                      Duration(milliseconds: v.toInt()),),
                   activeColor: AppTheme.primaryGreen,
                 ),
               ),
@@ -128,8 +128,8 @@ class _PreviewSheetState extends State<PreviewSheet>
             Text(_fmt(_dur),
                 style: const TextStyle(
                     fontSize: 12,
-                    color: AppTheme.textSecondary)),
-          ]),
+                    color: AppTheme.textSecondary,),),
+          ],),
           const SizedBox(height: 12),
           GestureDetector(
             onTap: () =>
@@ -141,13 +141,13 @@ class _PreviewSheetState extends State<PreviewSheet>
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(colors: [
                   Color(0xFF6BAF4B),
-                  Color(0xFF4A8A3B)
-                ]),
+                  Color(0xFF4A8A3B),
+                ],),
                 boxShadow: [
                   BoxShadow(
                       color: AppTheme.primaryGreen
                           .withValues(alpha: 0.3),
-                      blurRadius: 12)
+                      blurRadius: 12,),
                 ],
               ),
               child: Center(
@@ -156,7 +156,7 @@ class _PreviewSheetState extends State<PreviewSheet>
                           ? Icons.pause
                           : Icons.play_arrow,
                       color: Colors.white,
-                      size: 28)),
+                      size: 28,),),
             ),
           ),
           const SizedBox(height: 20),
@@ -166,17 +166,17 @@ class _PreviewSheetState extends State<PreviewSheet>
               onPressed: () {
                 Navigator.pop(context);
                 context.push(
-                    '${AppRoutes.composeCard}?workId=${widget.work.id}');
+                    '${AppRoutes.composeCard}?workId=${widget.work.id}',);
               },
               icon: const Text('📮'),
               label: const Text('做成明信片'),
               style: OutlinedButton.styleFrom(
                   side: const BorderSide(
                       color: AppTheme.primaryWarm,
-                      width: 1.5)),
+                      width: 1.5,),),
             ),
           ),
-        ]),
+        ],),
       ),
     );
   }

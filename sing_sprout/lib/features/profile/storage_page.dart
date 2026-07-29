@@ -86,7 +86,7 @@ class _StoragePageState extends State<StoragePage> {
             path: entity.path,
             size: stat.size,
             modified: stat.modified,
-          ));
+          ),);
         }
       }
     } catch (_) {}
@@ -226,7 +226,7 @@ class _StoragePageState extends State<StoragePage> {
                           child: _clearing
                               ? const SizedBox(
                                   width: 16, height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2))
+                                  child: CircularProgressIndicator(strokeWidth: 2),)
                               : const Text('清理', style: TextStyle(color: AppTheme.error, fontSize: 13)),
                         )
                       : null,
@@ -271,7 +271,7 @@ class _StoragePageState extends State<StoragePage> {
                     leading: const Icon(Icons.image, size: 20),
                     title: Text(f.name, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                     trailing: Text(_formatBytes(f.size), style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                  )),
+                  ),),
                   const SizedBox(height: 16),
                 ],
 
@@ -298,7 +298,7 @@ class _StoragePageState extends State<StoragePage> {
                   ...appState.works.map((w) => _WorkStorageTile(
                     work: w,
                     onDelete: () => _deleteWorkFromList(w),
-                  )),
+                  ),),
 
                 const SizedBox(height: 16),
 
@@ -347,7 +347,7 @@ class _StorageOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final mb = totalBytes / (1024 * 1024);
     final color = isLow ? const Color(0xFFE67E22) : AppTheme.primaryGreen;
-    final refMB = 500;
+    const refMB = 500;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -367,9 +367,9 @@ class _StorageOverview extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
+          const Text(
             '已使用 (上限约 $refMB MB)',
-            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 16),
           ClipRRect(

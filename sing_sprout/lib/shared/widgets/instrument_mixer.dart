@@ -107,7 +107,7 @@ class _InstrumentMixerState extends State<InstrumentMixer> {
                   // 乐器图标（半圆弧，以 Stack 中心为原点）
                   ...List.generate(_instruments.length, (i) {
                     final angle = -pi * 0.8 + (pi * 1.6 * i / (_instruments.length - 1));
-                    final radius = 42.0;
+                    const radius = 42.0;
                     final dx = radius * cos(angle);
                     final dy = -radius * sin(angle) * 0.6 - 10;
                     final isActive = _active[i];

@@ -107,7 +107,7 @@ class ArrangementEngine {
             startSeconds: chordTime,
             durationSeconds: (dur * beatDuration * 0.9).clamp(0.05, barDuration),
             velocity: (0.35 * dyn).clamp(0.15, 0.6),
-          ));
+          ),);
           chordTime += dur * beatDuration;
         }
       }
@@ -122,7 +122,7 @@ class ArrangementEngine {
             startSeconds: bassTime,
             durationSeconds: (bar.bassRhythm[j] * beatDuration * 0.85).clamp(0.05, barDuration),
             velocity: (0.5 * dyn).clamp(0.25, 0.7),
-          ));
+          ),);
           bassTime += bar.bassRhythm[j] * beatDuration;
         }
       }
@@ -141,19 +141,19 @@ class ArrangementEngine {
             percNotes.add(MidiNoteEvent(
               noteNumber: _kick, startSeconds: hitTime,
               durationSeconds: 0.1, velocity: vel,
-            ));
+            ),);
           }
           if (hit.contains('snare')) {
             percNotes.add(MidiNoteEvent(
               noteNumber: _snare, startSeconds: hitTime,
               durationSeconds: 0.08, velocity: vel * 0.95,
-            ));
+            ),);
           }
           if (hit.contains('hh')) {
             percNotes.add(MidiNoteEvent(
               noteNumber: _hihat, startSeconds: hitTime,
               durationSeconds: 0.03, velocity: vel * 0.6,
-            ));
+            ),);
           }
         }
       }
@@ -184,7 +184,7 @@ class ArrangementEngine {
         startSeconds: time,
         durationSeconds: dur * 0.85,
         velocity: 0.65,
-      ));
+      ),);
       time += dur;
     }
 
@@ -303,7 +303,7 @@ class ArrangementEngine {
               startSeconds: n.startSeconds + introDuration,
               durationSeconds: n.durationSeconds,
               velocity: n.velocity,
-            )).toList()
+            ),).toList()
         : melody;
 
     // ── 3. Select progression dynamically from melody contour ──
@@ -470,7 +470,7 @@ class ArrangementEngine {
   }) {
     final notes = <MidiNoteEvent>[];
     final beatDuration = 60.0 / profile.tempo;
-    final barBeats = 4.0;
+    const barBeats = 4.0;
     final barDuration = beatDuration * barBeats;
 
     var barIndex = 0;
@@ -486,7 +486,9 @@ class ArrangementEngine {
       final chordMidi = offsets.map((offset) {
         var midi = tonicMidi + scale[offset % scale.length];
         if (offset >= scale.length) midi += 12;
-        while (midi > tonicMidi + 24) midi -= 12;
+        while (midi > tonicMidi + 24) {
+          midi -= 12;
+        }
         if (midi < tonicMidi - 12) midi += 12;
         return midi + octaveShift * 12;
       }).toList();
@@ -501,7 +503,7 @@ class ArrangementEngine {
               startSeconds: subTime,
               durationSeconds: noteLen * 0.9,
               velocity: 0.4,
-            ));
+            ),);
           }
           break;
 
@@ -512,7 +514,7 @@ class ArrangementEngine {
               startSeconds: time,
               durationSeconds: (barDuration * 0.95).clamp(0, endTime - time),
               velocity: 0.2,
-            ));
+            ),);
           }
           break;
 
@@ -526,7 +528,7 @@ class ArrangementEngine {
                 startSeconds: hitTime,
                 durationSeconds: beatDuration * 0.3,
                 velocity: 0.5,
-              ));
+              ),);
             }
           }
           break;
@@ -569,14 +571,14 @@ class ArrangementEngine {
             startSeconds: time,
             durationSeconds: beatDuration * 1.8,
             velocity: 0.5,
-          ));
+          ),);
           if (time + beatDuration * 2 < endTime) {
             notes.add(MidiNoteEvent(
               noteNumber: rootMidi,
               startSeconds: time + beatDuration * 2,
               durationSeconds: beatDuration * 1.8,
               velocity: 0.45,
-            ));
+            ),);
           }
           break;
 
@@ -586,7 +588,7 @@ class ArrangementEngine {
             startSeconds: time,
             durationSeconds: (barDuration * 0.95).clamp(0, endTime - time),
             velocity: 0.3,
-          ));
+          ),);
           break;
 
         case _BassPattern.rootFifth:
@@ -600,7 +602,7 @@ class ArrangementEngine {
               startSeconds: noteTime,
               durationSeconds: beatDuration * 0.7,
               velocity: 0.55,
-            ));
+            ),);
           }
           break;
       }
@@ -634,13 +636,13 @@ class ArrangementEngine {
         startSeconds: time,
         durationSeconds: 0.1,
         velocity: 0.7,
-      ));
+      ),);
       notes.add(MidiNoteEvent(
         noteNumber: _kick,
         startSeconds: time + beatDuration * 2,
         durationSeconds: 0.1,
         velocity: barCount.isEven ? 0.6 : 0.65,
-      ));
+      ),);
 
       // Snare on beats 2 and 4
       notes.add(MidiNoteEvent(
@@ -648,13 +650,13 @@ class ArrangementEngine {
         startSeconds: time + beatDuration,
         durationSeconds: 0.08,
         velocity: 0.65,
-      ));
+      ),);
       notes.add(MidiNoteEvent(
         noteNumber: _snare,
         startSeconds: time + beatDuration * 3,
         durationSeconds: 0.08,
         velocity: 0.65,
-      ));
+      ),);
 
       // Hi-hat eighth notes
       for (var i = 0; i < 8; i++) {
@@ -666,7 +668,7 @@ class ArrangementEngine {
           startSeconds: ht,
           durationSeconds: 0.03,
           velocity: 0.4 * accent,
-        ));
+        ),);
       }
 
       barCount++;
@@ -683,7 +685,7 @@ class ArrangementEngine {
             startSeconds: ft,
             durationSeconds: 0.06,
             velocity: 0.75,
-          ));
+          ),);
         }
       }
 
@@ -695,7 +697,7 @@ class ArrangementEngine {
 
   // ── Intro / Outro ──
 
-  static final _allProgressions = const [
+  static const _allProgressions = [
     [1, 5, 6, 4],
     [1, 4, 1, 5],
     [1, 6, 4, 5],
@@ -721,7 +723,7 @@ class ArrangementEngine {
         startSeconds: 0,
         durationSeconds: barDuration * 0.9,
         velocity: 0.15,
-      ));
+      ),);
     }
 
     // Bass: root on beat 1, rising approach to the melody entry
@@ -730,7 +732,7 @@ class ArrangementEngine {
       startSeconds: 0,
       durationSeconds: beatDuration * 3.5,
       velocity: 0.25,
-    ));
+    ),);
 
     return notes;
   }
@@ -746,7 +748,7 @@ class ArrangementEngine {
         startSeconds: beat * beatDuration,
         durationSeconds: 0.04,
         velocity: 0.2 + beat * 0.1,
-      ));
+      ),);
     }
     return notes;
   }
@@ -767,7 +769,7 @@ class ArrangementEngine {
         startSeconds: startTime,
         durationSeconds: barDuration * 0.85,
         velocity: 0.1,
-      ));
+      ),);
     }
 
     // Final bass note on beat 1, held
@@ -776,7 +778,7 @@ class ArrangementEngine {
       startSeconds: startTime,
       durationSeconds: barDuration * 0.9,
       velocity: 0.2,
-    ));
+    ),);
 
     return notes;
   }
@@ -790,7 +792,7 @@ class ArrangementEngine {
       startSeconds: startTime,
       durationSeconds: 0.12,
       velocity: 0.5,
-    ));
+    ),);
     final beatDuration = 60.0 / tempo;
     for (var beat = 1; beat < 4; beat++) {
       notes.add(MidiNoteEvent(
@@ -798,7 +800,7 @@ class ArrangementEngine {
         startSeconds: startTime + beat * beatDuration,
         durationSeconds: 0.03,
         velocity: 0.2,
-      ));
+      ),);
     }
     return notes;
   }

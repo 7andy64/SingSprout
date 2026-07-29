@@ -264,7 +264,7 @@ class AudioProcessor {
             noteNumber: currentNote,
             startSeconds: startTime,
             durationSeconds: duration,
-          ));
+          ),);
         }
         startTime = midiFrames[i].time;
         currentNote = midiFrames[i].note;
@@ -278,7 +278,7 @@ class AudioProcessor {
         noteNumber: currentNote,
         startSeconds: startTime,
         durationSeconds: lastDuration.clamp(0.05, 2.0),
-      ));
+      ),);
     }
 
     return events;

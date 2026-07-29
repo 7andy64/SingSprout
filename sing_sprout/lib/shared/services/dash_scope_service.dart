@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -460,7 +459,7 @@ class DashScopeService {
           chordRhythm: chordRhythm ?? [],
           percussion: percussion ?? [],
           dynamic_: dynamicVal.clamp(0.2, 1.0),
-        ));
+        ),);
       }
 
       return AiFullScore(

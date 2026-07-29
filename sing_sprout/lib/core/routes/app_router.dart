@@ -277,7 +277,7 @@ class _BottomNavBar extends StatelessWidget {
                     children: [
                       Text(
                         _tabs[i].$1,
-                        style: TextStyle(fontSize: 26),
+                        style: const TextStyle(fontSize: 26),
                       ),
                       const SizedBox(height: 2),
                       Text(

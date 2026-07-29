@@ -56,7 +56,7 @@ class EditingStageWidget extends StatelessWidget {
                     BoxShadow(
                         color: accent.withValues(alpha: 0.06),
                         blurRadius: 20,
-                        offset: const Offset(0, 4)),
+                        offset: const Offset(0, 4),),
                   ],
                 ),
                 child: Stack(
@@ -71,7 +71,7 @@ class EditingStageWidget extends StatelessWidget {
                             ['♪', '♫', '♩', '🎵', '✨', '🎶'][i],
                             style: TextStyle(
                                 fontSize: 16 + (i % 3) * 6.0,
-                                color: accent),
+                                color: accent,),
                           ),
                         ),
                       );
@@ -96,11 +96,11 @@ class EditingStageWidget extends StatelessWidget {
                                   colors: hasResult
                                       ? [
                                           const Color(0xFF6BAF4B),
-                                          const Color(0xFF4A8A3B)
+                                          const Color(0xFF4A8A3B),
                                         ]
                                       : [
                                           Colors.grey.shade400,
-                                          Colors.grey.shade500
+                                          Colors.grey.shade500,
                                         ],
                                 ),
                                 boxShadow: [
@@ -119,7 +119,7 @@ class EditingStageWidget extends StatelessWidget {
                                   vm.isPlaying ? '⏸' : '▶',
                                   style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 22)),
+                                      fontSize: 22,),),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -130,14 +130,14 @@ class EditingStageWidget extends StatelessWidget {
                             style: const TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 12,
-                                fontWeight: FontWeight.w500),
+                                fontWeight: FontWeight.w500,),
                           ),
                           if (hasResult &&
                               vm.playDuration > Duration.zero) ...[
                             const SizedBox(height: 6),
                             Padding(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 40),
+                                  horizontal: 40,),
                               child: ClipRRect(
                                 borderRadius:
                                     BorderRadius.circular(2),
@@ -196,7 +196,7 @@ class EditingStageWidget extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 12,
                       color: accent,
-                      fontWeight: FontWeight.w500)),
+                      fontWeight: FontWeight.w500,),),
             ),
           const SizedBox(height: 36),
           // ── Action buttons ──
@@ -210,9 +210,9 @@ class EditingStageWidget extends StatelessWidget {
                         const Size(double.infinity, 52),
                     shape: RoundedRectangleBorder(
                         borderRadius:
-                            BorderRadius.circular(26)),
+                            BorderRadius.circular(26),),
                     side: const BorderSide(
-                        color: AppTheme.primaryGreen),
+                        color: AppTheme.primaryGreen,),
                   ),
                   child: const Text('保存'),
                 ),
@@ -234,16 +234,16 @@ class EditingStageWidget extends StatelessWidget {
               icon:
                   const Text('📮', style: TextStyle(fontSize: 18)),
               label: const Text(
-                  '做成音乐明信片\n把这首歌寄给远方爸爸妈妈'),
+                  '做成音乐明信片\n把这首歌寄给远方爸爸妈妈',),
               style: OutlinedButton.styleFrom(
                 minimumSize:
                     const Size(double.infinity, 56),
                 side: const BorderSide(
                     color: AppTheme.primaryWarm,
-                    width: 1.5),
+                    width: 1.5,),
                 shape: RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.circular(26)),
+                        BorderRadius.circular(26),),
               ),
             ),
           ),

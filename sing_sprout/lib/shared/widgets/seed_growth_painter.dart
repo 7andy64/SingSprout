@@ -60,7 +60,7 @@ class SeedGrowthPainter extends CustomPainter {
       )!
       ..style = PaintingStyle.fill;
 
-    final seedWidth = 16.0;
+    const seedWidth = 16.0;
     final seedHeight = 10.0 + t * 2;
     canvas.drawOval(
       Rect.fromCenter(
@@ -193,7 +193,7 @@ class SeedGrowthPainter extends CustomPainter {
   }
 
   void _drawCanopy(Canvas canvas, double centerX, double groundY, double t, Random rng) {
-    final stemHeight = 80.0;
+    const stemHeight = 80.0;
     final canopyY = groundY - stemHeight;
     final baseRadius = 18 + t * 18;
 
