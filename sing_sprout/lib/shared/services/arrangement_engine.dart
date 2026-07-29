@@ -149,6 +149,12 @@ class ArrangementEngine {
               durationSeconds: 0.08, velocity: vel * 0.95,
             ),);
           }
+          if (hit.contains('clap')) {
+            percNotes.add(MidiNoteEvent(
+              noteNumber: _clap, startSeconds: hitTime,
+              durationSeconds: 0.06, velocity: vel * 0.85,
+            ),);
+          }
           if (hit.contains('hh')) {
             percNotes.add(MidiNoteEvent(
               noteNumber: _hihat, startSeconds: hitTime,
@@ -619,6 +625,7 @@ class ArrangementEngine {
   /// MIDI note numbers for GM percussion (channel 10).
   static const _kick = 36;
   static const _snare = 38;
+  static const _clap = 39;
   static const _hihat = 42;
 
   static List<MidiNoteEvent> _generatePercussion(double totalDuration, double tempo, {double timeOffset = 0.0}) {
