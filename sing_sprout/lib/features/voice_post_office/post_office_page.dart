@@ -44,12 +44,12 @@ class PostOfficePage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Tab 切换：发件箱 / 收件箱
-            DefaultTabController(
+            const DefaultTabController(
               length: 2,
               child: Expanded(
                 child: Column(
                   children: [
-                    const TabBar(
+                    TabBar(
                       labelColor: AppTheme.primaryGreen,
                       unselectedLabelColor: AppTheme.textSecondary,
                       indicatorColor: AppTheme.primaryGreen,

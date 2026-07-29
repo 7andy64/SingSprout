@@ -139,7 +139,7 @@ class _WorksPageState extends State<WorksPage> {
                 setState(() => _sortBy = s);
                 Navigator.pop(ctx);
               },
-            )),
+            ),),
             const SizedBox(height: 8),
           ],
         ),
@@ -197,7 +197,7 @@ class _WorksPageState extends State<WorksPage> {
                 });
                 Navigator.pop(ctx);
               },
-            )),
+            ),),
             const SizedBox(height: 8),
           ],
         ),

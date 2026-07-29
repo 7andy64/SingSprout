@@ -37,10 +37,12 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final storage = FileStorageService();
       final bytes = await storage.totalStorageUsed();
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _totalStorageBytes = bytes;
         _storageChecked = true;
       });
+      }
     } catch (_) {
       if (mounted) setState(() => _storageChecked = true);
     }
@@ -179,9 +181,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           MenuItem(
                             icon: Icons.info_outline_rounded,
                             label: '关于声芽',
-                            trailing: Text(
+                            trailing: const Text(
                               'V${AppConfig.version}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 color: AppTheme.textSecondary,
                               ),
@@ -305,7 +307,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       trailing: isSelected
                           ? const Icon(Icons.check_circle,
-                              color: AppTheme.primaryGreen)
+                              color: AppTheme.primaryGreen,)
                           : null,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

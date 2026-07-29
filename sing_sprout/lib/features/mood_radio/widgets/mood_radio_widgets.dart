@@ -354,7 +354,7 @@ class MoodTimeline extends StatelessWidget {
                           color: _moodToColor(r.mood).withValues(alpha: 0.8),
                           shape: BoxShape.circle,
                         ),
-                      )),
+                      ),),
                 ],
               ),
             ),

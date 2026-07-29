@@ -61,7 +61,7 @@ class GeneratingStageWidget extends StatelessWidget {
               style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary),
+                  color: AppTheme.textPrimary,),
               textAlign: TextAlign.center,
             ),
           ),
@@ -73,7 +73,7 @@ class GeneratingStageWidget extends StatelessWidget {
                 progress!.detail!,
                 key: ValueKey(progress.detail),
                 style: const TextStyle(
-                    fontSize: 14, color: AppTheme.textSecondary),
+                    fontSize: 14, color: AppTheme.textSecondary,),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -96,8 +96,8 @@ class GeneratingStageWidget extends StatelessWidget {
                     gradient: LinearGradient(colors: [
                       accent,
                       accent.withGreen(
-                          (accent.g + 40).clamp(0, 255).toInt())
-                    ]),
+                          (accent.g + 40).clamp(0, 255).toInt(),),
+                    ],),
                   ),
                 ),
               ),
@@ -134,15 +134,15 @@ class GeneratingStageWidget extends StatelessWidget {
                       height: 36,
                       child: isCompleted
                           ? Icon(Icons.check_circle_rounded,
-                              color: accent, size: 28)
+                              color: accent, size: 28,)
                           : isCurrent
                               ? _PulseIconWidget(
-                                  icon: row.icon, color: accent)
+                                  icon: row.icon, color: accent,)
                               : Opacity(
                                   opacity: 0.3,
                                   child: Text(row.icon,
                                       style: const TextStyle(
-                                          fontSize: 22)),
+                                          fontSize: 22,),),
                                 ),
                     ),
                   ),
@@ -171,7 +171,7 @@ class GeneratingStageWidget extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(180, 48),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24)),
+                    borderRadius: BorderRadius.circular(24),),
               ),
               child: const Text('🎧 听听看'),
             ),
@@ -180,7 +180,7 @@ class GeneratingStageWidget extends StatelessWidget {
             TextButton(
               onPressed: vm.isGenerating ? null : onSkipToEditing,
               child: const Text('好啦，让我看看',
-                  style: TextStyle(color: AppTheme.textSecondary)),
+                  style: TextStyle(color: AppTheme.textSecondary),),
             ),
           const SizedBox(height: 24),
         ],
@@ -208,7 +208,7 @@ class _PulseIconWidgetState extends State<_PulseIconWidget>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
+        vsync: this, duration: const Duration(milliseconds: 900),);
     _scale = Tween(begin: 0.85, end: 1.15)
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
     _ctrl.repeat(reverse: true);

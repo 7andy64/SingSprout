@@ -77,7 +77,7 @@ class PostcardGenerator {
     // ── 分割线 ──
     canvas.drawLine(
       const ui.Offset(64, 340),
-      ui.Offset(width - 64, 340),
+      const ui.Offset(width - 64, 340),
       ui.Paint()
         ..color = const ui.Color(0x302D4059)
         ..strokeWidth = 2,
@@ -93,7 +93,7 @@ class PostcardGenerator {
 
     // ── 消息背景 ──
     final msgBgRect = ui.RRect.fromRectAndRadius(
-      ui.Rect.fromLTWH(64, 440, width - 128, 320),
+      const ui.Rect.fromLTWH(64, 440, width - 128, 320),
       const ui.Radius.circular(24),
     );
     canvas.drawRRect(msgBgRect, ui.Paint()..color = const ui.Color(0x99FFFFFF));
@@ -277,7 +277,7 @@ class PostcardGenerator {
     final builder = ui.ParagraphBuilder(ui.ParagraphStyle(
       textDirection: ui.TextDirection.ltr,
       maxLines: 10,
-    ))
+    ),)
       ..pushStyle(style)
       ..addText(text);
     final para = builder.build()

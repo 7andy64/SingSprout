@@ -31,13 +31,13 @@ class QuickActionChip extends StatelessWidget {
           gradient: LinearGradient(colors: [
             AppTheme.primaryGreen.withValues(alpha: 0.06),
             AppTheme.primaryWarm.withValues(alpha: 0.04),
-          ]),
+          ],),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
                 color: AppTheme.primaryGreen.withValues(alpha: 0.06),
                 blurRadius: 8,
-                offset: const Offset(0, 2)),
+                offset: const Offset(0, 2),),
           ],
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -47,8 +47,8 @@ class QuickActionChip extends StatelessWidget {
               style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: AppTheme.textPrimary)),
-        ]),
+                  color: AppTheme.textPrimary,),),
+        ],),
       ),
     );
   }
@@ -116,13 +116,13 @@ class _RecentWorksSectionState extends State<RecentWorksSection> {
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
+                  color: AppTheme.textPrimary,),),
           if (works.isNotEmpty)
             TextButton(
               onPressed: () => context.push(AppRoutes.works),
               child: const Text('查看全部'),
             ),
-        ]),
+        ],),
         const SizedBox(height: 8),
         if (recent.isEmpty)
           const EmptyWorksPlaceholder()
@@ -137,12 +137,12 @@ class _RecentWorksSectionState extends State<RecentWorksSection> {
               itemBuilder: (context, index) {
                 return _appeared
                     ? WorkTreeCard(
-                        work: recent[index], delayMs: index * 80)
+                        work: recent[index], delayMs: index * 80,)
                     : const SizedBox.shrink();
               },
             ),
           ),
-      ]),
+      ],),
     );
   }
 }
@@ -182,10 +182,10 @@ class StatCard extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary)),
+                color: AppTheme.textPrimary,),),
         const SizedBox(height: 16),
         ...children,
-      ]),
+      ],),
     );
   }
 }
@@ -211,19 +211,19 @@ class StatItem extends StatelessWidget {
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label,
             style: const TextStyle(
-                color: AppTheme.textSecondary, fontSize: 13)),
+                color: AppTheme.textSecondary, fontSize: 13,),),
         if (subtitle != null)
           Text(subtitle!,
               style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 11)),
-      ]),
+                  color: AppTheme.textSecondary, fontSize: 11,),),
+      ],),
       const Spacer(),
       Text(value,
           style: const TextStyle(
               fontWeight: FontWeight.w600,
               color: AppTheme.textPrimary,
-              fontSize: 15)),
-    ]);
+              fontSize: 15,),),
+    ],);
   }
 }
 
@@ -252,12 +252,12 @@ class MoodDayChip extends StatelessWidget {
               style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: color)),
+                  color: color,),),
           Text(label,
               style: TextStyle(
                   fontSize: 11,
-                  color: color.withValues(alpha: 0.7))),
-        ]),
+                  color: color.withValues(alpha: 0.7),),),
+        ],),
       ),
     );
   }

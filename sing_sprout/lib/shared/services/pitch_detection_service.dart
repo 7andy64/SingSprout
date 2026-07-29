@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'audio_processor.dart';
@@ -56,8 +55,8 @@ class PitchDetectionService {
     Float64List samples,
     int sampleRate,
   ) async {
-    final frameSize = 1024;
-    final hopSize = 512;
+    const frameSize = 1024;
+    const hopSize = 512;
     final numFrames = (samples.length - frameSize) ~/ hopSize + 1;
     final results = <PitchPoint>[];
 

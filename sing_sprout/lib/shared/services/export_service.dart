@@ -25,20 +25,20 @@ class ExportService {
     // 1. JSON 数据文件
     final worksJson = json.encode(works.map((w) => w.toJson()).toList());
     archive.addFile(ArchiveFile('works.json', utf8.encode(worksJson).length,
-        utf8.encode(worksJson)));
+        utf8.encode(worksJson),),);
 
     final soundsJson = json.encode(sounds.map((s) => s.toJson()).toList());
     archive.addFile(ArchiveFile('sounds.json', utf8.encode(soundsJson).length,
-        utf8.encode(soundsJson)));
+        utf8.encode(soundsJson),),);
 
     final cardsJson = json.encode(cards.map((c) => _cardToJson(c)).toList());
     archive.addFile(ArchiveFile('cards.json', utf8.encode(cardsJson).length,
-        utf8.encode(cardsJson)));
+        utf8.encode(cardsJson),),);
 
     if (profile != null) {
       final profileJson = json.encode(_profileToJson(profile));
       archive.addFile(ArchiveFile('profile.json',
-          utf8.encode(profileJson).length, utf8.encode(profileJson)));
+          utf8.encode(profileJson).length, utf8.encode(profileJson),),);
     }
 
     // 2. 音频文件和封面图

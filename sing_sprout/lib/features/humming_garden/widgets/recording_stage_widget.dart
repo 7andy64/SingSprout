@@ -44,13 +44,13 @@ class IdleStageWidget extends StatelessWidget {
                     fontSize: 36,
                     fontWeight: FontWeight.w300,
                     color: Color(0xFF639960),
-                    letterSpacing: 4)),
+                    letterSpacing: 4,),),
             const SizedBox(height: 12),
             const Text('用声音种一棵音乐树',
                 style: TextStyle(
                     fontSize: 16,
                     color: Color(0xFF888888),
-                    letterSpacing: 1)),
+                    letterSpacing: 1,),),
             const SizedBox(height: 60),
             Opacity(
               opacity: 1.0 - t * 0.6,
@@ -59,7 +59,7 @@ class IdleStageWidget extends StatelessWidget {
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 40),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 14),
+                      horizontal: 20, vertical: 14,),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -67,7 +67,7 @@ class IdleStageWidget extends StatelessWidget {
                       BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 8,
-                          offset: const Offset(0, 2))
+                          offset: const Offset(0, 2),),
                     ],
                   ),
                   child: const Text(
@@ -75,7 +75,7 @@ class IdleStageWidget extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 13,
                         color: Color(0xFF444444),
-                        height: 1.5),
+                        height: 1.5,),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -97,7 +97,7 @@ class IdleStageWidget extends StatelessWidget {
                         animal: app.userProfile?.guardianAnimal ??
                             GuardianAnimal.panda,
                         size: 80,
-                        speechBubble: null),
+                        speechBubble: null,),
                   ),
                 ),
               ),
@@ -145,7 +145,7 @@ class IdleStageWidget extends StatelessWidget {
                     alignment: Alignment.center,
                     child: const Text('🎤',
                         style: TextStyle(
-                            color: Colors.white, fontSize: 36)),
+                            color: Colors.white, fontSize: 36,),),
                   ),
                 ),
               ),
@@ -153,14 +153,14 @@ class IdleStageWidget extends StatelessWidget {
             const SizedBox(height: 12),
             const Text('轻点开始录音',
                 style:
-                    TextStyle(fontSize: 12, color: Color(0xFFAAAAAA))),
+                    TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),),
             const Spacer(),
             const Padding(
               padding: EdgeInsets.only(bottom: 20),
               child: Text('多录制几段旋律，花园页面就能长满小树啦',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 12, color: Color(0xFFAAAAAA))),
+                      fontSize: 12, color: Color(0xFFAAAAAA),),),
             ),
           ],
         );

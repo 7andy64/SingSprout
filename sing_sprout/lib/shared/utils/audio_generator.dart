@@ -106,7 +106,7 @@ class AudioGenerator {
         detail: melodyNoteCount > 0
             ? '发现了 $melodyNoteCount 个音符'
             : (speechText != null ? '正在理解你说的话...' : '正在创作一段旋律...'),
-      ));
+      ),);
 
       // Low voiced ratio + speech text = user was speaking, not humming
       final isSpeaking = speechText != null && (voicedRatio < 0.3 || melodyNoteCount < 3);
@@ -140,7 +140,7 @@ class AudioGenerator {
         'startSeconds': n.startSeconds,
         'durationSeconds': n.durationSeconds,
         'velocity': n.velocity,
-      }).toList();
+      },).toList();
 
       try {
         final score = await DashScopeService().generateFullScore(
@@ -182,7 +182,7 @@ class AudioGenerator {
           icon: '🤖',
           fraction: 0.85,
           detail: aiMoodNote,
-        ));
+        ),);
       }
       final outputPath = FileStorageService().generateMusicPath(
         styleSeed: styleSeed.name,
@@ -204,7 +204,7 @@ class AudioGenerator {
         icon: '🌟',
         fraction: 1.0,
         detail: '你的音乐已经准备好了',
-      ));
+      ),);
 
       return GenerationResult(
         audioPath: outputPath,
@@ -348,7 +348,7 @@ class AudioGenerator {
           startSeconds: time,
           durationSeconds: remaining * 0.85,
           velocity: 0.5 + (rng.next() % 35) / 100.0,
-        ));
+        ),);
         break;
       }
 
@@ -357,7 +357,7 @@ class AudioGenerator {
         startSeconds: time,
         durationSeconds: dur * 0.82,
         velocity: 0.45 + (rng.next() % 40) / 100.0,
-      ));
+      ),);
       time += dur;
       notesInPhrase++;
     }

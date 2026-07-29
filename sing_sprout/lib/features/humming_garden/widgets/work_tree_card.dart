@@ -43,7 +43,7 @@ class EmptyWorksPlaceholder extends StatelessWidget {
         color: AppTheme.primaryGreen.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: AppTheme.primaryGreen.withValues(alpha: 0.08)),
+            color: AppTheme.primaryGreen.withValues(alpha: 0.08),),
       ),
       child: Column(children: [
         const Text('🌱', style: TextStyle(fontSize: 48)),
@@ -52,11 +52,11 @@ class EmptyWorksPlaceholder extends StatelessWidget {
             style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.textPrimary)),
+                color: AppTheme.textPrimary,),),
         const SizedBox(height: 4),
         const Text('去创作页录制你的第一首歌吧',
             style: TextStyle(
-                fontSize: 13, color: AppTheme.textSecondary)),
+                fontSize: 13, color: AppTheme.textSecondary,),),
         const SizedBox(height: 16),
         FilledButton.icon(
           onPressed: () => context.push(AppRoutes.creativeFlow),
@@ -65,10 +65,10 @@ class EmptyWorksPlaceholder extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: AppTheme.primaryGreen,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20)),
+                borderRadius: BorderRadius.circular(20),),
           ),
         ),
-      ]),
+      ],),
     );
   }
 }
@@ -95,13 +95,13 @@ class _WorkTreeCardState extends State<WorkTreeCard>
   void initState() {
     super.initState();
     _fadeSlideCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
+        vsync: this, duration: const Duration(milliseconds: 400),);
     _fadeAnim =
         CurvedAnimation(parent: _fadeSlideCtrl, curve: Curves.easeOut);
     _slideAnim = Tween<Offset>(
-            begin: const Offset(0, 0.3), end: Offset.zero)
+            begin: const Offset(0, 0.3), end: Offset.zero,)
         .animate(
-            CurvedAnimation(parent: _fadeSlideCtrl, curve: Curves.easeOut));
+            CurvedAnimation(parent: _fadeSlideCtrl, curve: Curves.easeOut),);
     Future.delayed(Duration(milliseconds: widget.delayMs), () {
       if (mounted) _fadeSlideCtrl.forward();
     });
@@ -118,7 +118,7 @@ class _WorkTreeCardState extends State<WorkTreeCard>
       context: context,
       shape: const RoundedRectangleBorder(
           borderRadius:
-              BorderRadius.vertical(top: Radius.circular(24))),
+              BorderRadius.vertical(top: Radius.circular(24)),),
       builder: (_) => PreviewSheet(work: widget.work),
     );
   }
@@ -128,7 +128,7 @@ class _WorkTreeCardState extends State<WorkTreeCard>
       context: context,
       shape: const RoundedRectangleBorder(
           borderRadius:
-              BorderRadius.vertical(top: Radius.circular(24))),
+              BorderRadius.vertical(top: Radius.circular(24)),),
       builder: (_) => WorkMenu(work: widget.work),
     );
   }
@@ -174,7 +174,7 @@ class _WorkTreeCardState extends State<WorkTreeCard>
                             ? AppTheme.primaryGreen
                             : Colors.black)
                         .withValues(
-                            alpha: _isPressed ? 0.15 : 0.06),
+                            alpha: _isPressed ? 0.15 : 0.06,),
                     blurRadius: _isPressed ? 14 : 8,
                     offset: const Offset(0, 3),
                   ),
@@ -188,7 +188,7 @@ class _WorkTreeCardState extends State<WorkTreeCard>
                       child: CustomPaint(
                         size: const Size(72, 72),
                         painter: MoodTreePainter(
-                            widget.work.moodSticker),
+                            widget.work.moodSticker,),
                       ),
                     ),
                   ),
@@ -201,13 +201,13 @@ class _WorkTreeCardState extends State<WorkTreeCard>
                     Text(timeStr,
                         style: const TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF999999))),
+                            color: Color(0xFF999999),),),
                     const SizedBox(height: 2),
                     Text(moodLabel,
                         style: const TextStyle(
                             fontSize: 11,
-                            color: Color(0xFFAAAAAA))),
-                  ]),
+                            color: Color(0xFFAAAAAA),),),
+                  ],),
                 ),
                 if (isToday)
                   Positioned(
@@ -223,10 +223,10 @@ class _WorkTreeCardState extends State<WorkTreeCard>
                       ),
                       child: const Center(
                           child: Text('🌱',
-                              style: TextStyle(fontSize: 11))),
+                              style: TextStyle(fontSize: 11),),),
                     ),
                   ),
-              ]),
+              ],),
             ),
           ),
         ),
@@ -253,11 +253,11 @@ class WorkMenu extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                   color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2))),
+                  borderRadius: BorderRadius.circular(2),),),
           const SizedBox(height: 16),
           ListTile(
             leading: const Text('✏️',
-                style: TextStyle(fontSize: 22)),
+                style: TextStyle(fontSize: 22),),
             title: const Text('重命名'),
             onTap: () {
               Navigator.pop(context);
@@ -266,7 +266,7 @@ class WorkMenu extends StatelessWidget {
           ),
           ListTile(
             leading: const Text('🗑️',
-                style: TextStyle(fontSize: 22)),
+                style: TextStyle(fontSize: 22),),
             title: const Text('删除'),
             onTap: () {
               Navigator.pop(context);
@@ -280,7 +280,7 @@ class WorkMenu extends StatelessWidget {
                     TextButton(
                         onPressed: () =>
                             Navigator.pop(context),
-                        child: const Text('取消')),
+                        child: const Text('取消'),),
                     FilledButton(
                       onPressed: () {
                         context
@@ -297,15 +297,15 @@ class WorkMenu extends StatelessWidget {
           ),
           ListTile(
             leading: const Text('📋',
-                style: TextStyle(fontSize: 22)),
+                style: TextStyle(fontSize: 22),),
             title: const Text('查看详情'),
             onTap: () {
               Navigator.pop(context);
               context.push(
-                  '${AppRoutes.workDetail}?id=${work.id}');
+                  '${AppRoutes.workDetail}?id=${work.id}',);
             },
           ),
-        ]),
+        ],),
       ),
     );
   }
@@ -320,20 +320,20 @@ class WorkMenu extends StatelessWidget {
             controller: ctrl,
             maxLength: 20,
             decoration:
-                const InputDecoration(hintText: '输入新名称')),
+                const InputDecoration(hintText: '输入新名称'),),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消')),
+              child: const Text('取消'),),
           FilledButton(
               onPressed: () {
                 if (ctrl.text.trim().isNotEmpty) {
                   context.read<AppState>().updateWork(
-                      work.copyWith(title: ctrl.text.trim()));
+                      work.copyWith(title: ctrl.text.trim()),);
                 }
                 Navigator.pop(context);
               },
-              child: const Text('确定')),
+              child: const Text('确定'),),
         ],
       ),
     );

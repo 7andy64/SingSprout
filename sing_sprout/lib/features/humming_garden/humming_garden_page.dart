@@ -93,7 +93,7 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                               GuardianAnimal.panda,
                           size: 72,
                           speechBubble:
-                              '嘿！今天想哼点什么？\n试试用音乐种一棵树吧～'),
+                              '嘿！今天想哼点什么？\n试试用音乐种一棵树吧～',),
                     ),
                   );
                 },
@@ -127,11 +127,11 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                     style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary)),
+                        color: AppTheme.textPrimary,),),
                 Text(_stateMessage(),
                     style: const TextStyle(
                         fontSize: 13,
-                        color: AppTheme.textSecondary)),
+                        color: AppTheme.textSecondary,),),
                 const SizedBox(height: 10),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 60),
@@ -162,14 +162,14 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                     ],
                   ),
                   child: const Icon(Icons.mic,
-                      color: Colors.white, size: 36),
+                      color: Colors.white, size: 36,),
                 ),
               ),
               const SizedBox(height: 4),
               const Text('点击开始创作',
                   style: TextStyle(
                       fontSize: 13,
-                      color: AppTheme.textSecondary)),
+                      color: AppTheme.textSecondary,),),
               const SizedBox(height: 20),
               // ── Quick actions ──
               Padding(
@@ -227,7 +227,7 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                   const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16),
+                        horizontal: 16,),
                     child: StatCard(
                       title: '心情印记',
                       children: [
@@ -250,14 +250,14 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                             count: _treeData!.negativeMoodDays,
                             color: AppTheme.moodBlue,
                           ),
-                        ]),
+                        ],),
                       ],
                     ),
                   ),
                 ],
               ],
               const SizedBox(height: 40),
-            ]),
+            ],),
           ),
         ),
       ),
@@ -302,7 +302,7 @@ class _HummingGardenPageState extends State<HummingGardenPage>
       context: context,
       shape: const RoundedRectangleBorder(
           borderRadius:
-              BorderRadius.vertical(top: Radius.circular(20))),
+              BorderRadius.vertical(top: Radius.circular(20)),),
       builder: (_) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -313,12 +313,12 @@ class _HummingGardenPageState extends State<HummingGardenPage>
               const Text('📊 每日创作统计',
                   style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w600)),
+                      fontWeight: FontWeight.w600,),),
               const SizedBox(height: 4),
               Text('共 ${works.length} 首作品',
                   style: const TextStyle(
                       fontSize: 13,
-                      color: AppTheme.textSecondary)),
+                      color: AppTheme.textSecondary,),),
               const SizedBox(height: 16),
               if (sortedDays.isEmpty)
                 const Padding(
@@ -326,7 +326,7 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                   child: Center(
                       child: Text('还没有作品，开始哼唱吧 🎤',
                           style: TextStyle(
-                              color: AppTheme.textSecondary))),
+                              color: AppTheme.textSecondary,),),),
                 )
               else
                 Flexible(
@@ -341,14 +341,14 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                             const EdgeInsets.symmetric(vertical: 6),
                         child: Row(children: [
                           Text(day,
-                              style: const TextStyle(fontSize: 14)),
+                              style: const TextStyle(fontSize: 14),),
                           const Spacer(),
                           Text('$count 首',
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryGreen)),
-                        ]),
+                                  color: AppTheme.primaryGreen,),),
+                        ],),
                       );
                     },
                   ),

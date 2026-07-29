@@ -45,7 +45,7 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage>
   bool _hasPermission = false;
 
   // ── Weekly task progress (placeholder) ──
-  int _weeklyCollected = 2;
+  final int _weeklyCollected = 2;
   final int _weeklyTarget = 3;
 
   @override
@@ -62,7 +62,7 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage>
     ).animate(CurvedAnimation(
       parent: _cardSlideController,
       curve: Curves.easeOutCubic,
-    ));
+    ),);
 
     // Wave animation
     _waveAnimController = AnimationController(
@@ -176,7 +176,7 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage>
     Future.delayed(const Duration(milliseconds: 800), () {
       if (!mounted) return;
       final rng = Random();
-      final types = SoundType.values;
+      const types = SoundType.values;
       final sampleBpm = [72.0, 96.0, 108.0, 120.0, 140.0][rng.nextInt(5)];
       final type = types[rng.nextInt(types.length)];
 

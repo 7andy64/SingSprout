@@ -418,14 +418,14 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       await storage.clearExports();
 
       // 清理 recovery 临时片段
-      final docsDir = await storage.rootPath;
+      final docsDir = storage.rootPath;
       final recoveryDir = Directory('$docsDir/recovery');
       if (await recoveryDir.exists()) {
         await recoveryDir.delete(recursive: true);
       }
 
       // 清理明信片生成临时图
-      final exportsDir = Directory('${docsDir}/exports');
+      final exportsDir = Directory('$docsDir/exports');
       if (await exportsDir.exists()) {
         await for (final e in exportsDir.list()) {
           if (e is File && e.path.endsWith('.png')) {
@@ -502,7 +502,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       await DatabaseService().clearAll();
       // 清空文件存储
       final storage = FileStorageService();
-      final docsDir = await storage.rootPath;
+      final docsDir = storage.rootPath;
       for (final sub in ['recordings', 'generated', 'covers', 'exports', 'recovery']) {
         final dir = Directory('$docsDir/$sub');
         if (await dir.exists()) await dir.delete(recursive: true);

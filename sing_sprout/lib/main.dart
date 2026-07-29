@@ -56,10 +56,10 @@ void main() async {
                   const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   const Text('应用初始化失败',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),),
                   const SizedBox(height: 8),
                   const Text('请重启应用，如问题持续请重新安装',
-                      style: TextStyle(color: Colors.grey)),
+                      style: TextStyle(color: Colors.grey),),
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: () {
