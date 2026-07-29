@@ -150,11 +150,10 @@ class _PreviewSheetState extends State<PreviewSheet>
                       blurRadius: 12,),
                 ],
               ),
-              child: Center(
-                  child: Icon(
-                      _isPlaying
-                          ? Icons.pause
-                          : Icons.play_arrow,
+              alignment: Alignment.center,
+              child: Text(
+                  _isPlaying ? '⏸' : '▶',
+                  style: const TextStyle(
                       color: Colors.white,
                       size: 28,),),
             ),

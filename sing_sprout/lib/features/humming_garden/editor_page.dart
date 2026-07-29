@@ -130,18 +130,6 @@ class _EditorPageState extends State<EditorPage> {
         ),
         title: const Text('编辑作品'),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.check),
-            onPressed: _saving ? null : _saveWork,
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
