@@ -111,13 +111,9 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F9F1),
       appBar: AppBar(
         title: const Text('🎧 田野声音实验室'),
         centerTitle: true,
-        backgroundColor: const Color(0xFF7CB342),
-        foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: SafeArea(
         child: ListenableBuilder(
@@ -125,28 +121,37 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage>
           builder: (context, _) {
             return Column(
               children: [
-                // ── Wave visualization ──
-                WaveVisualization(
-                  vm: _vm,
-                  waveAnimController: _waveAnimController,
+                // 上半部分可滚动
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // ── Wave visualization ──
+                        WaveVisualization(
+                          vm: _vm,
+                          waveAnimController: _waveAnimController,
+                        ),
+
+                        // ── Recording controls + playback ──
+                        RecordingControls(
+                          vm: _vm,
+                          onPermissionDenied: _showPermissionDialog,
+                        ),
+
+                        // ── AI analysis card ──
+                        AnalysisCard(
+                          vm: _vm,
+                          cardSlideController: _cardSlideController,
+                          cardSlideAnimation: _cardSlideAnimation,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
-                // ── Recording controls + playback ──
-                RecordingControls(
-                  vm: _vm,
-                  onPermissionDenied: _showPermissionDialog,
-                ),
-
-                // ── AI analysis card ──
-                AnalysisCard(
-                  vm: _vm,
-                  cardSlideController: _cardSlideController,
-                  cardSlideAnimation: _cardSlideAnimation,
-                ),
-
-                const Spacer(),
-
-                // ── Bottom actions ──
+                // 底部操作栏固定在底部
                 BottomActions(vm: _vm),
                 const SizedBox(height: 12),
               ],

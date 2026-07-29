@@ -349,52 +349,46 @@ class _ProfilePageState extends State<ProfilePage> {
     if (profile == null) return;
 
     final controller = TextEditingController(text: profile.nickname);
-    var disposed = false;
 
-    void disposeController() {
-      if (!disposed) {
-        controller.dispose();
-        disposed = true;
-      }
-    }
-
-    showDialog(
+    showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('编辑资料'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '昵称',
-            hintText: '输入你的昵称',
+        content: SingleChildScrollView(
+          child: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: '昵称',
+              hintText: '输入你的昵称',
+            ),
+            maxLength: 12,
+            autofocus: true,
           ),
-          maxLength: 12,
-          autofocus: true,
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              disposeController();
-              Navigator.pop(ctx);
-            },
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () async {
+            onPressed: () {
               final newName = controller.text.trim();
-              if (newName.isNotEmpty && newName != profile.nickname) {
-                await context
-                    .read<AppState>()
-                    .setUserProfile(profile.copyWith(nickname: newName));
-              }
-              disposeController();
-              Navigator.pop(ctx);
+              Navigator.pop(ctx, newName.isNotEmpty ? newName : null);
             },
             child: const Text('保存'),
           ),
         ],
       ),
-    ).then((_) => disposeController());
+    ).then((newName) {
+      controller.dispose();
+      if (newName != null && mounted) {
+        // 使用 AppState 中的最新 profile 防止覆盖其他字段的并发修改
+        final currentProfile = context.read<AppState>().userProfile;
+        if (currentProfile != null && newName != currentProfile.nickname) {
+          context.read<AppState>().setUserProfile(currentProfile.copyWith(nickname: newName));
+        }
+      }
+    });
   }
 
   // ── 存储管理 ──
