@@ -55,8 +55,8 @@ typedef ProgressCallback = void Function(PipelineProgress progress);
 
 /// AI music generation pipeline orchestrator.
 ///
-/// Full chain: WAV recording → YIN pitch detection → MIDI quantization
-/// → [AI full-score generation] → WAV synthesis → output file.
+/// Full chain: WAV recording → pitch detection (Basic Pitch / YIN)
+/// → MIDI quantization → [AI full-score generation] → WAV synthesis → output file.
 ///
 /// When AI is available, it writes per-bar accompaniment (bass, chords,
 /// percussion, dynamics) directly — no rule templates. Falls back to
@@ -94,7 +94,8 @@ class AudioGenerator {
       final voicedRatio = pitchContour.isNotEmpty
           ? voicedFrames / pitchContour.length
           : 0.0;
-      debugPrint('[AudioGenerator] Stage 2: Pitch detection → ${pitchContour.length} frames, voiced ratio: ${(voicedRatio * 100).toStringAsFixed(0)}% (CREPE: ${PitchDetectionService().isAvailable})');
+      final pitchMethod = PitchDetectionService().isAvailable ? 'BasicPitch' : 'YIN';
+      debugPrint('[AudioGenerator] Stage 2: Pitch detection → ${pitchContour.length} frames, voiced ratio: ${(voicedRatio * 100).toStringAsFixed(0)}% (method: $pitchMethod)');
 
       // ── Stage 2b: Audio event detection (environmental sounds) ──
       String? audioEventsDesc;
