@@ -6,6 +6,7 @@ import 'shared/providers/audio_provider.dart';
 import 'shared/providers/notification_provider.dart';
 import 'shared/services/audio_service.dart';
 import 'shared/services/outbox_queue_service.dart';
+import 'shared/services/pitch_detection_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 
@@ -27,6 +28,8 @@ class _SingSproutAppState extends State<SingSproutApp>
       context.read<AppState>().loadLocalData();
       context.read<NotificationProvider>().loadInitialCount();
     });
+    // 后台初始化端侧 AI 模型（非阻塞，YIN 回退已就位）
+    PitchDetectionService().initialize();
   }
 
   @override

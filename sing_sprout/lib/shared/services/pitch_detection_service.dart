@@ -2,11 +2,17 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'audio_processor.dart';
+import 'device_capability_service.dart';
 
-/// On-device pitch detection using TFLite (CREPE-tiny) with YIN fallback.
+/// On-device pitch detection using Basic Pitch TFLite with YIN fallback.
 ///
-/// CREPE-tiny is ~2MB, runs ~50ms per frame on low-end Android.
-/// YIN is 0MB, runs ~20ms per frame but less accurate in noisy environments.
+/// Device-tiered: 1-2GB RAM → YIN only (DSP, 0MB); 2GB+ → Basic Pitch TFLite
+/// (~0.84MB, CQT front-end, polyphonic capable) with YIN fallback.
+///
+/// Basic Pitch model from litert-community/Basic-Pitch-LiteRT (HuggingFace).
+///   Input:  [1, 43844] float32  — ~2 s of 22050 Hz mono audio
+///   Output: contour [1,172,264], note [1,172,88], onset [1,172,88]
+///   Frame rate: ~11.6 ms (256-sample hop at 22050 Hz)
 class PitchDetectionService {
   static final PitchDetectionService _instance = PitchDetectionService._();
   factory PitchDetectionService() => _instance;
@@ -14,27 +20,47 @@ class PitchDetectionService {
 
   Interpreter? _interpreter;
   bool _modelLoaded = false;
+  bool _aiEnabled = false;
+
+  // Basic Pitch constants
+  static const int _targetSampleRate = 22050;
+  static const int _windowSamples = 43844;
+  static const int _overlapSamples = 7680;
+  static const int _hopSamples = _windowSamples - _overlapSamples;
+  static const int _numFrames = 172;
+  static const int _numMidiBins = 88;
+  static const int _midiOffset = 21;
 
   /// Initialize TFLite model from assets. Call once at app startup.
+  ///
+  /// On low-end devices (<2GB RAM) this skips TFLite loading to avoid OOM.
   Future<void> initialize() async {
+    final caps = DeviceCapabilityService();
+    if (!caps.shouldUseAIPitchDetection) {
+      debugPrint('[PitchDetection] Low-end device (${caps.totalRamMB}MB), using YIN only');
+      _aiEnabled = false;
+      return;
+    }
+
     try {
-      _interpreter = await Interpreter.fromAsset('assets/models/crepe_tiny.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/models/basicpitch.tflite');
       _modelLoaded = true;
-      debugPrint('[PitchDetection] TFLite model loaded');
+      _aiEnabled = true;
+      debugPrint('[PitchDetection] Basic Pitch TFLite loaded (device: ${caps.totalRamMB}MB)');
     } catch (e) {
-      debugPrint('[PitchDetection] TFLite model not available, using YIN fallback: $e');
+      debugPrint('[PitchDetection] TFLite not available, using YIN fallback: $e');
       _modelLoaded = false;
+      _aiEnabled = false;
     }
   }
 
   bool get isAvailable => _modelLoaded;
+  bool get isAIEnabled => _aiEnabled;
 
   /// Detect pitch contour from audio samples.
   ///
-  /// Uses TFLite if available, otherwise falls back to YIN.
-  /// [samples] — normalized [-1.0, 1.0] audio samples.
-  /// [sampleRate] — e.g., 44100.
-  /// Returns list of (time, frequencyHz) pairs. frequencyHz = 0 means unvoiced.
+  /// [samples] — normalized [-1.0, 1.0] audio samples at [sampleRate] Hz.
+  /// Returns (timeSeconds, frequencyHz) pairs. frequencyHz = 0 means unvoiced.
   Future<List<PitchPoint>> detectPitch(
     Float64List samples,
     int sampleRate, {
@@ -42,58 +68,111 @@ class PitchDetectionService {
   }) async {
     if (preferTflite && _modelLoaded) {
       try {
-        return await _detectWithTflite(samples, sampleRate);
+        return await _detectWithBasicPitch(samples, sampleRate);
       } catch (e) {
-        debugPrint('[PitchDetection] TFLite failed, falling back to YIN: $e');
+        debugPrint('[PitchDetection] Basic Pitch failed, falling back to YIN: $e');
       }
     }
     return _detectWithYin(samples, sampleRate);
   }
 
-  /// TFLite-based pitch detection (CREPE-tiny).
-  Future<List<PitchPoint>> _detectWithTflite(
+  /// Basic Pitch TFLite inference.
+  ///
+  /// Resamples to 22050 Hz, processes in 2-second overlapping windows,
+  /// extracts dominant pitch per frame from the note-activation output.
+  Future<List<PitchPoint>> _detectWithBasicPitch(
     Float64List samples,
     int sampleRate,
   ) async {
-    const frameSize = 1024;
-    const hopSize = 512;
-    final numFrames = (samples.length - frameSize) ~/ hopSize + 1;
-    final results = <PitchPoint>[];
-
-    final input = List.generate(numFrames, (_) => Float32List(frameSize));
-
-    for (var i = 0; i < numFrames; i++) {
-      final offset = i * hopSize;
-      for (var j = 0; j < frameSize; j++) {
-        input[i][j] = samples[offset + j].toDouble();
-      }
+    // Resample to 22050 Hz if needed
+    Float64List audio;
+    if (sampleRate == _targetSampleRate) {
+      audio = samples;
+    } else {
+      audio = _resample(samples, sampleRate, _targetSampleRate);
     }
 
-    final inputTensor = [input];
-    final outputTensor = [List.generate(numFrames, (_) => Float32List(360))];
+    final results = <PitchPoint>[];
 
-    _interpreter!.run(inputTensor, outputTensor);
+    for (var offset = 0; offset + _windowSamples <= audio.length; offset += _hopSamples) {
+      // Build input tensor [1, 43844]
+      final input = Float32List(_windowSamples);
+      for (var i = 0; i < _windowSamples; i++) {
+        input[i] = audio[offset + i].toDouble();
+      }
+      final inputTensor = [input];
 
-    for (var i = 0; i < numFrames; i++) {
-      final time = (i * hopSize) / sampleRate;
-      final probs = outputTensor[0][i];
+      // Allocate output tensors
+      final contourOutput = [
+        List.generate(_numFrames, (_) => Float32List(264)),
+      ];
+      final noteOutput = [
+        List.generate(_numFrames, (_) => Float32List(_numMidiBins)),
+      ];
+      final onsetOutput = [
+        List.generate(_numFrames, (_) => Float32List(_numMidiBins)),
+      ];
 
-      var maxIdx = 0;
-      var maxProb = probs[0];
-      for (var j = 1; j < probs.length; j++) {
-        if (probs[j] > maxProb) {
-          maxProb = probs[j];
-          maxIdx = j;
+      _interpreter!.runForMultipleInputs([inputTensor], {
+        0: contourOutput,
+        1: noteOutput,
+        2: onsetOutput,
+      });
+
+      // Extract pitch from note activations
+      final isLastWindow = offset + _windowSamples >= audio.length;
+      final framesToKeep = isLastWindow
+          ? _numFrames
+          : (_hopSamples ~/ 256).clamp(0, _numFrames);
+
+      for (var f = 0; f < framesToKeep; f++) {
+        final timeSec = (offset / _targetSampleRate) + (f * 256 / _targetSampleRate);
+
+        // Find max activation across all 88 MIDI bins
+        var maxVal = 0.0;
+        var maxBin = -1;
+        for (var b = 0; b < _numMidiBins; b++) {
+          if (noteOutput[0][f][b] > maxVal) {
+            maxVal = noteOutput[0][f][b];
+            maxBin = b;
+          }
+        }
+
+        if (maxVal > 0.5 && maxBin >= 0) {
+          final midiNote = maxBin + _midiOffset;
+          final freqHz = 440.0 * pow(2.0, (midiNote - 69) / 12.0);
+          results.add(PitchPoint(timeSec, freqHz));
+        } else {
+          results.add(PitchPoint(timeSec, 0.0));
         }
       }
 
-      // CREPE bins: 20-2000Hz, 20 cents per bin. freq = 20 * 2^(bin/60)
-      final freq = maxProb > 0.5 ? 20.0 * _pow2(maxIdx / 60.0) : 0.0;
-
-      results.add(PitchPoint(time, freq));
     }
 
     return results;
+  }
+
+  /// Simple linear resampling.
+  Float64List _resample(Float64List samples, int fromRate, int toRate) {
+    if (fromRate == toRate) return samples;
+
+    final ratio = fromRate / toRate;
+    final outLen = (samples.length / ratio).round();
+    final out = Float64List(outLen);
+
+    for (var i = 0; i < outLen; i++) {
+      final srcPos = i * ratio;
+      final srcIdx = srcPos.floor();
+      final frac = srcPos - srcIdx;
+
+      if (srcIdx + 1 < samples.length) {
+        out[i] = samples[srcIdx] * (1.0 - frac) + samples[srcIdx + 1] * frac;
+      } else {
+        out[i] = samples[srcIdx.clamp(0, samples.length - 1)];
+      }
+    }
+
+    return out;
   }
 
   /// YIN-based pitch detection (fallback).
@@ -101,13 +180,10 @@ class PitchDetectionService {
     return AudioProcessor.detectPitch(samples, sampleRate);
   }
 
-  double _pow2(double x) {
-    return exp(x * 0.6931471805599453); // ln(2)
-  }
-
   void dispose() {
     _interpreter?.close();
     _interpreter = null;
     _modelLoaded = false;
+    _aiEnabled = false;
   }
 }
