@@ -130,6 +130,18 @@ class _EditorPageState extends State<EditorPage> {
         ),
         title: const Text('编辑作品'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('✅', style: TextStyle(fontSize: 24)),
+            onPressed: _saving ? null : _saveWork,
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -148,10 +160,12 @@ class _EditorPageState extends State<EditorPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: Icon(
-                        _isPlaying ? Icons.pause_circle : Icons.play_circle,
-                        size: 56,
-                        color: AppTheme.primaryGreen,
+                      icon: Text(
+                        _isPlaying ? '⏸' : '▶',
+                        style: const TextStyle(
+                          fontSize: 56,
+                          color: AppTheme.primaryGreen,
+                        ),
                       ),
                       onPressed: _togglePlayPause,
                     ),
@@ -193,26 +207,28 @@ class _EditorPageState extends State<EditorPage> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: OutlinedButton.icon(
                       onPressed: _saving ? null : _saveWork,
+                      icon: const Text('💾', style: TextStyle(fontSize: 20)),
+                      label: const Text('保存'),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 52),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                         side: const BorderSide(color: AppTheme.primaryGreen),
                       ),
-                      child: const Text('保存'),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         // 带着当前作品 ID 跳转声音邮局
                         context.push(
                           '${AppRoutes.composeCard}?workId=${_work.id}',
                         );
                       },
-                      child: const Text('发给爸妈'),
+                      icon: const Text('✉️', style: TextStyle(fontSize: 20)),
+                      label: const Text('发给爸妈'),
                     ),
                   ),
                 ],
@@ -220,6 +236,106 @@ class _EditorPageState extends State<EditorPage> {
               const SizedBox(height: 24),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 有机云朵播放预览 — 无硬边框，渐变+阴影+音符粒子
+class _OrganicPlaybackPreview extends StatelessWidget {
+  final bool isPlaying;
+  final VoidCallback onToggle;
+
+  const _OrganicPlaybackPreview({
+    required this.isPlaying,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: Container(
+        height: 132,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.topLeft,
+            radius: 1.5,
+            colors: [
+              AppTheme.primaryGreen.withOpacity(0.10),
+              AppTheme.primaryGreen.withOpacity(0.03),
+              AppTheme.bgWarm.withOpacity(0.8),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryGreen.withOpacity(0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // 柔和的音符粒子背景
+            ...List.generate(6, (i) {
+              return Positioned(
+                left: 30 + (i * 50.0) % 280,
+                top: 20 + (i * 35.0) % 80,
+                child: Opacity(
+                  opacity: 0.08 + (i % 3) * 0.04,
+                  child: Text(
+                    ['♪', '♫', '♩', '🎵', '✨', '🎶'][i],
+                    style: TextStyle(fontSize: 16 + (i % 3) * 6.0, color: AppTheme.primaryGreen),
+                  ),
+                ),
+              );
+            }),
+            // 播放控制
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: onToggle,
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryGreen.withOpacity(0.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        isPlaying ? '⏸' : '▶',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '00:00 / 00:30',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
