@@ -337,13 +337,14 @@ class _StepTellAboutYou extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            '介绍一下你自己',
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '介绍一下你自己',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -434,16 +435,17 @@ class _StepTellAboutYou extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          TextField(
-            controller: controller,
-            maxLength: 12,
-            decoration: const InputDecoration(
-              hintText: '输入你的昵称',
-              counterText: '',
+            TextField(
+              controller: controller,
+              maxLength: 12,
+              decoration: const InputDecoration(
+                hintText: '输入你的昵称',
+                counterText: '',
+              ),
+              textInputAction: TextInputAction.done,
             ),
-            textInputAction: TextInputAction.done,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

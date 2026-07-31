@@ -9,6 +9,7 @@ import '../../shared/models/user_profile.dart';
 import 'widgets/profile_widgets.dart';
 import '../../shared/services/update_service.dart';
 import '../../shared/services/file_storage_service.dart';
+import '../../shared/services/identity_service.dart';
 import '../../shared/providers/app_state.dart';
 
 /// 个人中心 — MVP P0 功能
@@ -26,8 +27,8 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    // 进入页面时从本地数据库加载用户数据
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      IdentityService().ensureInitialized();
       context.read<AppState>().loadLocalData();
       _checkStorage();
     });
@@ -39,9 +40,9 @@ class _ProfilePageState extends State<ProfilePage> {
       final bytes = await storage.totalStorageUsed();
       if (mounted) {
         setState(() {
-        _totalStorageBytes = bytes;
-        _storageChecked = true;
-      });
+          _totalStorageBytes = bytes;
+          _storageChecked = true;
+        });
       }
     } catch (_) {
       if (mounted) setState(() => _storageChecked = true);
@@ -156,6 +157,18 @@ class _ProfilePageState extends State<ProfilePage> {
                             icon: Icons.edit_outlined,
                             label: '编辑资料',
                             onTap: () => _showEditProfile(profile),
+                          ),
+                          MenuItem(
+                            icon: Icons.swap_horiz_rounded,
+                            label: '切换身份',
+                            trailing: Text(
+                              profile?.role.label ?? '',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                            onTap: () => _showSwitchRole(profile),
                           ),
                           MenuItem(
                             icon: Icons.lock_outline_rounded,
@@ -345,36 +358,30 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // ── 编辑资料弹窗 ──
 
-  void _showEditProfile(UserProfile? profile) {
+  Future<void> _showEditProfile(UserProfile? profile) async {
     if (profile == null) return;
 
     final controller = TextEditingController(text: profile.nickname);
-    var disposed = false;
 
-    void disposeController() {
-      if (!disposed) {
-        controller.dispose();
-        disposed = true;
-      }
-    }
-
-    showDialog(
+    await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('编辑资料'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '昵称',
-            hintText: '输入你的昵称',
+        content: SingleChildScrollView(
+          child: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: '昵称',
+              hintText: '输入你的昵称',
+            ),
+            maxLength: 12,
+            autofocus: true,
           ),
-          maxLength: 12,
-          autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () {
-              disposeController();
+              controller.dispose();
               Navigator.pop(ctx);
             },
             child: const Text('取消'),
@@ -387,14 +394,236 @@ class _ProfilePageState extends State<ProfilePage> {
                     .read<AppState>()
                     .setUserProfile(profile.copyWith(nickname: newName));
               }
-              disposeController();
+              controller.dispose();
               Navigator.pop(ctx);
             },
             child: const Text('保存'),
           ),
         ],
       ),
-    ).then((_) => disposeController());
+    );
+
+    // 兜底：确保 controller 被释放（正常情况已被回调中 dispose）
+    try {
+      controller.dispose();
+    } catch (_) { /* already disposed */ }
+  }
+
+  // ── 切换身份 ──
+
+  Future<void> _showSwitchRole(UserProfile? profile) async {
+    if (profile == null) return;
+
+    final selectedRole = await showModalBottomSheet<UserRole>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '切换身份',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '当前身份：${profile.role.emoji} ${profile.role.label}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ...UserRole.values.map((role) {
+                final isCurrent = profile.role == role;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isCurrent
+                        ? AppTheme.primaryGreen.withValues(alpha: 0.08)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: isCurrent
+                        ? Border.all(
+                            color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                          )
+                        : null,
+                  ),
+                  child: ListTile(
+                    leading: Text(role.emoji, style: const TextStyle(fontSize: 30)),
+                    title: Text(
+                      role.label,
+                      style: TextStyle(
+                        fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      _roleDescription(role),
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                    trailing: isCurrent
+                        ? const Icon(Icons.check_circle, color: AppTheme.primaryGreen)
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabled: !isCurrent,
+                    onTap: isCurrent ? null : () => Navigator.pop(ctx, role),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (selectedRole == null || !mounted) return;
+
+    // 密码验证（身份切换密码，默认 123456，5次失败锁定5分钟）
+    final error = await _verifyIdentityPassword();
+    if (error != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // 记录切换前的身份
+    final oldRole = profile.role.label;
+
+    // 更新身份并重新加载
+    await context.read<AppState>().setUserProfile(
+      profile.copyWith(role: selectedRole),
+    );
+
+    // 记录操作日志
+    await IdentityService().logSwitch(oldRole, selectedRole.label);
+
+    if (mounted) {
+      context.read<AppState>().loadLocalData(force: true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('身份已切换为${selectedRole.emoji} ${selectedRole.label}'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// 返回 null=验证通过，否则返回错误消息
+  Future<String?> _verifyIdentityPassword() async {
+    final identityService = IdentityService();
+    final controller = TextEditingController();
+    String? errorMsg;
+    bool disposed = false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) {
+          return AlertDialog(
+            title: const Text('身份验证'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '切换身份需要输入身份切换密码',
+                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '（默认密码：123456）',
+                  style: TextStyle(fontSize: 12, color: Color(0xFFBBBBBB)),
+                ),
+                if (errorMsg != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.error.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      errorMsg!,
+                      style: const TextStyle(fontSize: 12, color: AppTheme.error),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: '身份切换密码',
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
+                  autofocus: true,
+                  onSubmitted: (_) async {
+                    if (disposed) return;
+                    final error = await identityService.verifyPassword(controller.text);
+                    if (error == null) {
+                      if (!disposed) { disposed = true; controller.dispose(); }
+                      Navigator.pop(ctx, true);
+                    } else {
+                      setDlgState(() => errorMsg = error);
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  if (!disposed) { disposed = true; controller.dispose(); }
+                  Navigator.pop(ctx, false);
+                },
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  if (disposed) return;
+                  final error = await identityService.verifyPassword(controller.text);
+                  if (error == null) {
+                    if (!disposed) { disposed = true; controller.dispose(); }
+                    Navigator.pop(ctx, true);
+                  } else {
+                    setDlgState(() => errorMsg = error);
+                  }
+                },
+                child: const Text('验证'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    try { if (!disposed) controller.dispose(); } catch (_) {}
+    if (result != true) return errorMsg ?? '已取消';
+    return null; // 验证通过
+  }
+
+  String _roleDescription(UserRole role) {
+    switch (role) {
+      case UserRole.student: return '适合儿童的创作模式';
+      case UserRole.teacher: return '适合教师的指导模式';
+      case UserRole.parent:  return '适合家长的陪伴模式';
+    }
   }
 
   // ── 存储管理 ──
