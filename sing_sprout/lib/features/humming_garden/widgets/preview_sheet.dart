@@ -155,7 +155,7 @@ class _PreviewSheetState extends State<PreviewSheet>
                   _isPlaying ? '⏸' : '▶',
                   style: const TextStyle(
                       color: Colors.white,
-                      size: 28,),),
+                      fontSize: 28,),),
             ),
           ),
           const SizedBox(height: 20),

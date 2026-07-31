@@ -105,7 +105,6 @@ class _InstrumentMixerState extends State<InstrumentMixer> {
                     _buildVertex(
                       i, angles[i] + angleOffset, cx, cy, r, btnSize,
                     ),
-                  ),
 
                   // 乐器图标（半圆弧，以 Stack 中心为原点）
                   ...List.generate(_instruments.length, (i) {
