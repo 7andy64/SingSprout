@@ -125,7 +125,7 @@ class _EditorPageState extends State<EditorPage> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.check),
+                : const Text('✅', style: TextStyle(fontSize: 24)),
             onPressed: _saving ? null : _saveWork,
           ),
         ],
@@ -147,10 +147,12 @@ class _EditorPageState extends State<EditorPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: Icon(
-                        _isPlaying ? Icons.pause_circle : Icons.play_circle,
-                        size: 56,
-                        color: AppTheme.primaryGreen,
+                      icon: Text(
+                        _isPlaying ? '⏸' : '▶',
+                        style: const TextStyle(
+                          fontSize: 56,
+                          color: AppTheme.primaryGreen,
+                        ),
                       ),
                       onPressed: _togglePlayPause,
                     ),
@@ -194,7 +196,7 @@ class _EditorPageState extends State<EditorPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _saving ? null : _saveWork,
-                      icon: const Icon(Icons.save_outlined),
+                      icon: const Text('💾', style: TextStyle(fontSize: 20)),
                       label: const Text('保存'),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 52),
@@ -212,7 +214,7 @@ class _EditorPageState extends State<EditorPage> {
                           '${AppRoutes.composeCard}?workId=${_work.id}',
                         );
                       },
-                      icon: const Icon(Icons.mail_outline),
+                      icon: const Text('✉️', style: TextStyle(fontSize: 20)),
                       label: const Text('发给爸妈'),
                     ),
                   ),
@@ -303,10 +305,12 @@ class _OrganicPlaybackPreview extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Icon(
-                        isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 30,
+                      child: Text(
+                        isPlaying ? '⏸' : '▶',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                        ),
                       ),
                     ),
                   ),

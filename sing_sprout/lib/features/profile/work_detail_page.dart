@@ -195,7 +195,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
         actions: [
           if (!_isEditing)
             IconButton(
-              icon: const Icon(Icons.edit_outlined),
+              icon: const Text('✏️', style: TextStyle(fontSize: 20)),
               tooltip: '编辑',
               onPressed: _toggleEdit,
             ),
@@ -205,7 +205,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
               child: const Text('完成'),
             ),
           IconButton(
-            icon: const Icon(Icons.delete_outline),
+            icon: const Text('🗑️', style: TextStyle(fontSize: 20)),
             tooltip: '删除',
             onPressed: _confirmDelete,
           ),
@@ -363,10 +363,12 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
                   ],
                 ),
                 child: IconButton(
-                  icon: Icon(
-                    _isPlaying ? Icons.pause : Icons.play_arrow,
-                    color: Colors.white,
-                    size: 32,
+                  icon: Text(
+                    _isPlaying ? '⏸' : '▶',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                    ),
                   ),
                   onPressed: _togglePlayPause,
                 ),
@@ -390,19 +392,19 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
     return Row(
       children: [
         _MetaChip(
-          icon: Icons.palette_outlined,
-          label: work.styleSeed.icon + ' ' + work.styleSeed.label,
+          icon: '🎨',
+          label: '${work.styleSeed.icon} ${work.styleSeed.label}',
         ),
         const SizedBox(width: 8),
         if (work.moodSticker != null) ...[
           _MetaChip(
-            icon: Icons.emoji_emotions_outlined,
+            icon: '😊',
             label: '${work.moodSticker!.emoji} ${work.moodSticker!.label}',
           ),
           const SizedBox(width: 8),
         ],
         _MetaChip(
-          icon: Icons.access_time,
+          icon: '⏱️',
           label: Formatters.formatDuration(work.duration),
         ),
       ],
@@ -423,7 +425,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
         children: [
           const Row(
             children: [
-              Icon(Icons.notes_rounded, size: 16, color: AppTheme.textSecondary),
+              Text('📝', style: const TextStyle(fontSize: 16)),
               SizedBox(width: 6),
               Text(
                 '创作故事',
@@ -457,7 +459,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
           children: [
             // 收藏
             _ActionButton(
-              icon: work.isFavorite ? Icons.favorite : Icons.favorite_border,
+              icon: work.isFavorite ? '❤️' : '🤍',
               color: work.isFavorite ? AppTheme.moodRed : AppTheme.textSecondary,
               label: work.isFavorite ? '已收藏' : '收藏',
               onTap: _toggleFavorite,
@@ -467,7 +469,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
             Expanded(
               child: FilledButton.icon(
                 onPressed: _shareAsCard,
-                icon: const Icon(Icons.mail_outline, size: 20),
+                icon: const Text('✉️', style: TextStyle(fontSize: 20)),
                 label: const Text('制作明信片'),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.primaryGreen,
@@ -487,7 +489,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
 
 /// 元数据标签
 class _MetaChip extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final String label;
 
   const _MetaChip({required this.icon, required this.label});
@@ -503,7 +505,7 @@ class _MetaChip extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, size: 18, color: AppTheme.textSecondary),
+            Text(icon, style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 4),
             Text(
               label,
@@ -521,7 +523,7 @@ class _MetaChip extends StatelessWidget {
 
 /// 底部操作按钮
 class _ActionButton extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final Color color;
   final String label;
   final VoidCallback onTap;
@@ -538,7 +540,7 @@ class _ActionButton extends StatelessWidget {
     return Expanded(
       child: OutlinedButton.icon(
         onPressed: onTap,
-        icon: Icon(icon, size: 20, color: color),
+        icon: Text(icon, style: TextStyle(fontSize: 20, color: color)),
         label: Text(label, style: TextStyle(color: color, fontSize: 13)),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),

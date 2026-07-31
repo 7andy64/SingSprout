@@ -152,6 +152,26 @@ class _RecordingPageState extends State<RecordingPage> {
                 onSelected: (mood) => setState(() => _selectedMood = mood),
               ),
 
+              const SizedBox(height: 12),
+
+              // 说话 / 哼唱 切换
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('哼唱', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                  Switch(
+                    value: _speechMode,
+                    onChanged: (v) => setState(() => _speechMode = v),
+                    activeColor: AppTheme.primaryGreen,
+                  ),
+                  const Text('说话', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                  if (_speechText != null && _speechText!.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    const Text('✅', style: TextStyle(fontSize: 16)),
+                  ],
+                ],
+              ),
+
               const Spacer(),
 
               // 生成按钮
@@ -354,10 +374,12 @@ class _RecordButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(
-          isRecording ? Icons.stop : Icons.mic,
-          color: Colors.white,
-          size: 40,
+        child: Text(
+          isRecording ? '⏹' : '🎤',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 40,
+          ),
         ),
       ),
     );
@@ -386,7 +408,7 @@ class _RecoveryBanner extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.phone_callback, size: 20, color: AppTheme.primaryGreen),
+              const Text('📞', style: TextStyle(fontSize: 20)),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(

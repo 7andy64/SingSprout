@@ -31,7 +31,7 @@ class PostOfficePage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => context.push(AppRoutes.composeCard),
-                  icon: const Icon(Icons.edit_note, size: 22),
+                  icon: const Text('✍️', style: TextStyle(fontSize: 22)),
                   label: const Text('写一张音乐明信片'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryWarm,
@@ -93,8 +93,8 @@ class _CardList extends StatelessWidget {
     if (cards.isEmpty) {
       return _EmptyState(
         icon: direction == VoiceCardDirection.sent
-            ? Icons.send_outlined
-            : Icons.mail_outline_rounded,
+            ? '📤'
+            : '📬',
         message: direction == VoiceCardDirection.sent
             ? '还没有发送过明信片\n创作一首歌然后发给爸妈'
             : '还没有收到回信\n试试给爸妈发第一张明信片吧',
@@ -159,7 +159,7 @@ class _CardItem extends StatelessWidget {
           ],
         ),
         trailing: IconButton(
-          icon: const Icon(Icons.ios_share, size: 20),
+          icon: const Text('📤', style: TextStyle(fontSize: 20)),
           onPressed: () => _shareCard(context),
           tooltip: '再次分享',
         ),
@@ -188,7 +188,7 @@ class _CardItem extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final String message;
   const _EmptyState({required this.icon, required this.message});
 
@@ -198,7 +198,7 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          Icon(icon, size: 56, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+          Text(icon, style: TextStyle(fontSize: 56, color: AppTheme.textSecondary.withValues(alpha: 0.3))),
           const SizedBox(height: 16),
           Text(
             message,
