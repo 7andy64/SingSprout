@@ -8,6 +8,7 @@ import '../../core/constants/enums.dart';
 import '../../shared/models/sound_sample.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/services/audio_service.dart';
+import '../../shared/services/sound_classification_service.dart';
 
 class FieldSoundLabPage extends StatefulWidget {
   const FieldSoundLabPage({super.key});
@@ -28,7 +29,9 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage>
   Timer? _recordTimer;
   String? _recordedFilePath;
 
-  // ── AI analysis result ──
+  // ── AI analysis state ──
+  bool _isAnalyzing = false;
+  String? _analysisError;
   bool _showAnalysisCard = false;
   late final AnimationController _cardSlideController;
   late final Animation<Offset> _cardSlideAnimation;
@@ -166,36 +169,37 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage>
     });
 
     if (path != null && mounted) {
-      // Simulate AI analysis with placeholder values
-      _simulateAnalysis();
+      _runAnalysis(path);
     }
   }
 
-  void _simulateAnalysis() {
-    // Simulate a short analysis delay
-    Future.delayed(const Duration(milliseconds: 800), () {
+  Future<void> _runAnalysis(String wavFilePath) async {
+    setState(() {
+      _isAnalyzing = true;
+      _analysisError = null;
+    });
+
+    try {
+      final result = await SoundClassificationService().analyze(wavFilePath);
+
       if (!mounted) return;
-      final rng = Random();
-      const types = SoundType.values;
-      final sampleBpm = [72.0, 96.0, 108.0, 120.0, 140.0][rng.nextInt(5)];
-      final type = types[rng.nextInt(types.length)];
-
-      final useHints = <SoundType, String>{
-        SoundType.nature: '这个声音适合做背景环境音，搭配钢琴旋律效果很好',
-        SoundType.animal: '这个声音适合做节奏点缀，试试放在副歌段落',
-        SoundType.humanVoice: '这段人声适合做旋律主线，可以试试调音或变调',
-        SoundType.mechanical: '这个声音适合做打击乐底子，试试循环播放',
-        SoundType.unknown: '这个声音很有特色，可以试试不同的音乐风格',
-      };
-
       setState(() {
-        _detectedType = type;
-        _detectedBpm = sampleBpm;
-        _recommendedUse = useHints[type]!;
+        _detectedType = result.soundType;
+        _detectedBpm = result.bpm;
+        _recommendedUse = result.recommendedUse;
         _showAnalysisCard = true;
+        _isAnalyzing = false;
       });
       _cardSlideController.forward(from: 0);
-    });
+    } catch (e) {
+      debugPrint('[FieldSoundLab] Analysis failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _isAnalyzing = false;
+        _analysisError = '分析失败，请重试';
+        _showAnalysisCard = false;
+      });
+    }
   }
 
   void _showPermissionDialog() {
@@ -477,19 +481,42 @@ class _FieldSoundLabPageState extends State<FieldSoundLabPage>
   Widget _buildIdleHint() {
     return Column(
       children: [
-        const Text(
-          '🎤 发现身边的声音',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF333333),
+        if (_isAnalyzing) ...[
+          const SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: Color(0xFF42A5F5),
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          _hasPermission ? '长按按钮开始采集' : '点击按钮开启麦克风权限',
-          style: const TextStyle(fontSize: 13, color: Color(0xFF999999)),
-        ),
+          const SizedBox(height: 8),
+          const Text(
+            '🤖 AI 正在分析声音...',
+            style: TextStyle(fontSize: 15, color: Color(0xFF666666)),
+          ),
+        ] else ...[
+          const Text(
+            '🎤 发现身边的声音',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _hasPermission ? '长按按钮开始采集' : '点击按钮开启麦克风权限',
+            style: const TextStyle(fontSize: 13, color: Color(0xFF999999)),
+          ),
+        ],
+        if (_analysisError != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _analysisError!,
+            style: const TextStyle(fontSize: 12, color: Color(0xFFEF5350)),
+          ),
+        ],
       ],
     );
   }
