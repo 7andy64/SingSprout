@@ -29,9 +29,11 @@ class _SingSproutAppState extends State<SingSproutApp>
       context.read<AppState>().loadLocalData();
       context.read<NotificationProvider>().loadInitialCount();
     });
-    // 后台初始化端侧 AI 模型（非阻塞，回退方案已就位）
-    PitchDetectionService().initialize();
-    SoundClassificationService().initialize();
+    // 后台初始化端侧 AI 模型（延迟到首帧后，避免启动卡顿）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PitchDetectionService().initialize();
+      SoundClassificationService().initialize();
+    });
   }
 
   @override
