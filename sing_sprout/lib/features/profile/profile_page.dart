@@ -140,11 +140,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null,
                             onTap: () => context.push(AppRoutes.ledger),
                           ),
-                          MenuItem(
-                            icon: Icons.people_outline_rounded,
-                            label: '教师/家长观察窗',
-                            onTap: () => context.push(AppRoutes.observation),
-                          ),
+                          if (RoleGate.isAllowed(Feature.accessObservation, role))
+                            MenuItem(
+                              icon: Icons.people_outline_rounded,
+                              label: '教师/家长观察窗',
+                              onTap: () => context.push(AppRoutes.observation),
+                            ),
                         ],
                       ),
 
