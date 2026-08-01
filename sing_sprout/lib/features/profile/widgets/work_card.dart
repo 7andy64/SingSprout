@@ -14,6 +14,7 @@ class WorkCard extends StatefulWidget {
   final bool selectMode;
   final VoidCallback onFavorite;
   final VoidCallback? onDelete;
+  final VoidCallback? onRename;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onToggleSelect;
@@ -24,7 +25,8 @@ class WorkCard extends StatefulWidget {
     required this.selected,
     required this.selectMode,
     required this.onFavorite,
-    required this.onDelete,
+    this.onDelete,
+    this.onRename,
     required this.onTap,
     required this.onLongPress,
     required this.onToggleSelect,
@@ -327,6 +329,7 @@ class _WorkCardState extends State<WorkCard>
                   padding: EdgeInsets.zero,
                   onSelected: (action) {
                     if (action == 'favorite') widget.onFavorite();
+                    if (action == 'rename') widget.onRename?.call();
                     if (action == 'delete') widget.onDelete?.call();
                   },
                   itemBuilder: (_) => [
@@ -346,6 +349,17 @@ class _WorkCardState extends State<WorkCard>
                         ],
                       ),
                     ),
+                    if (widget.onRename != null)
+                      const PopupMenuItem(
+                        value: 'rename',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18, color: AppTheme.textSecondary),
+                            SizedBox(width: 8),
+                            Text('重命名'),
+                          ],
+                        ),
+                      ),
                     if (widget.onDelete != null)
                       const PopupMenuItem(
                         value: 'delete',

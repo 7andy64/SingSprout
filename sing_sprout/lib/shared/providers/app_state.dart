@@ -266,6 +266,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 更新声音样本。
+  Future<void> updateSound(SoundSample sample) async {
+    if (!kIsWeb) await _soundRepo.update(sample);
+    final index = _sounds.indexWhere((s) => s.id == sample.id);
+    if (index != -1) {
+      _sounds[index] = sample;
+    } else {
+      _sounds = await _soundRepo.getAll();
+    }
+    notifyListeners();
+  }
+
   // ── 明信片操作 ──
 
   Future<void> addVoiceCard(VoiceCard card) async {
