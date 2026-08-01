@@ -13,6 +13,7 @@ import '../../shared/services/identity_service.dart';
 import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/role_gate.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/providers/theme_provider.dart';
 import '../../shared/providers/economy_provider.dart';
 
 /// 个人中心 — MVP P0 功能
@@ -192,6 +193,20 @@ class _ProfilePageState extends State<ProfilePage> {
                             icon: Icons.edit_outlined,
                             label: '编辑资料',
                             onTap: () => _showEditProfile(profile),
+                          ),
+                          Builder(
+                            builder: (context) {
+                              final tp = context.watch<ThemeProvider>();
+                              return MenuItem(
+                                icon: tp.isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                                label: '切换主题',
+                                trailing: Text(
+                                  tp.isDark ? '夜间' : '白天',
+                                  style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                                ),
+                                onTap: () => tp.toggle(),
+                              );
+                            },
                           ),
                           if (RoleGate.isAllowed(Feature.switchRole, role))
                             MenuItem(
