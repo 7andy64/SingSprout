@@ -9,6 +9,9 @@ import '../../shared/providers/app_state.dart';
 import '../../shared/widgets/temperature_dial.dart';
 import '../../shared/widgets/speed_race_track.dart';
 import '../../shared/widgets/instrument_mixer.dart';
+import '../../shared/widgets/role_gate.dart';
+import '../../shared/services/role_permissions.dart';
+import '../../shared/models/user_profile.dart';
 import 'widgets/save_work_dialog.dart';
 
 /// 作品编辑器 — 播放预览 + 具象化微调 + 保存/分享
@@ -204,34 +207,46 @@ class _EditorPageState extends State<EditorPage> {
               const SizedBox(height: 44),
 
               // 操作按钮
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _saving ? null : _saveWork,
-                      icon: const Text('💾', style: TextStyle(fontSize: 20)),
-                      label: const Text('保存'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 52),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-                        side: const BorderSide(color: AppTheme.primaryGreen),
+              Consumer<AppState>(
+                builder: (context, app, _) {
+                  final role = app.userProfile?.role ?? UserRole.student;
+                  if (!RoleGate.isAllowed(Feature.editWork, role)) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        '当前身份不支持编辑作品',
+                        style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // 带着当前作品 ID 跳转声音邮局
-                        context.push(
-                          '${AppRoutes.composeCard}?workId=${_work.id}',
-                        );
-                      },
-                      icon: const Text('✉️', style: TextStyle(fontSize: 20)),
-                      label: const Text('发给爸妈'),
-                    ),
-                  ),
-                ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _saving ? null : _saveWork,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 52),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                            side: const BorderSide(color: AppTheme.primaryGreen),
+                          ),
+                          child: const Text('保存'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // 带着当前作品 ID 跳转声音邮局
+                            context.push(
+                              '${AppRoutes.composeCard}?workId=${_work.id}',
+                            );
+                          },
+                          child: const Text('发给爸妈'),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
             ],

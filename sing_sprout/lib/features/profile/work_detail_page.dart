@@ -5,7 +5,10 @@ import 'package:just_audio/just_audio.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_work.dart';
+import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/services/role_permissions.dart';
+import '../../shared/widgets/role_gate.dart';
 import '../../shared/utils/formatters.dart';
 
 /// 作品详情 / 播放页
@@ -82,6 +85,37 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
   }
 
   // ── 编辑 ──
+
+  List<Widget> _buildAppBarActions() {
+    final appState = context.read<AppState>();
+    final role = appState.userProfile?.role ?? UserRole.student;
+    final canEdit = RoleGate.isAllowed(Feature.editWork, role);
+    final canDelete = RoleGate.isAllowed(Feature.deleteWork, role);
+
+    final actions = <Widget>[];
+    if (canEdit) {
+      if (!_isEditing) {
+        actions.add(IconButton(
+          icon: const Icon(Icons.edit_outlined),
+          tooltip: '编辑',
+          onPressed: _toggleEdit,
+        ));
+      } else {
+        actions.add(TextButton(
+          onPressed: _toggleEdit,
+          child: const Text('完成'),
+        ));
+      }
+    }
+    if (canDelete) {
+      actions.add(IconButton(
+        icon: const Icon(Icons.delete_outline),
+        tooltip: '删除',
+        onPressed: _confirmDelete,
+      ));
+    }
+    return actions;
+  }
 
   void _toggleEdit() {
     setState(() => _isEditing = !_isEditing);
