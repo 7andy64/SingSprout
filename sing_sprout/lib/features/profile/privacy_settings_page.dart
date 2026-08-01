@@ -10,6 +10,9 @@ import '../../shared/services/file_storage_service.dart';
 import '../../shared/services/database_service.dart';
 import '../../shared/services/dash_scope_service.dart';
 import '../../shared/services/identity_service.dart';
+import '../../shared/services/role_permissions.dart';
+import '../../shared/widgets/role_gate.dart';
+import '../../shared/models/user_profile.dart';
 
 /// 隐私与安全设置
 class PrivacySettingsPage extends StatefulWidget {
@@ -640,18 +643,31 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           ),
 
           // ── 身份切换密码 ──
-          const SizedBox(height: 24),
-          const Text('身份切换', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-            child: ListTile(
-              leading: const Icon(Icons.swap_horiz_rounded, color: AppTheme.textSecondary, size: 22),
-              title: const Text('身份切换密码', style: TextStyle(fontSize: 15)),
-              subtitle: const Text('默认密码 123456，可在此修改', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-              trailing: const Icon(Icons.chevron_right, color: AppTheme.divider),
-              onTap: _showChangeIdentityPassword,
-            ),
+          Consumer<AppState>(
+            builder: (context, app, _) {
+              final role = app.userProfile?.role ?? UserRole.student;
+              return RoleGate(
+                feature: Feature.changeIdentityPassword,
+                role: role,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 24),
+                    const Text('身份切换', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                      child: ListTile(
+                        leading: const Icon(Icons.swap_horiz_rounded, color: AppTheme.textSecondary, size: 22),
+                        title: const Text('身份切换密码', style: TextStyle(fontSize: 15)),
+                        subtitle: const Text('默认密码 123456，可在此修改', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                        trailing: const Icon(Icons.chevron_right, color: AppTheme.divider),
+                        onTap: _showChangeIdentityPassword,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
 
           const SizedBox(height: 24),

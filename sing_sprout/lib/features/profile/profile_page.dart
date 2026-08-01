@@ -10,6 +10,8 @@ import 'widgets/profile_widgets.dart';
 import '../../shared/services/update_service.dart';
 import '../../shared/services/file_storage_service.dart';
 import '../../shared/services/identity_service.dart';
+import '../../shared/services/role_permissions.dart';
+import '../../shared/widgets/role_gate.dart';
 import '../../shared/providers/app_state.dart';
 
 /// 个人中心 — MVP P0 功能
@@ -54,6 +56,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Consumer<AppState>(
       builder: (context, appState, _) {
         final profile = appState.userProfile;
+        final role = profile?.role ?? UserRole.student;
         final dataLoaded = appState.dataLoaded;
 
         return Scaffold(
@@ -137,11 +140,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null,
                             onTap: () => context.push(AppRoutes.ledger),
                           ),
-                          MenuItem(
-                            icon: Icons.people_outline_rounded,
-                            label: '教师/家长观察窗',
-                            onTap: () => context.push(AppRoutes.observation),
-                          ),
+                          if (RoleGate.isAllowed(Feature.accessObservation, role))
+                            MenuItem(
+                              icon: Icons.people_outline_rounded,
+                              label: '教师/家长观察窗',
+                              onTap: () => context.push(AppRoutes.observation),
+                            ),
                         ],
                       ),
 
@@ -158,23 +162,25 @@ class _ProfilePageState extends State<ProfilePage> {
                             label: '编辑资料',
                             onTap: () => _showEditProfile(profile),
                           ),
-                          MenuItem(
-                            icon: Icons.swap_horiz_rounded,
-                            label: '切换身份',
-                            trailing: Text(
-                              profile?.role.label ?? '',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppTheme.textSecondary,
+                          if (RoleGate.isAllowed(Feature.switchRole, role))
+                            MenuItem(
+                              icon: Icons.swap_horiz_rounded,
+                              label: '切换身份',
+                              trailing: Text(
+                                profile?.role.label ?? '',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
+                              onTap: () => _showSwitchRole(profile),
                             ),
-                            onTap: () => _showSwitchRole(profile),
-                          ),
-                          MenuItem(
-                            icon: Icons.lock_outline_rounded,
-                            label: '隐私与安全',
-                            onTap: () => context.push(AppRoutes.privacySettings),
-                          ),
+                          if (RoleGate.isAllowed(Feature.accessPrivacySettings, role))
+                            MenuItem(
+                              icon: Icons.lock_outline_rounded,
+                              label: '隐私与安全',
+                              onTap: () => context.push(AppRoutes.privacySettings),
+                            ),
                           MenuItem(
                             icon: Icons.storage_rounded,
                             label: '存储管理',
