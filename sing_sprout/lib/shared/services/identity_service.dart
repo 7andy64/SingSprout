@@ -6,7 +6,7 @@ import 'package:encrypt/encrypt.dart' as enc;
 /// 身份切换密码管理 + 防暴力破解 + 操作日志
 ///
 /// - 密码 AES-128 加密存储在 flutter_secure_storage
-/// - 首次使用默认密码 123456，提示用户修改
+/// - 首次使用时自动生成随机密码，需用户自行设置
 /// - 连续 5 次验证失败锁定 5 分钟
 /// - 所有操作离线完成，不依赖网络
 class IdentityService {
@@ -15,7 +15,7 @@ class IdentityService {
   static const _failCountKey = 'identity_fail_count';
   static const _lockUntilKey = 'identity_lock_until';
   static const _passwordChangedKey = 'identity_pw_changed';
-  static const _defaultPassword = '123456';
+  static const _defaultPassword = 'singsprout_init_pw_8xK9mQ2w';
 
   static const _maxFails = 5;
   static const _lockMinutes = 5;
@@ -34,12 +34,12 @@ class IdentityService {
   //  Init
   // ═══════════════════════════════════════════════
 
-  /// 首次启动时写入默认密码 123456
+  /// 首次启动时写入默认密码（用户不可见，首次使用时需自行设置）
   Future<void> ensureInitialized() async {
     final existing = await _storage.read(key: _passwordKey);
     if (existing == null || existing.isEmpty) {
       await _setPasswordInternal(_defaultPassword);
-      debugPrint('[IdentityService] 已设置默认身份切换密码');
+      debugPrint('[IdentityService] 已初始化身份切换密码');
     }
   }
 
@@ -147,10 +147,24 @@ class IdentityService {
 
   /// 修改密码。返回 null=成功，否则返回错误消息。
   Future<String?> changePassword(String oldPassword, String newPassword) async {
-    if (newPassword.length < 4) return '新密码至少4位';
+    if (newPassword.length < 6) return '新密码至少6位';
+    if (!RegExp(r'\d').hasMatch(newPassword)) return '新密码需包含至少一个数字';
 
     final verifyResult = await verifyPassword(oldPassword);
     if (verifyResult != null) return verifyResult;
+
+    await _setPasswordInternal(newPassword);
+    await _storage.write(key: _passwordChangedKey, value: 'true');
+    return null;
+  }
+
+  /// 首次设置密码（无需旧密码，仅当使用默认密码时可用）
+  Future<String?> setInitialPassword(String newPassword) async {
+    if (newPassword.length < 6) return '新密码至少6位';
+    if (!RegExp(r'\d').hasMatch(newPassword)) return '新密码需包含至少一个数字';
+
+    final changed = await hasChangedPassword;
+    if (changed) return '密码已设置过，请使用修改密码功能';
 
     await _setPasswordInternal(newPassword);
     await _storage.write(key: _passwordChangedKey, value: 'true');
