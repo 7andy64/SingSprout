@@ -42,7 +42,7 @@ class BottomActions extends StatelessWidget {
                   onPressed: vm.hasRecording
                       ? () => _saveToLibrary(context)
                       : null,
-                  icon: const Icon(Icons.save_alt_rounded, size: 22),
+                  icon: const Text('💾', style: TextStyle(fontSize: 22)),
                   label: const Text(
                     '保存到我的声音库',
                     style: TextStyle(
@@ -114,7 +114,7 @@ class BottomActions extends StatelessWidget {
                   decoration: const InputDecoration(
                     labelText: '给声音起个名字吧',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.edit, size: 20),
+                    prefixIcon: const Text('✏️', style: TextStyle(fontSize: 20)),
                   ),
                   autofocus: true,
                 ),
