@@ -8,6 +8,7 @@ import 'shared/providers/app_state.dart';
 import 'shared/providers/audio_provider.dart';
 import 'shared/providers/connectivity_provider.dart';
 import 'shared/providers/notification_provider.dart';
+import 'shared/providers/theme_provider.dart';
 import 'core/routes/app_router.dart';
 import 'shared/services/update_service.dart';
 import 'shared/services/encryption_service.dart';
@@ -86,6 +87,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AppState()),
         ChangeNotifierProvider(create: (_) => AudioProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: const SingSproutApp(),

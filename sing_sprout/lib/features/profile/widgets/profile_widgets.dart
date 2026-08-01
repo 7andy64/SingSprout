@@ -204,7 +204,7 @@ class _StatCard extends StatelessWidget {
 /// 菜单分组
 class MenuSection extends StatelessWidget {
   final String title;
-  final List<MenuItem> items;
+  final List<Widget> items;
 
   const MenuSection({super.key, required this.title, required this.items});
 
