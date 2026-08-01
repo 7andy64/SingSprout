@@ -284,6 +284,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteVoiceCard(String id) async {
+    if (!kIsWeb) await _cardRepo.delete(id);
+    _cards.removeWhere((c) => c.id == id);
+    _updateTree();
+    notifyListeners();
+  }
+
   // ── 音乐树 ──
 
   void updateTreeData(MusicTreeData data) {

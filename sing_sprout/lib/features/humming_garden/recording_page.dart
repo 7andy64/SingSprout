@@ -158,12 +158,12 @@ class _RecordingPageState extends State<RecordingPage> {
                   Switch(
                     value: _speechMode,
                     onChanged: (v) => setState(() => _speechMode = v),
-                    activeColor: AppTheme.primaryGreen,
+                    activeTrackColor: AppTheme.primaryGreen,
                   ),
                   const Text('说话', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                   if (_speechText != null && _speechText!.isNotEmpty) ...[
                     const SizedBox(width: 8),
-                    const Icon(Icons.check_circle, size: 16, color: AppTheme.primaryGreen),
+                    const Text('✅', style: TextStyle(fontSize: 16)),
                   ],
                 ],
               ),
@@ -242,19 +242,17 @@ class _RecordingPageState extends State<RecordingPage> {
                     if (_speechText != null && _speechText!.isNotEmpty && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('识别到你说: "${_speechText}"'),
+                          content: Text('识别到你说: "$_speechText"'),
                           behavior: SnackBarBehavior.floating,
                           duration: const Duration(seconds: 2),
                         ),
                       );
                     }
                     // 回退
-                    if (audioPath == null) {
-                      audioPath = (await AudioGenerator.generateTestTone(
+                    audioPath ??= (await AudioGenerator.generateTestTone(
                         styleSeed: _selectedStyle.name,
                         durationSec: 3.0,
                       )).audioPath;
-                    }
 
                     final duration = AudioService().lastDuration ??
                         AudioService().recordingDuration ??
@@ -276,7 +274,7 @@ class _RecordingPageState extends State<RecordingPage> {
                       ? '⏹ 停止并生成'
                       : _speechMode
                           ? '🎙 开始说话'
-                          : '🎤 开始哼唱'),
+                          : '🎤 开始哼唱',),
                 ),
               ),
               const SizedBox(height: 16),
@@ -396,6 +394,50 @@ class _WaveformPainter extends CustomPainter {
       oldDelegate.amplitude != amplitude || oldDelegate.frozen != frozen;
 }
 
+class _RecordButton extends StatelessWidget {
+  final bool isRecording;
+  final VoidCallback onStart;
+  final VoidCallback onStop;
+
+  const _RecordButton({
+    required this.isRecording,
+    required this.onStart,
+    required this.onStop,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isRecording ? onStop : onStart,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: isRecording ? 96 : 80,
+        height: isRecording ? 96 : 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isRecording ? AppTheme.error : AppTheme.primaryGreen,
+          boxShadow: [
+            BoxShadow(
+              color: (isRecording ? AppTheme.error : AppTheme.primaryGreen)
+                  .withValues(alpha: 0.35),
+              blurRadius: isRecording ? 24 : 12,
+              spreadRadius: isRecording ? 6 : 0,
+            ),
+          ],
+        ),
+        child: Text(
+          isRecording ? '⏹' : '🎤',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 40,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 /// 来电中断恢复横幅
 class _RecoveryBanner extends StatelessWidget {
   final VoidCallback onRecover;
@@ -416,9 +458,9 @@ class _RecoveryBanner extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.phone_callback, size: 20, color: AppTheme.primaryGreen),
+              const Text('📞', style: TextStyle(fontSize: 20)),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(

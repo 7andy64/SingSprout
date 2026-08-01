@@ -13,7 +13,7 @@ class WorkCard extends StatefulWidget {
   final bool selected;
   final bool selectMode;
   final VoidCallback onFavorite;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onToggleSelect;
@@ -299,7 +299,7 @@ class _WorkCardState extends State<WorkCard>
                         ],
                         const SizedBox(width: 10),
                         Icon(Icons.access_time_filled,
-                            size: 12, color: AppTheme.textSecondary.withValues(alpha: 0.6)),
+                            size: 12, color: AppTheme.textSecondary.withValues(alpha: 0.6),),
                         const SizedBox(width: 3),
                         Text(
                           durationStr,
@@ -327,7 +327,7 @@ class _WorkCardState extends State<WorkCard>
                   padding: EdgeInsets.zero,
                   onSelected: (action) {
                     if (action == 'favorite') widget.onFavorite();
-                    if (action == 'delete') widget.onDelete();
+                    if (action == 'delete') widget.onDelete?.call();
                   },
                   itemBuilder: (_) => [
                     PopupMenuItem(
@@ -346,16 +346,17 @@ class _WorkCardState extends State<WorkCard>
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_outline, size: 18, color: AppTheme.textSecondary),
-                          SizedBox(width: 8),
-                          Text('删除'),
-                        ],
+                    if (widget.onDelete != null)
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline, size: 18, color: AppTheme.textSecondary),
+                            SizedBox(width: 8),
+                            Text('删除'),
+                          ],
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],

@@ -9,6 +9,10 @@ import '../../shared/services/export_service.dart';
 import '../../shared/services/file_storage_service.dart';
 import '../../shared/services/database_service.dart';
 import '../../shared/services/dash_scope_service.dart';
+import '../../shared/services/identity_service.dart';
+import '../../shared/services/role_permissions.dart';
+import '../../shared/widgets/role_gate.dart';
+import '../../shared/models/user_profile.dart';
 
 /// 隐私与安全设置
 class PrivacySettingsPage extends StatefulWidget {
@@ -418,14 +422,14 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       await storage.clearExports();
 
       // 清理 recovery 临时片段
-      final docsDir = await storage.rootPath;
+      final docsDir = storage.rootPath;
       final recoveryDir = Directory('$docsDir/recovery');
       if (await recoveryDir.exists()) {
         await recoveryDir.delete(recursive: true);
       }
 
       // 清理明信片生成临时图
-      final exportsDir = Directory('${docsDir}/exports');
+      final exportsDir = Directory('$docsDir/exports');
       if (await exportsDir.exists()) {
         await for (final e in exportsDir.list()) {
           if (e is File && e.path.endsWith('.png')) {
@@ -502,7 +506,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       await DatabaseService().clearAll();
       // 清空文件存储
       final storage = FileStorageService();
-      final docsDir = await storage.rootPath;
+      final docsDir = storage.rootPath;
       for (final sub in ['recordings', 'generated', 'covers', 'exports', 'recovery']) {
         final dir = Directory('$docsDir/$sub');
         if (await dir.exists()) await dir.delete(recursive: true);
@@ -638,6 +642,34 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
             ),
           ),
 
+          // ── 身份切换密码 ──
+          Consumer<AppState>(
+            builder: (context, app, _) {
+              final role = app.userProfile?.role ?? UserRole.student;
+              return RoleGate(
+                feature: Feature.changeIdentityPassword,
+                role: role,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 24),
+                    const Text('身份切换', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                      child: ListTile(
+                        leading: const Icon(Icons.swap_horiz_rounded, color: AppTheme.textSecondary, size: 22),
+                        title: const Text('身份切换密码', style: TextStyle(fontSize: 15)),
+                        subtitle: const Text('默认密码 123456，可在此修改', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                        trailing: const Icon(Icons.chevron_right, color: AppTheme.divider),
+                        onTap: _showChangeIdentityPassword,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
           const SizedBox(height: 24),
 
           // ── AI 设置 ──
@@ -692,5 +724,109 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
         ],
       ),
     );
+  }
+
+  // ═══════════════════════════════════════════
+  //  修改身份切换密码
+  // ═══════════════════════════════════════════
+
+  Future<void> _showChangeIdentityPassword() async {
+    final identityService = IdentityService();
+    final oldCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('修改身份切换密码'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '修改后，切换身份时需要输入新密码。\n默认密码：123456',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: oldCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: '当前密码',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: '新密码（至少4位）',
+                  prefixIcon: Icon(Icons.lock_reset),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: '再次输入新密码',
+                  prefixIcon: Icon(Icons.lock_reset),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              oldCtrl.dispose(); newCtrl.dispose(); confirmCtrl.dispose();
+              Navigator.pop(ctx);
+            },
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final oldPw = oldCtrl.text;
+              final newPw = newCtrl.text;
+              final confirmPw = confirmCtrl.text;
+
+              if (newPw.length < 4) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('新密码至少4位'), behavior: SnackBarBehavior.floating),
+                );
+                return;
+              }
+              if (newPw != confirmPw) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('两次输入的新密码不一致'), behavior: SnackBarBehavior.floating),
+                );
+                return;
+              }
+
+              final error = await identityService.changePassword(oldPw, newPw);
+              oldCtrl.dispose(); newCtrl.dispose(); confirmCtrl.dispose();
+
+              if (ctx.mounted) Navigator.pop(ctx);
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(error == null ? '身份切换密码已修改' : error),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('确认修改'),
+          ),
+        ],
+      ),
+    );
+
+    try { oldCtrl.dispose(); } catch (_) {}
+    try { newCtrl.dispose(); } catch (_) {}
+    try { confirmCtrl.dispose(); } catch (_) {}
   }
 }

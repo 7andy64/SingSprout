@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
 import '../../shared/models/voice_card.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/services/social_share_service.dart';
 
 /// 声音邮局 — 亲子音乐明信片收发
 class PostOfficePage extends StatelessWidget {
@@ -30,7 +30,7 @@ class PostOfficePage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => context.push(AppRoutes.composeCard),
-                  icon: const Icon(Icons.edit_note, size: 22),
+                  icon: const Text('✍️', style: TextStyle(fontSize: 22)),
                   label: const Text('写一张音乐明信片'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryWarm,
@@ -44,12 +44,12 @@ class PostOfficePage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Tab 切换：发件箱 / 收件箱
-            DefaultTabController(
+            const DefaultTabController(
               length: 2,
               child: Expanded(
                 child: Column(
                   children: [
-                    const TabBar(
+                    TabBar(
                       labelColor: AppTheme.primaryGreen,
                       unselectedLabelColor: AppTheme.textSecondary,
                       indicatorColor: AppTheme.primaryGreen,
@@ -92,8 +92,8 @@ class _CardList extends StatelessWidget {
     if (cards.isEmpty) {
       return _EmptyState(
         icon: direction == VoiceCardDirection.sent
-            ? Icons.send_outlined
-            : Icons.mail_outline_rounded,
+            ? '📤'
+            : '📬',
         message: direction == VoiceCardDirection.sent
             ? '还没有发送过明信片\n创作一首歌然后发给爸妈'
             : '还没有收到回信\n试试给爸妈发第一张明信片吧',
@@ -121,6 +121,7 @@ class _CardItem extends StatelessWidget {
     final work = appState.works
         .where((w) => w.id == card.workId)
         .firstOrNull;
+    final isReceived = card.direction == VoiceCardDirection.received;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -134,9 +135,26 @@ class _CardItem extends StatelessWidget {
             style: const TextStyle(fontSize: 20),
           ),
         ),
-        title: Text(
-          work?.title ?? '未知作品',
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        title: Row(
+          children: [
+            if (isReceived && card.isUnread) ...[
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+            Expanded(
+              child: Text(
+                work?.title ?? '未知作品',
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+            ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,33 +169,63 @@ class _CardItem extends StatelessWidget {
                   fontSize: 13,
                 ),
               ),
-            Text(
-              _formatDate(card.createdAt),
-              style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+            Row(
+              children: [
+                if (card.greetingAudioPath != null) ...[
+                  const Text('🎙️', style: TextStyle(fontSize: 12)),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  _formatDate(card.createdAt),
+                  style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                ),
+              ],
             ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.ios_share, size: 20),
-          onPressed: () => _shareCard(context),
-          tooltip: '再次分享',
-        ),
-        onTap: () => _shareCard(context),
+        trailing: isReceived
+            ? const Icon(Icons.chevron_right, color: AppTheme.textSecondary)
+            : IconButton(
+                icon: const Text('📤', style: TextStyle(fontSize: 20)),
+                onPressed: () => _reshareCard(context),
+                tooltip: '再次分享',
+              ),
+        onTap: () {
+          if (isReceived) {
+            _openDetail(context);
+          } else {
+            _reshareCard(context);
+          }
+        },
       ),
     );
   }
 
-  Future<void> _shareCard(BuildContext context) async {
-    if (card.coverUrl != null && card.coverUrl!.isNotEmpty) {
-      try {
-        await Share.shareXFiles(
-          [XFile(card.coverUrl!)],
-          text: '🎵 ${card.textContent ?? "分享一首音乐给你"}',
-        );
-      } catch (_) {
-        // 文件不存在时静默
-      }
+  void _openDetail(BuildContext context) {
+    context.push('${AppRoutes.cardDetail}?id=${card.id}');
+  }
+
+  void _reshareCard(BuildContext context) {
+    final appState = context.read<AppState>();
+    final profile = appState.userProfile;
+    final work = appState.works.where((w) => w.id == card.workId).firstOrNull;
+
+    if (card.coverUrl == null || card.coverUrl!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('明信片图片不存在')),
+      );
+      return;
     }
+
+    SocialShareService.showShareOptions(
+      context,
+      imagePath: card.coverUrl!,
+      cardId: card.id,
+      title: work?.title ?? '音乐明信片',
+      message: card.textContent ?? '',
+      deviceId: profile?.localId ?? 'default',
+      audioOssKey: card.audioPath,
+    );
   }
 
   String _formatDate(DateTime d) {
@@ -187,7 +235,7 @@ class _CardItem extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final String message;
   const _EmptyState({required this.icon, required this.message});
 
@@ -197,7 +245,7 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          Icon(icon, size: 56, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+          Text(icon, style: TextStyle(fontSize: 56, color: AppTheme.textSecondary.withValues(alpha: 0.3))),
           const SizedBox(height: 16),
           Text(
             message,

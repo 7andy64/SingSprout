@@ -54,18 +54,18 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     _vm.addListener(() => setState(() {}));
 
     _waveController = AnimationController(
-        vsync: this, duration: const Duration(seconds: 3));
+        vsync: this, duration: const Duration(seconds: 3),);
     _growthController = AnimationController(
-        vsync: this, duration: const Duration(seconds: 3));
+        vsync: this, duration: const Duration(seconds: 3),);
     _transitionController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
+        vsync: this, duration: const Duration(milliseconds: 400),);
     _pressScaleController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 150));
+        vsync: this, duration: const Duration(milliseconds: 150),);
     _ringRotateController = AnimationController(
-        vsync: this, duration: const Duration(seconds: 4))
+        vsync: this, duration: const Duration(seconds: 4),)
       ..repeat();
     _breatheController = AnimationController(
-        vsync: this, duration: const Duration(seconds: 2))
+        vsync: this, duration: const Duration(seconds: 2),)
       ..repeat(reverse: true);
 
     _waveController.addStatusListener((status) {
@@ -93,6 +93,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       _ringRotateController.repeat();
       _breatheController.repeat(reverse: true);
       await _vm.startRecording();
+      if (_vm.recordedFilePath == null) return;
     }
 
     if (_vm.stage == CreativeFlowStage.recording &&
@@ -116,7 +117,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
           content: Text(hint),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
-        ));
+        ),);
       }
 
       if (mounted && _vm.stage == CreativeFlowStage.generating) {
@@ -165,7 +166,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         duration: Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Color(0xDB4A8A3B),
-      ));
+      ),);
     }
   }
 
@@ -222,7 +223,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         leading: IconButton(
           icon: const Text('←',
               style:
-                  TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
+                  TextStyle(fontSize: 22, color: AppTheme.textPrimary),),
           onPressed: () => context.pop(),
         ),
       ),
@@ -259,6 +260,20 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
             await Future.delayed(const Duration(milliseconds: 300));
             if (!_isLongPressing || !mounted) return;
             await _vm.startRecording();
+            if (_vm.recordedFilePath == null) {
+              // 录音启动失败，回退动画并提示用户
+              if (mounted) {
+                setState(() => _isLongPressing = false);
+                _pressScaleController.reverse();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('录音启动失败，请重试'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+              return;
+            }
             _waveController.repeat();
             _ringRotateController.repeat();
             _breatheController.repeat(reverse: true);
@@ -328,7 +343,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         duration: Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Color(0xDB4A8A3B),
-      ));
+      ),);
     } else {
       _waveController.stop();
       _goToStage(CreativeFlowStage.stylePick);
@@ -353,7 +368,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
             builder: (context, _) => CustomPaint(
               painter: WaveParticlesPainter(
                   volume: _vm.currentAmplitude,
-                  time: _waveController.value),
+                  time: _waveController.value,),
               size: Size.infinite,
             ),
           ),
@@ -386,7 +401,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                         animal: app.userProfile?.guardianAnimal ??
                             GuardianAnimal.panda,
                         size: 72,
-                        speechBubble: null),
+                        speechBubble: null,),
                   ),
                 ],
               ),
@@ -398,7 +413,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
               child: Text('建议哼唱 5-15 秒',
                   style: TextStyle(
                       fontSize: 11,
-                      color: Color(0xAA666666))),
+                      color: Color(0xAA666666),),),
             ),
         ],
       ),
@@ -447,7 +462,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         const SizedBox(height: 24),
         Text(topText,
             style: const TextStyle(
-                fontSize: 14, color: AppTheme.textSecondary)),
+                fontSize: 14, color: AppTheme.textSecondary,),),
         const SizedBox(height: 12),
         Expanded(child: centerContent),
         const SizedBox(height: 16),
@@ -482,7 +497,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                   boxShadow: [
                     BoxShadow(
                       color: buttonShadowColor.withValues(
-                          alpha: _isLongPressing ? 0.5 : 0.35),
+                          alpha: _isLongPressing ? 0.5 : 0.35,),
                       blurRadius: _isLongPressing ? 24 : 16,
                       spreadRadius: _isLongPressing ? 6 : 2,
                     ),
@@ -491,7 +506,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                 alignment: Alignment.center,
                 child: const Text('🎤',
                     style:
-                        TextStyle(color: Colors.white, fontSize: 36)),
+                        TextStyle(color: Colors.white, fontSize: 36),),
               ),
             ),
           ),
@@ -522,7 +537,7 @@ class GreenRingPainter extends CustomPainter {
   final double rotation;
 
   GreenRingPainter(
-      {this.progress = 0.0, this.volume = 0.0, this.rotation = 0.0});
+      {this.progress = 0.0, this.volume = 0.0, this.rotation = 0.0,});
 
   @override
   void paint(Canvas canvas, Size size) {

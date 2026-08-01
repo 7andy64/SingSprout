@@ -13,6 +13,7 @@ class PostcardGenerator {
     required MusicWork work,
     required String message,
     required String senderName,
+    String? greetingText,
   }) async {
     const width = 750;
     const height = 1200;
@@ -77,7 +78,7 @@ class PostcardGenerator {
     // ── 分割线 ──
     canvas.drawLine(
       const ui.Offset(64, 340),
-      ui.Offset(width - 64, 340),
+      const ui.Offset(width - 64, 340),
       ui.Paint()
         ..color = const ui.Color(0x302D4059)
         ..strokeWidth = 2,
@@ -93,7 +94,7 @@ class PostcardGenerator {
 
     // ── 消息背景 ──
     final msgBgRect = ui.RRect.fromRectAndRadius(
-      ui.Rect.fromLTWH(64, 440, width - 128, 320),
+      const ui.Rect.fromLTWH(64, 440, width - 128, 320),
       const ui.Radius.circular(24),
     );
     canvas.drawRRect(msgBgRect, ui.Paint()..color = const ui.Color(0x99FFFFFF));
@@ -111,13 +112,32 @@ class PostcardGenerator {
     );
     canvas.drawParagraph(msgPara, const ui.Offset(96, 470));
 
+    // ── 语音祝福 ──
+    double signatureY = 810.0;
+    if (greetingText != null && greetingText.isNotEmpty) {
+      final greetLabel = _buildParagraph(
+        '🎙️ 语音祝福',
+        ui.TextStyle(fontSize: 22, color: const ui.Color(0xFF5A7FA0)),
+        200,
+      );
+      canvas.drawParagraph(greetLabel, const ui.Offset(64, 780));
+
+      final greetPara = _buildParagraph(
+        '"$greetingText"',
+        ui.TextStyle(fontSize: 26, color: const ui.Color(0xFF6B8FA0,), fontStyle: ui.FontStyle.italic,),
+        width - 192,
+      );
+      canvas.drawParagraph(greetPara, const ui.Offset(96, 820));
+      signatureY = 900.0;
+    }
+
     // ── 署名 ──
     final signPara = _buildParagraph(
       '— $senderName',
       ui.TextStyle(fontSize: 26, color: const ui.Color(0xFF888888)),
       300,
     );
-    canvas.drawParagraph(signPara, const ui.Offset(64, 810));
+    canvas.drawParagraph(signPara, ui.Offset(64, signatureY));
 
     // ── 底部品牌 ──
     final brandPara = _buildParagraph(
@@ -125,7 +145,7 @@ class PostcardGenerator {
       ui.TextStyle(fontSize: 22, color: const ui.Color(0xFFAAAAAA)),
       400,
     );
-    canvas.drawParagraph(brandPara, const ui.Offset(64, 870));
+    canvas.drawParagraph(brandPara, ui.Offset(64, signatureY + 60));
 
     // ── 装饰藤蔓 ──
     _drawVine(canvas, width, height);
@@ -277,7 +297,7 @@ class PostcardGenerator {
     final builder = ui.ParagraphBuilder(ui.ParagraphStyle(
       textDirection: ui.TextDirection.ltr,
       maxLines: 10,
-    ))
+    ),)
       ..pushStyle(style)
       ..addText(text);
     final para = builder.build()

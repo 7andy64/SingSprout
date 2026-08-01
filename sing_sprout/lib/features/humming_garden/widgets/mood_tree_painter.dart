@@ -110,7 +110,7 @@ class MoodTreePainter extends CustomPainter {
       c.drawLine(
           Offset(cx + cos(a) * 8, cy - 16 + sin(a) * 8),
           Offset(cx + cos(a) * 17, cy - 16 + sin(a) * 17),
-          l);
+          l,);
     }
     f.color = const Color(0xFFC8D8B0);
     final fl = Path()
@@ -137,12 +137,13 @@ class MoodTreePainter extends CustomPainter {
       final p = Path();
       for (var i = 0; i < 5; i++) {
         final a = (i / 5) * 2 * pi - pi / 2;
-        if (i == 0)
+        if (i == 0) {
           p.moveTo(x + cos(a) * r, y + sin(a) * r);
-        else
+        } else {
           p.lineTo(x + cos(a) * r, y + sin(a) * r);
+        }
         p.lineTo(x + cos(a + pi / 5) * r * 0.4,
-            y + sin(a + pi / 5) * r * 0.4);
+            y + sin(a + pi / 5) * r * 0.4,);
       }
       p.close();
       c.drawPath(p, f);

@@ -179,7 +179,7 @@ class WavSynthesizer {
       startSeconds: n.startSeconds * factor,
       durationSeconds: n.durationSeconds * factor,
       velocity: n.velocity,
-    )).toList();
+    ),).toList();
   }
 
   // ── ADSR interpolation (temperature → warmth) ──

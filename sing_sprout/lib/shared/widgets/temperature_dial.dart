@@ -22,8 +22,8 @@ class _TemperatureDialState extends State<TemperatureDial> {
 
   @override
   Widget build(BuildContext context) {
-    final coolColor = const Color(0xFF4D96FF);
-    final warmColor = const Color(0xFFFF8C42);
+    const coolColor = Color(0xFF4D96FF);
+    const warmColor = Color(0xFFFF8C42);
     final currentColor = Color.lerp(coolColor, warmColor, widget.value)!;
 
     return Center(
@@ -65,7 +65,7 @@ class _TemperatureDialState extends State<TemperatureDial> {
                 height: _trackHeight,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(_trackWidth / 2),
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [warmColor, coolColor],

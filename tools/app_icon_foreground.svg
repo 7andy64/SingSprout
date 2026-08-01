@@ -1,0 +1,193 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="sproutGrad" x1="0.3" y1="0" x2="0.4" y2="1">
+      <stop offset="0%"   stop-color="#B8E898"/>
+      <stop offset="100%" stop-color="#78D048"/>
+    </linearGradient>
+    <linearGradient id="soilGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#E8C898"/>
+      <stop offset="100%" stop-color="#D4A870"/>
+    </linearGradient>
+    <!-- 音符：强立体感 -->
+    <radialGradient id="noteGrad" cx="0.32" cy="0.25" r="0.72">
+      <stop offset="0%"   stop-color="#FFF0C0"/>
+      <stop offset="25%"  stop-color="#FFD870"/>
+      <stop offset="60%"  stop-color="#F8B838"/>
+      <stop offset="100%" stop-color="#D89010"/>
+    </radialGradient>
+    <filter id="noteShadow" x="-20%" y="-15%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#B87820" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- ============================================ -->
+  <!-- 可爱版：小土丘 + 圆滚滚芽苗 + 音符叶子        -->
+  <!-- ============================================ -->
+  <g transform="translate(512, 580) scale(0.70)">
+
+    <!-- 小土丘（圆润可爱） -->
+    <ellipse cx="0" cy="220" rx="155" ry="38" fill="url(#soilGrad)"/>
+    <ellipse cx="0" cy="218" rx="120" ry="22" fill="#EDD4A8" opacity="0.5"/>
+
+    <!-- ── 圆滚滚芽苗身体 ── -->
+    <!-- 像个胖嘟嘟的小水滴，非常圆 -->
+    <path d="
+      M 0 -240
+      C 95 -220, 165 -140, 175 -30
+      C 185 70, 170 140, 120 185
+      C 80 220, 30 232, -30 228
+      C -90 220, -155 180, -178 100
+      C -198 20, -185 -60, -140 -120
+      C -100 -180, -45 -235, 0 -240
+      Z
+    " fill="url(#sproutGrad)"/>
+
+    <!-- 左脸高光（圆圆的腮红感） -->
+    <ellipse cx="-70" cy="-30" rx="45" ry="55" fill="#FFFFFF" fill-opacity="0.16" transform="rotate(-12, -70, -30)"/>
+
+    <!-- 右脸暖光 -->
+    <ellipse cx="100" cy="80" rx="55" ry="65" fill="#F8E0B0" fill-opacity="0.18" transform="rotate(10, 100, 80)"/>
+
+    <!-- ── 八分音符（头顶的小叶子/音符） ── -->
+    <!-- ── 八分音符（巨型 + 强立体） ── -->
+    <g filter="url(#noteShadow)">
+      <!-- 音符头 rx=100 ry=82 -->
+      <ellipse cx="10" cy="-252" rx="100" ry="82" fill="url(#noteGrad)" transform="rotate(-8, 10, -252)"/>
+
+      <!-- 底部深暗面 -->
+      <path d="
+        M -75 -220
+        C -58 -158, 18 -138, 85 -155
+        C 115 -165, 130 -190, 130 -215
+        C 110 -178, 68 -158, 18 -158
+        C -35 -160, -60 -185, -75 -220
+        Z
+      " fill="#B06808" opacity="0.28" transform="rotate(-8, 10, -252)"/>
+
+      <!-- 侧暗面 -->
+      <path d="
+        M 65 -178
+        C 85 -190, 102 -208, 108 -228
+        C 98 -200, 80 -185, 58 -175
+        Z
+      " fill="#C87808" opacity="0.22" transform="rotate(-8, 10, -252)"/>
+
+      <!-- 主高光 -->
+      <ellipse cx="-25" cy="-295" rx="38" ry="24" fill="#FFFFFF" fill-opacity="0.45" transform="rotate(-8, -25, -295)"/>
+
+      <!-- 小亮斑 -->
+      <ellipse cx="-48" cy="-272" rx="15" ry="10" fill="#FFFFFF" fill-opacity="0.35" transform="rotate(-8, -48, -272)"/>
+
+      <!-- 左边缘反光 -->
+      <path d="
+        M -80 -268
+        C -90 -248, -88 -222, -75 -202
+      " stroke="#FFF0D0" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.40" transform="rotate(-8, 10, -252)"/>
+
+      <!-- 顶部亮线 -->
+      <path d="
+        M -55 -315
+        C -30 -332, 0 -335, 32 -328
+      " stroke="#FFF8E0" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.35" transform="rotate(-8, 10, -252)"/>
+    </g>
+
+    <!-- 茎杆 -->
+    <path d="
+      M 75 -290
+      C 85 -345, 95 -395, 108 -440
+      L 155 -432
+      C 138 -387, 122 -338, 102 -285
+      Z
+    " fill="url(#noteGrad)"/>
+
+    <!-- 茎杆暗面 -->
+    <path d="
+      M 108 -290
+      C 118 -338, 130 -387, 142 -432
+      L 155 -432
+      C 138 -387, 122 -338, 102 -285
+      Z
+    " fill="#B06808" opacity="0.40"/>
+
+    <!-- 茎杆高光 -->
+    <path d="
+      M 80 -294
+      C 89 -340, 98 -385, 106 -422
+      L 115 -419
+      C 106 -382, 97 -337, 88 -293
+      Z
+    " fill="#FFFFFF" fill-opacity="0.22"/>
+
+    <!-- 旗-暗面 -->
+    <path d="
+      M 155 -432
+      C 155 -432, 75 -465, 8 -452
+      C -25 -445, -48 -428, -55 -400
+      C -62 -370, -40 -348, 5 -336
+      C 55 -322, 112 -320, 152 -330
+      C 175 -338, 182 -350, 178 -368
+      C 168 -350, 138 -338, 98 -332
+      C 52 -325, 0 -332, -18 -352
+      C -30 -370, -25 -395, 8 -404
+      C 62 -425, 145 -415, 155 -432
+      Z
+    " fill="#D08818"/>
+
+    <!-- 旗-亮面 -->
+    <path d="
+      M 155 -432
+      C 155 -432, 82 -458, 22 -447
+      C -2 -442, -22 -428, -30 -406
+      C -38 -384, -18 -368, 22 -358
+      C 65 -350, 112 -348, 145 -358
+      C 165 -365, 175 -375, 172 -392
+      C 162 -374, 135 -364, 98 -360
+      C 58 -355, 15 -358, 0 -375
+      C -10 -390, -5 -410, 15 -420
+      C 52 -438, 128 -428, 155 -432
+      Z
+    " fill="#FFD870"/>
+
+    <!-- 旗-高光 -->
+    <path d="
+      M 155 -432
+      C 135 -442, 85 -452, 42 -444
+      C 22 -438, 8 -430, 5 -418
+      C 28 -428, 65 -434, 108 -428
+      C 145 -422, 155 -432, 155 -432
+      Z
+    " fill="#FFFFFF" fill-opacity="0.30"/>
+
+    <!-- 右侧小嫩叶 -->
+    <path d="
+      M 155 40
+      C 190 20, 210 10, 215 18
+      C 220 28, 208 38, 190 46
+      C 172 52, 158 48, 155 40
+      Z
+    " fill="#A0DC78"/>
+
+    <!-- ── 可爱小表情 ── -->
+    <!-- 左眼（小黑豆眼） -->
+    <circle cx="-50" cy="-100" r="11" fill="#5A3820"/>
+
+    <!-- 右眼 -->
+    <circle cx="50" cy="-100" r="11" fill="#5A3820"/>
+
+    <!-- 左眼高光 -->
+    <circle cx="-46" cy="-104" r="4" fill="#FFFFFF"/>
+    <circle cx="54" cy="-104" r="4" fill="#FFFFFF"/>
+
+    <!-- 微笑小嘴 -->
+    <path d="
+      M -20 -75
+      C -10 -62, 10 -62, 20 -75
+    " stroke="#5A3820" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+    <!-- 小腮红 -->
+    <ellipse cx="-80" cy="-72" rx="18" ry="12" fill="#F8B0A0" opacity="0.35"/>
+    <ellipse cx="80" cy="-72" rx="18" ry="12" fill="#F8B0A0" opacity="0.35"/>
+
+  </g>
+
+</svg>

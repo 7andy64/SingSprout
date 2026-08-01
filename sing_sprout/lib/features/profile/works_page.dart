@@ -5,7 +5,10 @@ import '../../core/constants/app_routes.dart';
 import '../../core/constants/enums.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_work.dart';
+import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/services/role_permissions.dart';
+import '../../shared/widgets/role_gate.dart';
 import 'widgets/work_card.dart';
 
 /// 排序方式
@@ -118,6 +121,46 @@ class _WorksPageState extends State<WorksPage> {
     _exitSelectMode();
   }
 
+  List<Widget> _buildAppBarActions(AppState appState, List<MusicWork> works) {
+    final role = appState.userProfile?.role ?? UserRole.student;
+    final canDelete = RoleGate.isAllowed(Feature.deleteWork, role);
+
+    if (_selectMode) {
+      return [
+        if (canDelete)
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: _selectedIds.isNotEmpty ? _batchDelete : null,
+            tooltip: '删除选中',
+          ),
+        _MenuAnchor(
+          icon: Icons.more_vert,
+          items: [
+            _MenuEntry(
+              label: '全选',
+              onTap: () => setState(() {
+                _selectedIds.addAll(works.map((w) => w.id));
+              }),
+            ),
+            _MenuEntry(
+              label: '取消全选',
+              onTap: () => setState(() => _selectedIds.clear()),
+            ),
+          ],
+        ),
+      ];
+    }
+    return [
+      _MenuAnchor(
+        icon: Icons.sort_rounded,
+        items: [
+          _MenuEntry(label: '排序', onTap: _showSortSheet),
+          _MenuEntry(label: '筛选', onTap: _showFilterSheet),
+        ],
+      ),
+    ];
+  }
+
   void _showSortSheet() {
     showModalBottomSheet(
       context: context,
@@ -139,7 +182,7 @@ class _WorksPageState extends State<WorksPage> {
                 setState(() => _sortBy = s);
                 Navigator.pop(ctx);
               },
-            )),
+            ),),
             const SizedBox(height: 8),
           ],
         ),
@@ -197,7 +240,7 @@ class _WorksPageState extends State<WorksPage> {
                 });
                 Navigator.pop(ctx);
               },
-            )),
+            ),),
             const SizedBox(height: 8),
           ],
         ),
@@ -228,6 +271,7 @@ class _WorksPageState extends State<WorksPage> {
       builder: (context, appState, _) {
         final allWorks = appState.works;
         final works = _applySortAndFilter(allWorks);
+        final role = appState.userProfile?.role ?? UserRole.student;
 
         return Scaffold(
           appBar: AppBar(
@@ -239,38 +283,7 @@ class _WorksPageState extends State<WorksPage> {
                     onPressed: _exitSelectMode,
                   )
                 : null,
-            actions: _selectMode
-                ? [
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: _selectedIds.isNotEmpty ? _batchDelete : null,
-                      tooltip: '删除选中',
-                    ),
-                    _MenuAnchor(
-                      icon: Icons.more_vert,
-                      items: [
-                        _MenuEntry(
-                          label: '全选',
-                          onTap: () => setState(() {
-                            _selectedIds.addAll(works.map((w) => w.id));
-                          }),
-                        ),
-                        _MenuEntry(
-                          label: '取消全选',
-                          onTap: () => setState(() => _selectedIds.clear()),
-                        ),
-                      ],
-                    ),
-                  ]
-                : [
-                    _MenuAnchor(
-                      icon: Icons.sort_rounded,
-                      items: [
-                        _MenuEntry(label: '排序', onTap: _showSortSheet),
-                        _MenuEntry(label: '筛选', onTap: _showFilterSheet),
-                      ],
-                    ),
-                  ],
+            actions: _buildAppBarActions(appState, works),
           ),
           body: Column(
             children: [
@@ -319,12 +332,13 @@ class _WorksPageState extends State<WorksPage> {
                         itemBuilder: (_, i) {
                           final w = works[i];
                           final selected = _selectedIds.contains(w.id);
+                          final canDelete = RoleGate.isAllowed(Feature.deleteWork, role);
                           return WorkCard(
                             work: w,
                             selected: selected,
                             selectMode: _selectMode,
                             onFavorite: () => appState.toggleFavorite(w.id),
-                            onDelete: () => _confirmDelete(context, w),
+                            onDelete: canDelete ? () => _confirmDelete(context, w) : null,
                             onTap: () {
                               if (_selectMode) {
                                 _toggleSelect(w.id);

@@ -51,7 +51,7 @@ class _TreeGrowAnimationState extends State<TreeGrowAnimation>
 
     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-          parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.easeIn)),
+          parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.easeIn),),
     );
 
     _controller.forward();
@@ -102,7 +102,7 @@ class _TreeGrowAnimationState extends State<TreeGrowAnimation>
                   .scale(
                       begin: const Offset(0.5, 0.5),
                       end: const Offset(1, 1),
-                      duration: 600.ms)
+                      duration: 600.ms,)
                   .then()
                   .fadeOut(duration: 200.ms),
               const SizedBox(height: 8),
@@ -112,12 +112,12 @@ class _TreeGrowAnimationState extends State<TreeGrowAnimation>
                   .scale(
                       begin: const Offset(0.5, 0.5),
                       end: const Offset(1.2, 1.2),
-                      duration: 400.ms)
+                      duration: 400.ms,)
                   .then()
                   .scale(
                       begin: const Offset(1.2, 1.2),
                       end: const Offset(1.0, 1.0),
-                      duration: 200.ms),
+                      duration: 200.ms,),
               const SizedBox(height: 16),
               const Text(
                 '🌳 你的音乐树正在生长',

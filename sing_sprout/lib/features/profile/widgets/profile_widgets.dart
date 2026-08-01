@@ -26,8 +26,8 @@ class ProfileHeader extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (loading)
-            Column(
-              children: const [
+            const Column(
+              children: [
                 SizedBox(
                   width: 120,
                   height: 20,

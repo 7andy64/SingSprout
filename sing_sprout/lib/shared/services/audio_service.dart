@@ -17,7 +17,8 @@ class AudioService {
   factory AudioService() => _instance;
   AudioService._();
 
-  final _audioRecorder = AudioRecorder();
+  AudioRecorder _audioRecorder = AudioRecorder();
+  bool _recorderHasStarted = false;
   final _player = AudioPlayer();
   final _fileStorage = FileStorageService();
 
@@ -151,20 +152,28 @@ class AudioService {
   Future<String?> _startRecordingInternal(RecordConfig config, {required String extension}) async {
     // ── 1. 状态检查 ──
     if (_isRecording) {
-      debugPrint('[AudioService] 已在录音中，忽略重复请求');
-      return _currentRecordingPath;
+      debugPrint('[AudioService] ⚠️ 检测到残留录音状态，自动清理后继续');
+      try {
+        await _audioRecorder.stop();
+      } catch (e) {
+        debugPrint('[AudioService] 清理残留录音时出错（可能未在录音中）：$e');
+      }
+      _isRecording = false;
+      _recordingStartedAt = null;
+      _currentRecordingPath = null;
+      _savedFragmentPath = null;
     }
 
     // ── 2. 权限检查 ──
     final hasPermission = await requestMicPermission();
     if (!hasPermission) {
-      throw AudioRecordException('麦克风权限未授予，无法开始录音。'
+      throw const AudioRecordException('麦克风权限未授予，无法开始录音。'
           '请在系统设置中允许声芽访问麦克风。');
     }
 
     // ── 3. 检查录音器是否可用 ──
     if (!await _audioRecorder.hasPermission()) {
-      throw AudioRecordException('录音权限检查失败，请确认系统设置中已授权。');
+      throw const AudioRecordException('录音权限检查失败，请确认系统设置中已授权。');
     }
 
     // ── 4. 生成文件路径 ──
@@ -180,13 +189,25 @@ class AudioService {
       throw AudioRecordException('无法创建录音目录: $e');
     }
 
-    // ── 6. 开始录音 ──
+    // ── 6. 准备录音器：如果已使用过则重新创建，避免原生层状态残留 ──
+    if (_recorderHasStarted) {
+      try {
+        await _audioRecorder.dispose();
+      } catch (e) {
+        debugPrint('[AudioService] 释放旧录音器时出错：$e');
+      }
+      _audioRecorder = AudioRecorder();
+      debugPrint('[AudioService] 🔄 已重新创建 AudioRecorder 实例');
+    }
+
+    // ── 7. 开始录音 ──
     try {
       final filePath = _currentRecordingPath!;
       await _audioRecorder.start(config, path: filePath);
       _isRecording = true;
       _savedFragmentPath = null;
       _recordingStartedAt = DateTime.now();
+      _recorderHasStarted = true;
 
       debugPrint('[AudioService] ✅ 开始录音 → $filePath');
       return filePath;

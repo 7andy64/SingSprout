@@ -9,7 +9,9 @@ import '../../shared/models/music_tree_data.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/services/music_tree_service.dart';
+import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/animal_avatar.dart';
+import '../../shared/widgets/role_gate.dart';
 import '../../shared/widgets/tree_visual.dart';
 import 'widgets/garden_widgets.dart';
 
@@ -140,36 +142,60 @@ class _HummingGardenPageState extends State<HummingGardenPage>
               ],
               const SizedBox(height: 16),
               // ── Record button ──
-              GestureDetector(
-                onTap: _startCreativeFlow,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            AppTheme.primaryGreen.withValues(alpha: 0.35),
-                        blurRadius: 16,
-                        spreadRadius: 2,
+              Consumer<AppState>(
+                builder: (context, app, _) {
+                  final role = app.userProfile?.role ?? UserRole.student;
+                  return RoleGate(
+                    feature: Feature.createMusic,
+                    role: role,
+                    fallback: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        '当前身份不支持创作功能',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
-                    ],
-                  ),
-                  child: const Icon(Icons.mic,
-                      color: Colors.white, size: 36),
-                ),
+                    ),
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          onTap: _startCreativeFlow,
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      AppTheme.primaryGreen.withValues(alpha: 0.35),
+                                  blurRadius: 16,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text('🎤',
+                                style: TextStyle(fontSize: 36)),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('点击开始创作',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 4),
-              const Text('点击开始创作',
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.textSecondary)),
               const SizedBox(height: 20),
               // ── Quick actions ──
               Padding(

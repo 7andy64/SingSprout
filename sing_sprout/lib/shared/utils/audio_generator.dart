@@ -4,6 +4,7 @@ import '../../core/constants/enums.dart';
 import '../services/audio_processor.dart';
 import '../services/arrangement_engine.dart';
 import '../services/dash_scope_service.dart';
+import '../services/pitch_detection_service.dart';
 import '../services/wav_synthesizer_isolate.dart';
 import '../services/file_storage_service.dart';
 
@@ -54,8 +55,8 @@ typedef ProgressCallback = void Function(PipelineProgress progress);
 
 /// AI music generation pipeline orchestrator.
 ///
-/// Full chain: WAV recording → YIN pitch detection → MIDI quantization
-/// → [AI full-score generation] → WAV synthesis → output file.
+/// Full chain: WAV recording → pitch detection (Basic Pitch / YIN)
+/// → MIDI quantization → [AI full-score generation] → WAV synthesis → output file.
 ///
 /// When AI is available, it writes per-bar accompaniment (bass, chords,
 /// percussion, dynamics) directly — no rule templates. Falls back to
@@ -86,14 +87,25 @@ class AudioGenerator {
       final samples = await AudioProcessor.readWav(wavFilePath);
       debugPrint('[AudioGenerator] Stage 1: Read ${samples.length} samples');
 
-      // ── Stage 2: YIN pitch detection ──
+      // ── Stage 2: Pitch detection (CREPE-TFLite → YIN fallback) ──
       onProgress?.call(PipelineProgress.stages[1]);
-      final pitchContour = AudioProcessor.detectPitch(samples, 44100);
+      final pitchContour = await PitchDetectionService().detectPitch(samples, 44100);
       final voicedFrames = pitchContour.where((p) => p.frequencyHz > 0).length;
       final voicedRatio = pitchContour.isNotEmpty
           ? voicedFrames / pitchContour.length
           : 0.0;
-      debugPrint('[AudioGenerator] Stage 2: YIN → ${pitchContour.length} frames, voiced ratio: ${(voicedRatio * 100).toStringAsFixed(0)}%');
+      final pitchMethod = PitchDetectionService().isAvailable ? 'BasicPitch' : 'YIN';
+      debugPrint('[AudioGenerator] Stage 2: Pitch detection → ${pitchContour.length} frames, voiced ratio: ${(voicedRatio * 100).toStringAsFixed(0)}% (method: $pitchMethod)');
+
+      // ── Stage 2b: Audio event detection (environmental sounds) ──
+      String? audioEventsDesc;
+      try {
+        final events = await DashScopeService().detectAudioEvents(wavFilePath);
+        if (events != null && events.events.isNotEmpty) {
+          audioEventsDesc = events.summary;
+          debugPrint('[AudioGenerator] Audio events: $audioEventsDesc');
+        }
+      } catch (_) { /* non-critical, skip */ }
 
       // ── Stage 3: MIDI quantization ──
       var melody = AudioProcessor.pitchToMidi(pitchContour);
@@ -106,7 +118,7 @@ class AudioGenerator {
         detail: melodyNoteCount > 0
             ? '发现了 $melodyNoteCount 个音符'
             : (speechText != null ? '正在理解你说的话...' : '正在创作一段旋律...'),
-      ));
+      ),);
 
       // Low voiced ratio + speech text = user was speaking, not humming
       final isSpeaking = speechText != null && (voicedRatio < 0.3 || melodyNoteCount < 3);
@@ -140,7 +152,7 @@ class AudioGenerator {
         'startSeconds': n.startSeconds,
         'durationSeconds': n.durationSeconds,
         'velocity': n.velocity,
-      }).toList();
+      },).toList();
 
       try {
         final score = await DashScopeService().generateFullScore(
@@ -149,6 +161,7 @@ class AudioGenerator {
           tonicMidi: tonicMidi,
           speechText: speechText,
           needsMelody: isSpeaking,
+          audioEvents: audioEventsDesc,
         );
 
         if (score != null && score.bars.isNotEmpty) {
@@ -182,7 +195,7 @@ class AudioGenerator {
           icon: '🤖',
           fraction: 0.85,
           detail: aiMoodNote,
-        ));
+        ),);
       }
       final outputPath = FileStorageService().generateMusicPath(
         styleSeed: styleSeed.name,
@@ -204,7 +217,7 @@ class AudioGenerator {
         icon: '🌟',
         fraction: 1.0,
         detail: '你的音乐已经准备好了',
-      ));
+      ),);
 
       return GenerationResult(
         audioPath: outputPath,
@@ -348,7 +361,7 @@ class AudioGenerator {
           startSeconds: time,
           durationSeconds: remaining * 0.85,
           velocity: 0.5 + (rng.next() % 35) / 100.0,
-        ));
+        ),);
         break;
       }
 
@@ -357,7 +370,7 @@ class AudioGenerator {
         startSeconds: time,
         durationSeconds: dur * 0.82,
         velocity: 0.45 + (rng.next() % 40) / 100.0,
-      ));
+      ),);
       time += dur;
       notesInPhrase++;
     }
