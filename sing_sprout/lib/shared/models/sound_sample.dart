@@ -60,6 +60,30 @@ class SoundSample {
         'created_at': createdAt.toIso8601String(),
       };
 
+  SoundSample copyWith({
+    String? name,
+    String? audioPath,
+    SoundType? type,
+    double? bpm,
+    String? pitchSequence,
+    String? timbreFeature,
+    String? recommendedUse,
+    bool? isPublic,
+  }) {
+    return SoundSample(
+      id: id,
+      name: name ?? this.name,
+      audioPath: audioPath ?? this.audioPath,
+      type: type ?? this.type,
+      bpm: bpm ?? this.bpm,
+      pitchSequence: pitchSequence ?? this.pitchSequence,
+      timbreFeature: timbreFeature ?? this.timbreFeature,
+      recommendedUse: recommendedUse ?? this.recommendedUse,
+      isPublic: isPublic ?? this.isPublic,
+      createdAt: createdAt,
+    );
+  }
+
   factory SoundSample.fromJson(Map<String, dynamic> json) => SoundSample(
         id: json['id'] as String,
         name: json['name'] as String,
