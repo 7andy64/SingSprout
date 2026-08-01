@@ -3,7 +3,7 @@ enum GuardianAnimal {
   panda('小熊猫咕咕', '🐼'),
   tit('山雀啾啾', '🐦'),
   frog('青蛙呱呱', '🐸'),
-  firefly('萤火虫闪闪', '🪲');
+  firefly('萤火虫闪闪', '✨');
 
   const GuardianAnimal(this.displayName, this.emoji);
   final String displayName;
