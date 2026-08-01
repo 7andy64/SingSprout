@@ -339,6 +339,7 @@ class _WorksPageState extends State<WorksPage> {
                             selectMode: _selectMode,
                             onFavorite: () => appState.toggleFavorite(w.id),
                             onDelete: canDelete ? () => _confirmDelete(context, w) : null,
+                            onRename: () => _showRenameDialog(context, w),
                             onTap: () {
                               if (_selectMode) {
                                 _toggleSelect(w.id);
@@ -380,6 +381,45 @@ class _WorksPageState extends State<WorksPage> {
           Text(
             _filter != WorkFilter.all ? '试试调整筛选条件' : '去哼唱花园录制你的第一首歌吧',
             style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, MusicWork work) {
+    final controller = TextEditingController(text: work.title);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('重命名作品'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: '作品名称',
+            hintText: '输入新名称',
+          ),
+          maxLength: 20,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              controller.dispose();
+              Navigator.pop(ctx);
+            },
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newTitle = controller.text.trim();
+              controller.dispose();
+              if (newTitle.isNotEmpty && newTitle != work.title) {
+                await context.read<AppState>().updateWork(work.copyWith(title: newTitle));
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('确定'),
           ),
         ],
       ),
