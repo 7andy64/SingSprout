@@ -555,6 +555,29 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
             ),
           ),
 
+          const SizedBox(height: 16),
+
+          // 头像隐私说明
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE3F2FD),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.account_circle_outlined, color: Color(0xFF4D96FF), size: 24),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '自定义头像仅保存在手机本地，不会上传到任何服务器，请放心使用。',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: 24),
 
           // ── 私密空间 ──
