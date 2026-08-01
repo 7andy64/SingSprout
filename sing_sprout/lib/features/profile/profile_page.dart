@@ -541,7 +541,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (selectedRole == null || !mounted) return;
 
-    // 密码验证（身份切换密码，默认 123456，5次失败锁定5分钟）
+    // 首次使用：先强制设置密码
+    final identityService = IdentityService();
+    final changed = await identityService.hasChangedPassword;
+    if (!changed) {
+      final setupError = await _showInitialPasswordSetup();
+      if (setupError != null) return; // 用户取消或失败
+    }
+
+    // 密码验证（5次失败锁定5分钟）
     final error = await _verifyIdentityPassword();
     if (error != null) {
       if (mounted) {
@@ -597,11 +605,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 const Text(
                   '切换身份需要输入身份切换密码',
                   style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  '（默认密码：123456）',
-                  style: TextStyle(fontSize: 12, color: Color(0xFFBBBBBB)),
                 ),
                 if (errorMsg != null) ...[
                   const SizedBox(height: 8),
@@ -668,6 +671,130 @@ class _ProfilePageState extends State<ProfilePage> {
     try { if (!disposed) controller.dispose(); } catch (_) {}
     if (result != true) return errorMsg ?? '已取消';
     return null; // 验证通过
+  }
+
+  /// 首次设置身份切换密码（无需旧密码）
+  /// 返回 null=设置成功，否则返回错误消息
+  Future<String?> _showInitialPasswordSetup() async {
+    final identityService = IdentityService();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    String? errorMsg;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Text('🔐', style: TextStyle(fontSize: 28)),
+                SizedBox(width: 8),
+                Text('首次设置安全密码', style: TextStyle(fontSize: 18)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '为了安全地切换身份（学生/老师/家长），\n请先设置一个身份切换密码。',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+                ),
+                if (errorMsg != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.error.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(errorMsg!, style: const TextStyle(fontSize: 12, color: AppTheme.error)),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                TextField(
+                  controller: newCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: '设置密码（至少6位+数字）',
+                    prefixIcon: Icon(Icons.lock_outline),
+                    helperText: '如：xiaoming2024',
+                    helperMaxLines: 1,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: confirmCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: '再次输入密码',
+                    prefixIcon: Icon(Icons.lock_reset),
+                  ),
+                  onSubmitted: (_) => _doSetInitial(
+                    ctx, setDlgState, identityService,
+                    newCtrl, confirmCtrl,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  newCtrl.dispose(); confirmCtrl.dispose();
+                  Navigator.pop(ctx, false);
+                },
+                child: const Text('稍后设置'),
+              ),
+              FilledButton(
+                onPressed: () => _doSetInitial(
+                  ctx, setDlgState, identityService,
+                  newCtrl, confirmCtrl,
+                ),
+                child: const Text('确认设置'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    try { newCtrl.dispose(); } catch (_) {}
+    try { confirmCtrl.dispose(); } catch (_) {}
+    return result == true ? null : (errorMsg ?? '已取消');
+  }
+
+  Future<void> _doSetInitial(
+    BuildContext ctx,
+    StateSetter setDlgState,
+    IdentityService identityService,
+    TextEditingController newCtrl,
+    TextEditingController confirmCtrl,
+  ) async {
+    final newPw = newCtrl.text;
+    final confirmPw = confirmCtrl.text;
+
+    if (newPw != confirmPw) {
+      setDlgState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('两次输入的密码不一致'), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+
+    final error = await identityService.setInitialPassword(newPw);
+    if (error != null) {
+      setDlgState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+
+    newCtrl.dispose(); confirmCtrl.dispose();
+    if (ctx.mounted) Navigator.pop(ctx, true);
   }
 
   String _roleDescription(UserRole role) {
