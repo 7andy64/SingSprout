@@ -239,7 +239,7 @@ class _BpmBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.speed, size: 18, color: Color(0xFF42A5F5)),
+          const Text('⚡', style: TextStyle(fontSize: 18, color: Color(0xFF42A5F5))),
           const SizedBox(width: 6),
           Text(
             '${vm.detectedBpm.toStringAsFixed(0)} BPM',

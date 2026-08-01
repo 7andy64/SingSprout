@@ -158,7 +158,7 @@ class _RecordingPageState extends State<RecordingPage> {
                   Switch(
                     value: _speechMode,
                     onChanged: (v) => setState(() => _speechMode = v),
-                    activeThumbColor: AppTheme.primaryGreen,
+                    activeTrackColor: AppTheme.primaryGreen,
                   ),
                   const Text('说话', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                   if (_speechText != null && _speechText!.isNotEmpty) ...[

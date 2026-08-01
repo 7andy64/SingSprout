@@ -127,14 +127,17 @@ class _RecordButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(
+        child: Text(
           vm.isRecording
-              ? Icons.mic
+              ? '🎤'
               : vm.hasRecording
-                  ? Icons.check_circle
-                  : Icons.mic_none,
-          color: Colors.white,
-          size: 44,
+                  ? '✅'
+                  : '🎤',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 44,
+          ),
         ),
       ),
     );
@@ -352,8 +355,8 @@ class _PlaybackBar extends StatelessWidget {
                     color: const Color(0xFFFF9800).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.refresh,
-                      size: 20, color: Color(0xFFFF9800)),
+                  child: const Text('🔄',
+                      style: TextStyle(fontSize: 20, color: Color(0xFFFF9800))),
                 ),
               ),
             ],
