@@ -1,22 +1,21 @@
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
-import 'package:record/record.dart';
+import 'package:just_audio/just_audio.dart';
 import '../services/audio_service.dart';
 
 enum AudioStatus { idle, recording, processing, playing, paused }
 
 class AudioProvider extends ChangeNotifier {
   final _service = AudioService();
-  StreamSubscription<RecordState>? _recordSub;
-  StreamSubscription<double>? _ampSub;
+  StreamSubscription<dynamic>? _recordSub;
+  StreamSubscription<dynamic>? _ampSub;
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<Duration>? _positionSub;
-  StreamSubscription<Duration>? _durationSub;
+  StreamSubscription<Duration?>? _durationSub;
 
   AudioStatus _status = AudioStatus.idle;
   Duration _currentPosition = Duration.zero;
-  Duration _totalDuration = Duration.zero;
+  Duration? _totalDuration = Duration.zero;
   List<double>? _waveformData;
   String? _currentRecordingPath;
   double _currentAmplitude = 0;
@@ -26,7 +25,7 @@ class AudioProvider extends ChangeNotifier {
 
   AudioStatus get status => _status;
   Duration get currentPosition => _currentPosition;
-  Duration get totalDuration => _totalDuration;
+  Duration get totalDuration => _totalDuration ?? Duration.zero;
   List<double>? get waveformData => _waveformData;
   String? get currentRecordingPath => _currentRecordingPath;
   double get currentAmplitude => _currentAmplitude;
@@ -44,7 +43,7 @@ class AudioProvider extends ChangeNotifier {
       notifyListeners();
     });
     _playerStateSub = _service.playerState.listen((state) {
-      if (state == PlayerState.completed) {
+      if (state.processingState == ProcessingState.completed) {
         _status = AudioStatus.idle;
         _currentPosition = Duration.zero;
         notifyListeners();
@@ -64,13 +63,36 @@ class AudioProvider extends ChangeNotifier {
     _savedFragmentPath = null;
     notifyListeners();
 
+    _ampSub = _service.amplitudeStream.listen((amp) {
+      _currentAmplitude = amp.current;
+      _waveformData!.add((amp.current + 60) / 60);
+      notifyListeners();
+    });
+
+    final path = await _service.startRecording();
+    if (path != null) {
+      _currentRecordingPath = path;
+    }
+  }
+
+  /// 开始 WAV 格式录音（用于哼唱分析的哼唱花园流程）
+  Future<void> startWavRecording() async {
+    final hasPermission = await _service.requestMicPermission();
+    if (!hasPermission) return;
+
+    _waveformData = [];
+    _status = AudioStatus.recording;
+    _currentPosition = Duration.zero;
+    _savedFragmentPath = null;
+    notifyListeners();
+
     _ampSub = _service.amplitude.listen((amp) {
       _currentAmplitude = amp;
       _waveformData!.add((amp + 60) / 60);
       notifyListeners();
     });
 
-    final path = await _service.startRecording();
+    final path = await _service.startWavRecording();
     if (path != null) {
       _currentRecordingPath = path;
     }
@@ -104,7 +126,7 @@ class AudioProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void startPlaying(Duration totalDuration) {
+  Future<void> startPlaying(String filePath) async {
     _status = AudioStatus.playing;
     _currentPosition = Duration.zero;
     notifyListeners();

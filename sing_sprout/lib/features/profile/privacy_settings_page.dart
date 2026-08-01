@@ -8,6 +8,8 @@ import '../../shared/services/private_space_service.dart';
 import '../../shared/services/export_service.dart';
 import '../../shared/services/file_storage_service.dart';
 import '../../shared/services/database_service.dart';
+import '../../shared/services/dash_scope_service.dart';
+import '../../shared/services/identity_service.dart';
 
 /// 隐私与安全设置
 class PrivacySettingsPage extends StatefulWidget {
@@ -22,8 +24,11 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
   bool _loaded = false;
   bool _exporting = false;
   bool _clearing = false;
+  bool _aiConfigured = false;
+  bool _aiLoading = false;
   final _pw1Controller = TextEditingController();
   final _pw2Controller = TextEditingController();
+  final _apiKeyController = TextEditingController();
 
   @override
   void initState() {
@@ -35,14 +40,17 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
   void dispose() {
     _pw1Controller.dispose();
     _pw2Controller.dispose();
+    _apiKeyController.dispose();
     super.dispose();
   }
 
   Future<void> _loadState() async {
     final enabled = await PrivateSpaceService().isPasswordSet();
+    final aiReady = await DashScopeService().isConfigured;
     if (mounted) {
       setState(() {
         _privateEnabled = enabled;
+        _aiConfigured = aiReady;
         _loaded = true;
       });
     }
@@ -227,6 +235,118 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
   }
 
   // ═══════════════════════════════════════════
+  // AI 设置（阿里云百炼 API Key）
+  // ═══════════════════════════════════════════
+
+  Future<void> _showApiKeyDialog() async {
+    _apiKeyController.clear();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('设置 AI 密钥'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '在阿里云百炼平台（DashScope）创建 API Key 后粘贴到下方。\n密钥仅保存在手机本地，不会上传。',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _apiKeyController,
+              obscureText: true,
+              maxLines: 1,
+              decoration: const InputDecoration(
+                labelText: 'API Key (sk-...)',
+                hintText: 'sk-xxxxxxxxxxxxxxxx',
+                prefixIcon: Icon(Icons.key),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('保存并验证')),
+        ],
+      ),
+    );
+
+    if (ok != true || !mounted) return;
+    final key = _apiKeyController.text.trim();
+    if (key.isEmpty) return;
+
+    setState(() => _aiLoading = true);
+
+    // First test the connection
+    final errMsg = await DashScopeService().testConnection(keyOverride: key);
+
+    if (errMsg != null) {
+      setState(() => _aiLoading = false);
+      if (mounted) _showError('API Key 验证失败: $errMsg');
+      return;
+    }
+
+    // Connection OK — save the key
+    try {
+      await DashScopeService().setApiKey(key);
+      setState(() {
+        _aiConfigured = true;
+        _aiLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI 密钥验证通过，已保存'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      setState(() => _aiLoading = false);
+      if (mounted) _showError('保存失败: $e');
+    }
+  }
+
+  Future<void> _testApiKey() async {
+    setState(() => _aiLoading = true);
+    final errMsg = await DashScopeService().testConnection();
+    setState(() => _aiLoading = false);
+    if (!mounted) return;
+    if (errMsg == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('连接成功！AI 密钥有效'), behavior: SnackBarBehavior.floating),
+      );
+    } else {
+      _showError('连接失败: $errMsg');
+    }
+  }
+
+  Future<void> _removeApiKey() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('移除 AI 密钥'),
+        content: const Text('移除后将使用离线规则引擎生成音乐。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('移除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await DashScopeService().clearApiKey();
+    setState(() => _aiConfigured = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI 密钥已移除，将使用离线模式'), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+
+  // ═══════════════════════════════════════════
   // 导出数据
   // ═══════════════════════════════════════════
 
@@ -299,14 +419,14 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       await storage.clearExports();
 
       // 清理 recovery 临时片段
-      final docsDir = await storage.rootPath;
+      final docsDir = storage.rootPath;
       final recoveryDir = Directory('$docsDir/recovery');
       if (await recoveryDir.exists()) {
         await recoveryDir.delete(recursive: true);
       }
 
       // 清理明信片生成临时图
-      final exportsDir = Directory('${docsDir}/exports');
+      final exportsDir = Directory('$docsDir/exports');
       if (await exportsDir.exists()) {
         await for (final e in exportsDir.list()) {
           if (e is File && e.path.endsWith('.png')) {
@@ -383,7 +503,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       await DatabaseService().clearAll();
       // 清空文件存储
       final storage = FileStorageService();
-      final docsDir = await storage.rootPath;
+      final docsDir = storage.rootPath;
       for (final sub in ['recordings', 'generated', 'covers', 'exports', 'recovery']) {
         final dir = Directory('$docsDir/$sub');
         if (await dir.exists()) await dir.delete(recursive: true);
@@ -415,7 +535,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryGreen.withOpacity(0.08),
+              color: AppTheme.primaryGreen.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Row(
@@ -518,8 +638,179 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
               ],
             ),
           ),
+
+          // ── 身份切换密码 ──
+          const SizedBox(height: 24),
+          const Text('身份切换', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              leading: const Icon(Icons.swap_horiz_rounded, color: AppTheme.textSecondary, size: 22),
+              title: const Text('身份切换密码', style: TextStyle(fontSize: 15)),
+              subtitle: const Text('默认密码 123456，可在此修改', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+              trailing: const Icon(Icons.chevron_right, color: AppTheme.divider),
+              onTap: _showChangeIdentityPassword,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── AI 设置 ──
+          const Text('AI 设置', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    _aiConfigured ? Icons.smart_toy_rounded : Icons.smart_toy_outlined,
+                    color: _aiConfigured ? AppTheme.primaryGreen : AppTheme.textSecondary,
+                    size: 22,
+                  ),
+                  title: const Text('AI 音乐增强', style: TextStyle(fontSize: 15)),
+                  subtitle: Text(
+                    _loaded
+                        ? (_aiConfigured ? '已配置阿里云通义千问 — 在线增强编曲' : '未配置 — 使用离线规则引擎')
+                        : '加载中...',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                  trailing: _aiLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : _aiConfigured
+                          ? PopupMenuButton<String>(
+                              onSelected: (a) {
+                                if (a == 'change') _showApiKeyDialog();
+                                if (a == 'test') _testApiKey();
+                                if (a == 'remove') _removeApiKey();
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(value: 'change', child: Text('更换密钥')),
+                                PopupMenuItem(value: 'test', child: Text('测试连接')),
+                                PopupMenuItem(value: 'remove', child: Text('移除密钥', style: TextStyle(color: AppTheme.error))),
+                              ],
+                            )
+                          : const Icon(Icons.chevron_right, color: AppTheme.divider),
+                  onTap: _aiConfigured ? null : _showApiKeyDialog,
+                ),
+                if (_aiConfigured)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(52, 0, 16, 14),
+                    child: Text(
+                      '哼唱录音后，AI 会分析旋律并自动编排和弦。未配置时使用离线规则引擎。密钥加密存储于手机本地。',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  // ═══════════════════════════════════════════
+  //  修改身份切换密码
+  // ═══════════════════════════════════════════
+
+  Future<void> _showChangeIdentityPassword() async {
+    final identityService = IdentityService();
+    final oldCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('修改身份切换密码'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '修改后，切换身份时需要输入新密码。\n默认密码：123456',
+                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: oldCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: '当前密码',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: '新密码（至少4位）',
+                  prefixIcon: Icon(Icons.lock_reset),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: '再次输入新密码',
+                  prefixIcon: Icon(Icons.lock_reset),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              oldCtrl.dispose(); newCtrl.dispose(); confirmCtrl.dispose();
+              Navigator.pop(ctx);
+            },
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final oldPw = oldCtrl.text;
+              final newPw = newCtrl.text;
+              final confirmPw = confirmCtrl.text;
+
+              if (newPw.length < 4) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('新密码至少4位'), behavior: SnackBarBehavior.floating),
+                );
+                return;
+              }
+              if (newPw != confirmPw) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('两次输入的新密码不一致'), behavior: SnackBarBehavior.floating),
+                );
+                return;
+              }
+
+              final error = await identityService.changePassword(oldPw, newPw);
+              oldCtrl.dispose(); newCtrl.dispose(); confirmCtrl.dispose();
+
+              if (ctx.mounted) Navigator.pop(ctx);
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(error == null ? '身份切换密码已修改' : error),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('确认修改'),
+          ),
+        ],
+      ),
+    );
+
+    try { oldCtrl.dispose(); } catch (_) {}
+    try { newCtrl.dispose(); } catch (_) {}
+    try { confirmCtrl.dispose(); } catch (_) {}
   }
 }

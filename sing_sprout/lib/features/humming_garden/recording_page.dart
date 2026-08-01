@@ -8,6 +8,8 @@ import '../../shared/models/music_work.dart';
 import '../../shared/providers/audio_provider.dart';
 import '../../shared/services/audio_service.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/services/dash_scope_service.dart';
+import '../../shared/services/speech_service.dart';
 import '../../shared/utils/audio_generator.dart';
 import '../../shared/widgets/mood_color_picker.dart';
 
@@ -22,6 +24,8 @@ class _RecordingPageState extends State<RecordingPage> {
   StyleSeed _selectedStyle = StyleSeed.morningDew;
   MoodColor? _selectedMood;
   bool _showRecoveryBanner = false;
+  bool _speechMode = false;
+  String? _speechText;
 
   @override
   void initState() {
@@ -82,6 +86,10 @@ class _RecordingPageState extends State<RecordingPage> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('创作'),
         centerTitle: true,
       ),
@@ -89,7 +97,7 @@ class _RecordingPageState extends State<RecordingPage> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // 来电中断恢复横幅
               if (_showRecoveryBanner)
@@ -98,25 +106,13 @@ class _RecordingPageState extends State<RecordingPage> {
                   onDiscard: _discardFragment,
                 ),
 
-              // 波形可视化占位
-              Container(
-                height: 120,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppTheme.primaryGreen.withOpacity(0.15),
-                  ),
-                ),
-                child: const Center(
-                  child: Text(
-                    '🎵 正在用 AI 听懂你的旋律...',
-                    style:
-                        TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-                  ),
-                ),
-              ],
+              // 波形可视化
+              _WaveformDisplay(
+                isRecording: audioProvider.isRecording,
+                hasRecording: audioProvider.currentRecordingPath != null,
+                amplitude: audioProvider.currentAmplitude,
+                waveformData: audioProvider.waveformData,
+              ),
 
               const SizedBox(height: 32),
 
@@ -162,12 +158,12 @@ class _RecordingPageState extends State<RecordingPage> {
                   Switch(
                     value: _speechMode,
                     onChanged: (v) => setState(() => _speechMode = v),
-                    activeColor: AppTheme.primaryGreen,
+                    activeThumbColor: AppTheme.primaryGreen,
                   ),
                   const Text('说话', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                   if (_speechText != null && _speechText!.isNotEmpty) ...[
                     const SizedBox(width: 8),
-                    const Text('✅', style: TextStyle(fontSize: 16)),
+                    const Icon(Icons.check_circle, size: 16, color: AppTheme.primaryGreen),
                   ],
                 ],
               ),
@@ -179,17 +175,84 @@ class _RecordingPageState extends State<RecordingPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
-                    // 如果正在录音则停止，获取真实录音文件
-                    String? audioPath;
-                    if (context.read<AudioProvider>().isRecording) {
-                      audioPath = await AudioService().stopRecording();
-                      context.read<AudioProvider>().stopRecording();
+                    // Not recording yet → start recording (+ speech recog if enabled)
+                    if (!context.read<AudioProvider>().isRecording) {
+                      final hasPermission = await AudioService().requestMicPermission();
+                      if (!hasPermission) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('需要麦克风权限'), behavior: SnackBarBehavior.floating),
+                          );
+                        }
+                        return;
+                      }
+                      _speechText = null;
+                      await context.read<AudioProvider>().startWavRecording();
+                      return;
                     }
-                    // 没有录音则用测试音频兜底
-                    audioPath ??= await AudioGenerator.generateTestTone(
-                      styleSeed: _selectedStyle.name,
-                      durationSec: 3.0,
-                    );
+
+                    // Currently recording → stop, transcribe if speech mode, then generate
+                    final recordedPath = await context.read<AudioProvider>().stopRecording();
+
+                    // Speech mode: transcribe recorded audio (file-based, no mic conflict)
+                    if (_speechMode && recordedPath != null) {
+                      final text = await SpeechService().transcribe(recordedPath);
+                      if (text != null && mounted) {
+                        setState(() => _speechText = text);
+                      } else if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('语音识别未成功，将使用离线模式'),
+                            behavior: SnackBarBehavior.floating,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+
+                    // AI 流水线：哼唱 WAV → 完整音乐
+                    String? audioPath;
+                    bool aiUsed = false;
+                    if (recordedPath != null) {
+                      try {
+                        final result = await AudioGenerator.generateFromHumming(
+                          wavFilePath: recordedPath,
+                          styleSeed: _selectedStyle,
+                          recordingDuration: AudioService().lastDuration,
+                          speechText: _speechText,
+                        );
+                        audioPath = result.audioPath;
+                        aiUsed = result.aiEnhanced;
+                      } catch (e) {
+                        debugPrint('[RecordingPage] AI 生成失败: $e');
+                      }
+                    }
+
+                    if (!aiUsed && context.mounted) {
+                      final hasKey = await DashScopeService().isConfigured;
+                      final hint = hasKey
+                          ? 'AI 未能响应，已使用离线规则引擎'
+                          : 'AI 未启用：请在隐私设置中配置 API Key';
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(hint), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)),
+                      );
+                    }
+
+                    // Show speech result if any
+                    if (_speechText != null && _speechText!.isNotEmpty && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('识别到你说: "$_speechText"'),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                    // 回退
+                    audioPath ??= (await AudioGenerator.generateTestTone(
+                        styleSeed: _selectedStyle.name,
+                        durationSec: 3.0,
+                      )).audioPath;
 
                     final duration = AudioService().lastDuration ??
                         AudioService().recordingDuration ??
@@ -207,7 +270,11 @@ class _RecordingPageState extends State<RecordingPage> {
                     if (!context.mounted) return;
                     context.push(AppRoutes.editor, extra: work);
                   },
-                  child: const Text('✨ AI 生成音乐'),
+                  child: Text(audioProvider.isRecording
+                      ? '⏹ 停止并生成'
+                      : _speechMode
+                          ? '🎙 开始说话'
+                          : '🎤 开始哼唱',),
                 ),
               ),
               const SizedBox(height: 16),
@@ -216,22 +283,6 @@ class _RecordingPageState extends State<RecordingPage> {
         ),
       ),
     );
-  }
-
-  void _generateMusic(BuildContext context) {
-    final path = context.read<AudioProvider>().currentRecordingPath;
-    if (path == null) return;
-
-    final work = MusicWork.create(
-      title: '未命名作品',
-      audioPath: path,
-      styleSeed: _selectedStyle,
-      moodSticker: _selectedMood,
-      duration: Duration.zero,
-    );
-
-    context.read<AppState>().addWork(work);
-    context.push('${AppRoutes.editor}?id=${work.id}');
   }
 
   @override
@@ -343,49 +394,6 @@ class _WaveformPainter extends CustomPainter {
       oldDelegate.amplitude != amplitude || oldDelegate.frozen != frozen;
 }
 
-class _RecordButton extends StatelessWidget {
-  final bool isRecording;
-  final VoidCallback onStart;
-  final VoidCallback onStop;
-
-  const _RecordButton({
-    required this.isRecording,
-    required this.onStart,
-    required this.onStop,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isRecording ? onStop : onStart,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: isRecording ? 96 : 80,
-        height: isRecording ? 96 : 80,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isRecording ? AppTheme.error : AppTheme.primaryGreen,
-          boxShadow: [
-            BoxShadow(
-              color: (isRecording ? AppTheme.error : AppTheme.primaryGreen)
-                  .withValues(alpha: 0.35),
-              blurRadius: isRecording ? 24 : 12,
-              spreadRadius: isRecording ? 6 : 0,
-            ),
-          ],
-        ),
-        child: Text(
-          isRecording ? '⏹' : '🎤',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 40,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// 来电中断恢复横幅
 class _RecoveryBanner extends StatelessWidget {
   final VoidCallback onRecover;
@@ -401,16 +409,16 @@ class _RecoveryBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.primaryGreen.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Text('📞', style: TextStyle(fontSize: 20)),
-              const SizedBox(width: 8),
-              const Expanded(
+              Icon(Icons.phone_callback, size: 20, color: AppTheme.primaryGreen),
+              SizedBox(width: 8),
+              Expanded(
                 child: Text(
                   '检测到上次录制被来电中断，已自动保存录音片段',
                   style: TextStyle(fontSize: 13, color: AppTheme.primaryGreen, height: 1.4),

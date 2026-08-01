@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
@@ -10,6 +9,7 @@ import '../../shared/providers/app_state.dart';
 import '../../shared/widgets/temperature_dial.dart';
 import '../../shared/widgets/speed_race_track.dart';
 import '../../shared/widgets/instrument_mixer.dart';
+import 'widgets/save_work_dialog.dart';
 
 /// 作品编辑器 — 播放预览 + 具象化微调 + 保存/分享
 ///
@@ -82,12 +82,21 @@ class _EditorPageState extends State<EditorPage> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      // 将编辑参数写入作品的 note 字段（MVP 阶段简单序列化）
+      if (!mounted) return;
+      final work = await SaveWorkDialog.show(
+        context,
+        audioPath: _work.audioPath,
+        styleSeed: _work.styleSeed,
+        duration: _work.duration,
+        defaultTitle: _work.title,
+      );
+      if (work == null) return; // 用户取消
+
+      // 将编辑参数追加到 note
       final params =
           '温度:${_temperature.toStringAsFixed(2)}|速度:${_speed.toStringAsFixed(2)}|乐器比重:${_instrumentMix.toStringAsFixed(2)}';
-      final saved = _work.copyWith(
-        title: _work.title,
-        note: _work.note != null ? '${_work.note}\n$params' : params,
+      final saved = work.copyWith(
+        note: work.note != null ? '${work.note}\n$params' : params,
       );
       await context.read<AppState>().addWork(saved);
       if (!mounted) return;
@@ -115,20 +124,12 @@ class _EditorPageState extends State<EditorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('编辑作品'),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('✅', style: TextStyle(fontSize: 24)),
-            onPressed: _saving ? null : _saveWork,
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -194,28 +195,26 @@ class _EditorPageState extends State<EditorPage> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: OutlinedButton(
                       onPressed: _saving ? null : _saveWork,
-                      icon: const Text('💾', style: TextStyle(fontSize: 20)),
-                      label: const Text('保存'),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 52),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                         side: const BorderSide(color: AppTheme.primaryGreen),
                       ),
+                      child: const Text('保存'),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child: ElevatedButton(
                       onPressed: () {
                         // 带着当前作品 ID 跳转声音邮局
                         context.push(
                           '${AppRoutes.composeCard}?workId=${_work.id}',
                         );
                       },
-                      icon: const Text('✉️', style: TextStyle(fontSize: 20)),
-                      label: const Text('发给爸妈'),
+                      child: const Text('发给爸妈'),
                     ),
                   ),
                 ],
@@ -223,106 +222,6 @@ class _EditorPageState extends State<EditorPage> {
               const SizedBox(height: 24),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 有机云朵播放预览 — 无硬边框，渐变+阴影+音符粒子
-class _OrganicPlaybackPreview extends StatelessWidget {
-  final bool isPlaying;
-  final VoidCallback onToggle;
-
-  const _OrganicPlaybackPreview({
-    required this.isPlaying,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: Container(
-        height: 132,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.topLeft,
-            radius: 1.5,
-            colors: [
-              AppTheme.primaryGreen.withOpacity(0.10),
-              AppTheme.primaryGreen.withOpacity(0.03),
-              AppTheme.bgWarm.withOpacity(0.8),
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primaryGreen.withOpacity(0.06),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // 柔和的音符粒子背景
-            ...List.generate(6, (i) {
-              return Positioned(
-                left: 30 + (i * 50.0) % 280,
-                top: 20 + (i * 35.0) % 80,
-                child: Opacity(
-                  opacity: 0.08 + (i % 3) * 0.04,
-                  child: Text(
-                    ['♪', '♫', '♩', '🎵', '✨', '🎶'][i],
-                    style: TextStyle(fontSize: 16 + (i % 3) * 6.0, color: AppTheme.primaryGreen),
-                  ),
-                ),
-              );
-            }),
-            // 播放控制
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    onTap: onToggle,
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryGreen.withOpacity(0.25),
-                            blurRadius: 12,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        isPlaying ? '⏸' : '▶',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '00:00 / 00:30',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );

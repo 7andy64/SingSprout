@@ -25,7 +25,6 @@ class _StoragePageState extends State<StoragePage> {
   int _generatedBytes = 0;
   int _coversBytes = 0;
   int _exportsBytes = 0;
-  int _worksBytes = 0; // 作品音频文件总计
   List<_FileEntry> _exportFiles = [];
   bool _clearing = false;
 
@@ -43,7 +42,6 @@ class _StoragePageState extends State<StoragePage> {
       _generatedBytes = await _dirSize(_storage.generatedDir);
       _coversBytes = await _dirSize(_storage.coversDir);
       _exportsBytes = await _dirSize(_storage.exportsDir);
-      _worksBytes = _recordingsBytes + _generatedBytes;
 
       // 列出导出文件详情
       _exportFiles = await _listFiles(_storage.exportsDir);
@@ -88,7 +86,7 @@ class _StoragePageState extends State<StoragePage> {
             path: entity.path,
             size: stat.size,
             modified: stat.modified,
-          ));
+          ),);
         }
       }
     } catch (_) {}
@@ -228,7 +226,7 @@ class _StoragePageState extends State<StoragePage> {
                           child: _clearing
                               ? const SizedBox(
                                   width: 16, height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2))
+                                  child: CircularProgressIndicator(strokeWidth: 2),)
                               : const Text('清理', style: TextStyle(color: AppTheme.error, fontSize: 13)),
                         )
                       : null,
@@ -243,7 +241,7 @@ class _StoragePageState extends State<StoragePage> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF3CD),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFC107).withOpacity(0.3)),
+                      border: Border.all(color: const Color(0xFFFFC107).withValues(alpha: 0.3)),
                     ),
                     child: const Row(
                       children: [
@@ -273,7 +271,7 @@ class _StoragePageState extends State<StoragePage> {
                     leading: const Icon(Icons.image, size: 20),
                     title: Text(f.name, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                     trailing: Text(_formatBytes(f.size), style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-                  )),
+                  ),),
                   const SizedBox(height: 16),
                 ],
 
@@ -300,7 +298,7 @@ class _StoragePageState extends State<StoragePage> {
                   ...appState.works.map((w) => _WorkStorageTile(
                     work: w,
                     onDelete: () => _deleteWorkFromList(w),
-                  )),
+                  ),),
 
                 const SizedBox(height: 16),
 
@@ -308,7 +306,7 @@ class _StoragePageState extends State<StoragePage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.05),
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
@@ -349,14 +347,14 @@ class _StorageOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final mb = totalBytes / (1024 * 1024);
     final color = isLow ? const Color(0xFFE67E22) : AppTheme.primaryGreen;
-    final refMB = 500;
+    const refMB = 500;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.15)),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Column(
         children: [
@@ -369,9 +367,9 @@ class _StorageOverview extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
+          const Text(
             '已使用 (上限约 $refMB MB)',
-            style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 16),
           ClipRRect(
@@ -379,7 +377,7 @@ class _StorageOverview extends StatelessWidget {
             child: LinearProgressIndicator(
               value: usageRatio,
               minHeight: 8,
-              backgroundColor: color.withOpacity(0.1),
+              backgroundColor: color.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),

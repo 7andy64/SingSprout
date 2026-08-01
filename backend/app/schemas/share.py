@@ -26,7 +26,14 @@ class ReplyRequest(BaseModel):
 
 class ReplyResponse(BaseModel):
     reply_id: str
-    status: str  # "ok"
+    status: str  # "processing"（文字回复 TTS 合成中）| "ready"
+    task_id: str | None = None  # 文字回复时返回，供轮询 tts-status
+
+
+class TtsStatusResponse(BaseModel):
+    task_id: str
+    status: str  # processing | ready | failed
+    error: str | None = None
 
 
 class CheckRepliesRequest(BaseModel):

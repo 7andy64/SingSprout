@@ -4,11 +4,12 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/constants/app_config.dart';
-import '../../shared/widgets/animal_avatar.dart';
 import '../../shared/widgets/update_dialog.dart';
+import '../../shared/models/user_profile.dart';
+import 'widgets/profile_widgets.dart';
 import '../../shared/services/update_service.dart';
 import '../../shared/services/file_storage_service.dart';
-import '../../shared/models/user_profile.dart';
+import '../../shared/services/identity_service.dart';
 import '../../shared/providers/app_state.dart';
 
 /// 个人中心 — MVP P0 功能
@@ -26,8 +27,8 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    // 进入页面时从本地数据库加载用户数据
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      IdentityService().ensureInitialized();
       context.read<AppState>().loadLocalData();
       _checkStorage();
     });
@@ -37,10 +38,12 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final storage = FileStorageService();
       final bytes = await storage.totalStorageUsed();
-      if (mounted) setState(() {
-        _totalStorageBytes = bytes;
-        _storageChecked = true;
-      });
+      if (mounted) {
+        setState(() {
+          _totalStorageBytes = bytes;
+          _storageChecked = true;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _storageChecked = true);
     }
@@ -65,28 +68,28 @@ class _ProfilePageState extends State<ProfilePage> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     children: [
                       // 用户信息卡片
-                      _ProfileHeader(profile: profile, loading: !dataLoaded),
+                      ProfileHeader(profile: profile, loading: !dataLoaded),
 
                       const SizedBox(height: 16),
 
                       // 数据统计区
                       if (dataLoaded) ...[
-                        _StatsSection(appState: appState),
+                        StatsSection(appState: appState),
                         const SizedBox(height: 16),
                       ],
 
                       // 低存储警告
                       if (_storageChecked && _totalStorageBytes > 100 * 1024 * 1024)
-                        _LowStorageBanner(
+                        LowStorageBanner(
                           totalBytes: _totalStorageBytes,
                           onTap: () => context.push(AppRoutes.storage),
                         ),
 
                       // 菜单列表
-                      _MenuSection(
+                      MenuSection(
                         title: '创作',
                         items: [
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.music_note_rounded,
                             label: '我的作品集',
                             trailing: dataLoaded
@@ -100,7 +103,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null,
                             onTap: () => context.push(AppRoutes.works),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.library_music_outlined,
                             label: '我的声音库',
                             trailing: dataLoaded
@@ -117,10 +120,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
 
-                      _MenuSection(
+                      MenuSection(
                         title: '连接',
                         items: [
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.mail_outline_rounded,
                             label: '家庭音乐账本',
                             trailing: dataLoaded
@@ -134,7 +137,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null,
                             onTap: () => context.push(AppRoutes.ledger),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.people_outline_rounded,
                             label: '教师/家长观察窗',
                             onTap: () => context.push(AppRoutes.observation),
@@ -142,30 +145,42 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
 
-                      _MenuSection(
+                      MenuSection(
                         title: '设置',
                         items: [
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.pets_outlined,
                             label: '换一只守护动物',
                             onTap: () => _showAnimalPicker(profile),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.edit_outlined,
                             label: '编辑资料',
                             onTap: () => _showEditProfile(profile),
                           ),
-                          _MenuItem(
+                          MenuItem(
+                            icon: Icons.swap_horiz_rounded,
+                            label: '切换身份',
+                            trailing: Text(
+                              profile?.role.label ?? '',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                            onTap: () => _showSwitchRole(profile),
+                          ),
+                          MenuItem(
                             icon: Icons.lock_outline_rounded,
                             label: '隐私与安全',
                             onTap: () => context.push(AppRoutes.privacySettings),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.storage_rounded,
                             label: '存储管理',
                             onTap: () => _showStorageManagement(),
                           ),
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.help_outline_rounded,
                             label: '帮助与反馈',
                             onTap: () => _showHelpDialog(),
@@ -173,15 +188,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
 
-                      _MenuSection(
+                      MenuSection(
                         title: '',
                         items: [
-                          _MenuItem(
+                          MenuItem(
                             icon: Icons.info_outline_rounded,
                             label: '关于声芽',
-                            trailing: Text(
+                            trailing: const Text(
                               'V${AppConfig.version}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 color: AppTheme.textSecondary,
                               ),
@@ -243,7 +258,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   context.read<AppState>().loadLocalData();
                 }
               },
-              icon: const Icon(Icons.auto_awesome, size: 20),
               label: const Text('创建我的档案'),
             ),
           ],
@@ -282,12 +296,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? AppTheme.primaryGreen.withOpacity(0.08)
+                          ? AppTheme.primaryGreen.withValues(alpha: 0.08)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: isSelected
                           ? Border.all(
-                              color: AppTheme.primaryGreen.withOpacity(0.3),
+                              color: AppTheme.primaryGreen.withValues(alpha: 0.3),
                             )
                           : null,
                     ),
@@ -306,7 +320,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       trailing: isSelected
                           ? const Icon(Icons.check_circle,
-                              color: AppTheme.primaryGreen)
+                              color: AppTheme.primaryGreen,)
                           : null,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -344,36 +358,30 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // ── 编辑资料弹窗 ──
 
-  void _showEditProfile(UserProfile? profile) {
+  Future<void> _showEditProfile(UserProfile? profile) async {
     if (profile == null) return;
 
     final controller = TextEditingController(text: profile.nickname);
-    var disposed = false;
 
-    void disposeController() {
-      if (!disposed) {
-        controller.dispose();
-        disposed = true;
-      }
-    }
-
-    showDialog(
+    await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('编辑资料'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: '昵称',
-            hintText: '输入你的昵称',
+        content: SingleChildScrollView(
+          child: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: '昵称',
+              hintText: '输入你的昵称',
+            ),
+            maxLength: 12,
+            autofocus: true,
           ),
-          maxLength: 12,
-          autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () {
-              disposeController();
+              controller.dispose();
               Navigator.pop(ctx);
             },
             child: const Text('取消'),
@@ -386,14 +394,236 @@ class _ProfilePageState extends State<ProfilePage> {
                     .read<AppState>()
                     .setUserProfile(profile.copyWith(nickname: newName));
               }
-              disposeController();
+              controller.dispose();
               Navigator.pop(ctx);
             },
             child: const Text('保存'),
           ),
         ],
       ),
-    ).then((_) => disposeController());
+    );
+
+    // 兜底：确保 controller 被释放（正常情况已被回调中 dispose）
+    try {
+      controller.dispose();
+    } catch (_) { /* already disposed */ }
+  }
+
+  // ── 切换身份 ──
+
+  Future<void> _showSwitchRole(UserProfile? profile) async {
+    if (profile == null) return;
+
+    final selectedRole = await showModalBottomSheet<UserRole>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '切换身份',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '当前身份：${profile.role.emoji} ${profile.role.label}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ...UserRole.values.map((role) {
+                final isCurrent = profile.role == role;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isCurrent
+                        ? AppTheme.primaryGreen.withValues(alpha: 0.08)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: isCurrent
+                        ? Border.all(
+                            color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                          )
+                        : null,
+                  ),
+                  child: ListTile(
+                    leading: Text(role.emoji, style: const TextStyle(fontSize: 30)),
+                    title: Text(
+                      role.label,
+                      style: TextStyle(
+                        fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      _roleDescription(role),
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                    trailing: isCurrent
+                        ? const Icon(Icons.check_circle, color: AppTheme.primaryGreen)
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabled: !isCurrent,
+                    onTap: isCurrent ? null : () => Navigator.pop(ctx, role),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (selectedRole == null || !mounted) return;
+
+    // 密码验证（身份切换密码，默认 123456，5次失败锁定5分钟）
+    final error = await _verifyIdentityPassword();
+    if (error != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // 记录切换前的身份
+    final oldRole = profile.role.label;
+
+    // 更新身份并重新加载
+    await context.read<AppState>().setUserProfile(
+      profile.copyWith(role: selectedRole),
+    );
+
+    // 记录操作日志
+    await IdentityService().logSwitch(oldRole, selectedRole.label);
+
+    if (mounted) {
+      context.read<AppState>().loadLocalData(force: true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('身份已切换为${selectedRole.emoji} ${selectedRole.label}'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// 返回 null=验证通过，否则返回错误消息
+  Future<String?> _verifyIdentityPassword() async {
+    final identityService = IdentityService();
+    final controller = TextEditingController();
+    String? errorMsg;
+    bool disposed = false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) {
+          return AlertDialog(
+            title: const Text('身份验证'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '切换身份需要输入身份切换密码',
+                  style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '（默认密码：123456）',
+                  style: TextStyle(fontSize: 12, color: Color(0xFFBBBBBB)),
+                ),
+                if (errorMsg != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.error.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      errorMsg!,
+                      style: const TextStyle(fontSize: 12, color: AppTheme.error),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: '身份切换密码',
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
+                  autofocus: true,
+                  onSubmitted: (_) async {
+                    if (disposed) return;
+                    final error = await identityService.verifyPassword(controller.text);
+                    if (error == null) {
+                      if (!disposed) { disposed = true; controller.dispose(); }
+                      Navigator.pop(ctx, true);
+                    } else {
+                      setDlgState(() => errorMsg = error);
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  if (!disposed) { disposed = true; controller.dispose(); }
+                  Navigator.pop(ctx, false);
+                },
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  if (disposed) return;
+                  final error = await identityService.verifyPassword(controller.text);
+                  if (error == null) {
+                    if (!disposed) { disposed = true; controller.dispose(); }
+                    Navigator.pop(ctx, true);
+                  } else {
+                    setDlgState(() => errorMsg = error);
+                  }
+                },
+                child: const Text('验证'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    try { if (!disposed) controller.dispose(); } catch (_) {}
+    if (result != true) return errorMsg ?? '已取消';
+    return null; // 验证通过
+  }
+
+  String _roleDescription(UserRole role) {
+    switch (role) {
+      case UserRole.student: return '适合儿童的创作模式';
+      case UserRole.teacher: return '适合教师的指导模式';
+      case UserRole.parent:  return '适合家长的陪伴模式';
+    }
   }
 
   // ── 存储管理 ──
@@ -421,350 +651,6 @@ class _ProfilePageState extends State<ProfilePage> {
             child: const Text('知道了'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// 子组件
-// ══════════════════════════════════════════════════════════════════════════════
-
-/// 用户信息头部 — 头像、昵称、角色、陪伴动物
-class _ProfileHeader extends StatelessWidget {
-  final UserProfile? profile;
-  final bool loading;
-
-  const _ProfileHeader({required this.profile, this.loading = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final hasProfile = profile != null;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-      child: Column(
-        children: [
-          AnimalAvatar(
-            animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
-            size: 80,
-            speechBubble: hasProfile ? '嘿！今天想做什么？' : null,
-          ),
-          const SizedBox(height: 12),
-          if (loading)
-            Column(
-              children: const [
-                SizedBox(
-                  width: 120,
-                  height: 20,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF0F0F0),
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 8),
-                SizedBox(
-                  width: 80,
-                  height: 14,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF0F0F0),
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          else ...[
-            Text(
-              profile?.nickname ?? '新朋友',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
-          ],
-          if (!loading && hasProfile) ...[
-            // 角色徽章
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${profile!.role.emoji} ${profile!.role.label}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.primaryGreen,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${profile!.guardianAnimal.displayName} 陪伴你',
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${_formatDate(profile!.createdAt)} 加入',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ] else if (!loading && !hasProfile) ...[
-            Text(
-              '${GuardianAnimal.panda.displayName} 陪伴你',
-              style: const TextStyle(color: AppTheme.textSecondary),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
-  }
-}
-
-/// 数据统计区 — 作品、声音、明信片计数
-class _StatsSection extends StatelessWidget {
-  final AppState appState;
-  const _StatsSection({required this.appState});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        children: [
-          _StatCard(
-            icon: Icons.music_note_rounded,
-            label: '作品',
-            count: appState.totalWorks,
-            color: AppTheme.primaryGreen,
-          ),
-          const SizedBox(width: 12),
-          _StatCard(
-            icon: Icons.graphic_eq_rounded,
-            label: '声音',
-            count: appState.totalSounds,
-            color: const Color(0xFF7C4DFF),
-          ),
-          const SizedBox(width: 12),
-          _StatCard(
-            icon: Icons.mail_outline_rounded,
-            label: '明信片',
-            count: appState.totalCards,
-            color: const Color(0xFFFF6D00),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 统计卡片
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int count;
-  final Color color;
-
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.count,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(height: 6),
-            Text(
-              '$count',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 菜单分组
-class _MenuSection extends StatelessWidget {
-  final String title;
-  final List<_MenuItem> items;
-
-  const _MenuSection({required this.title, required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8, top: 12),
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: items,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 低存储警告横幅
-class _LowStorageBanner extends StatelessWidget {
-  final int totalBytes;
-  final VoidCallback onTap;
-
-  const _LowStorageBanner({required this.totalBytes, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final mb = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF3CD),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFFC107).withOpacity(0.3)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.storage_rounded, size: 20, color: Color(0xFFE67E22)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '存储空间已使用 $mb MB',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF856404),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      '点击管理存储，不会自动删除你的作品',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF856404)),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: Color(0xFF856404), size: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 菜单项
-class _MenuItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Widget? trailing;
-  final VoidCallback onTap;
-
-  const _MenuItem({
-    required this.icon,
-    required this.label,
-    this.trailing,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, size: 22, color: AppTheme.textSecondary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ),
-            if (trailing != null) trailing!,
-            const Icon(
-              Icons.chevron_right,
-              color: AppTheme.divider,
-              size: 20,
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../features/humming_garden/humming_garden_page.dart';
 import '../../features/humming_garden/creative_flow_page.dart';
 import '../../features/humming_garden/recording_page.dart';
@@ -20,6 +21,8 @@ import '../../features/profile/ledger_page.dart';
 import '../../features/profile/observation_page.dart';
 import '../../features/profile/storage_page.dart';
 import '../../features/onboarding/onboarding_page.dart';
+import '../../shared/widgets/notification_badge.dart';
+import '../../shared/providers/notification_provider.dart';
 import '../constants/app_routes.dart';
 import '../theme/app_theme.dart';
 
@@ -66,9 +69,9 @@ class AppRouter {
             ),
           ),
           GoRoute(
-            path: AppRoutes.moodRadio,
+            path: AppRoutes.fieldSoundLab,
             pageBuilder: (context, state) => _buildTabPage(
-              const MoodRadioPage(),
+              const FieldSoundLabPage(),
             ),
           ),
           GoRoute(
@@ -93,6 +96,11 @@ class AppRouter {
       ),
 
       // ── 独立子页面 ──
+      GoRoute(
+        path: AppRoutes.moodRadio,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const MoodRadioPage(),
+      ),
       GoRoute(
         path: AppRoutes.onboarding,
         parentNavigatorKey: rootNavigatorKey,
@@ -220,58 +228,85 @@ class _AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      bottomNavigationBar: const _BottomNavBar(),
+      bottomNavigationBar: _BottomNavBar(),
     );
   }
 }
 
-/// 底部导航栏（5 项）
+/// 底部导航栏（5 项）— 使用 emoji 避免 Material Icons 字体加载问题
 class _BottomNavBar extends StatelessWidget {
+  // emoji + 标签映射
+  static const _tabs = [
+    ('🎤', '哼唱'),
+    ('🎧', '田野'),
+    ('🌳', '音乐树'),
+    ('📮', '邮局'),
+    ('👤', '我的'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    final screenWidth = MediaQuery.of(context).size.width;
-    final scale = screenWidth / 375;
-    final iconFontSize = (24 * scale).clamp(20.0, 28.0);
-    final labelFontSize = (12 * scale).clamp(11.0, 14.0);
     final index = _calculateIndex(location);
 
-    return BottomNavigationBar(
-      currentIndex: _calculateIndex(location),
-      onTap: (index) => _onTap(context, index),
-      type: BottomNavigationBarType.fixed,
-      elevation: 8,
-      selectedItemColor: AppTheme.primaryGreen,
-      unselectedItemColor: AppTheme.textSecondary,
-      selectedIconTheme: const IconThemeData(size: 26),
-      unselectedIconTheme: const IconThemeData(size: 24),
-      selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: const TextStyle(fontSize: 12),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.mic_none_rounded),
-          activeIcon: Icon(Icons.mic_rounded),
-          label: '哼唱',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.sentiment_satisfied_outlined),
-          activeIcon: Icon(Icons.sentiment_satisfied_rounded),
-          label: '心情',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.park_outlined),
-          activeIcon: Icon(Icons.park_rounded),
-          label: '音乐树',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.mail_outline_rounded),
-          activeIcon: Icon(Icons.mail_rounded),
-          label: '邮局',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline_rounded),
-          activeIcon: Icon(Icons.person_rounded),
-          label: '我的',
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_tabs.length, (i) {
+              final selected = i == index;
+              final tabWidget = GestureDetector(
+                onTap: () => _onTap(context, i),
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 56,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _tabs[i].$1,
+                        style: const TextStyle(fontSize: 26),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _tabs[i].$2,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                          color: selected ? AppTheme.primaryGreen : AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+
+              // 邮局 tab（index 3）加红点
+              if (i == 3) {
+                return Consumer<NotificationProvider>(
+                  builder: (context, notif, _) {
+                    return NotificationBadge(
+                      count: notif.unreadCount,
+                      child: tabWidget,
+                    );
+                  },
+                );
+              }
+              return tabWidget;
+            }),
+          ),
         ),
       ),
     );
@@ -279,7 +314,7 @@ class _BottomNavBar extends StatelessWidget {
 
   int _calculateIndex(String location) {
     if (location.startsWith(AppRoutes.hummingGarden)) return 0;
-    if (location.startsWith(AppRoutes.moodRadio)) return 1;
+    if (location.startsWith(AppRoutes.fieldSoundLab)) return 1;
     if (location.startsWith(AppRoutes.musicTree)) return 2;
     if (location.startsWith(AppRoutes.postOffice)) return 3;
     if (location.startsWith(AppRoutes.profile)) return 4;
@@ -289,86 +324,15 @@ class _BottomNavBar extends StatelessWidget {
   void _onTap(BuildContext context, int index) {
     final routes = [
       AppRoutes.hummingGarden,
-      AppRoutes.moodRadio,
+      AppRoutes.fieldSoundLab,
       AppRoutes.musicTree,
       AppRoutes.postOffice,
       AppRoutes.profile,
     ];
+    // 点击邮局时刷新通知计数
+    if (index == 3) {
+      context.read<NotificationProvider>().refresh();
+    }
     GoRouter.of(context).go(routes[index]);
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final String emoji;
-  final String label;
-  final double fontSize;
-  final double labelFontSize;
-  final bool isSelected;
-  final Animation<double> scaleAnimation;
-  final bool showBadge;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.emoji,
-    required this.label,
-    required this.fontSize,
-    required this.labelFontSize,
-    required this.isSelected,
-    required this.scaleAnimation,
-    required this.showBadge,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedBuilder(
-        animation: scaleAnimation,
-        builder: (context, child) => Transform.scale(
-          scale: scaleAnimation.value,
-          child: child,
-        ),
-        child: SizedBox(
-          width: 56,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Text(emoji, style: TextStyle(fontSize: fontSize)),
-                  if (showBadge)
-                    Positioned(
-                      right: -4,
-                      top: -2,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppTheme.error,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: labelFontSize,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected
-                      ? AppTheme.primaryGreen
-                      : AppTheme.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

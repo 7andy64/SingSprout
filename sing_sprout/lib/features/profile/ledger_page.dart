@@ -154,7 +154,7 @@ class _CardItem extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: (isReceived ? AppTheme.moodBlue : AppTheme.primaryGreen)
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -203,12 +203,12 @@ class _CardItem extends StatelessWidget {
                       children: [
                         if (card.audioPath != null) ...[
                           const Icon(Icons.mic, size: 13,
-                              color: AppTheme.textSecondary),
+                              color: AppTheme.textSecondary,),
                           const SizedBox(width: 4),
                           const Text('含语音',
                               style: TextStyle(
                                   fontSize: 11,
-                                  color: AppTheme.textSecondary)),
+                                  color: AppTheme.textSecondary,),),
                           const SizedBox(width: 10),
                         ],
                         Text(
@@ -221,7 +221,7 @@ class _CardItem extends StatelessWidget {
                         if (isReceived && card.readAt != null) ...[
                           const SizedBox(width: 8),
                           const Icon(Icons.done_all, size: 14,
-                              color: AppTheme.primaryGreen),
+                              color: AppTheme.primaryGreen,),
                         ],
                       ],
                     ),

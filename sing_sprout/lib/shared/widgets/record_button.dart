@@ -41,16 +41,14 @@ class _RecordButtonState extends State<RecordButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPressStart: (_) {
-        setState(() => _isPressed = true);
-        widget.onRecordingStart();
-      },
-      onLongPressEnd: (_) {
-        setState(() => _isPressed = false);
-        widget.onRecordingStop();
-      },
-      onLongPressCancel: () {
-        setState(() => _isPressed = false);
+      onTap: () {
+        if (_isPressed) {
+          setState(() => _isPressed = false);
+          widget.onRecordingStop();
+        } else {
+          setState(() => _isPressed = true);
+          widget.onRecordingStart();
+        }
       },
       child: AnimatedBuilder(
         animation: _pulseController,
@@ -96,10 +94,13 @@ class _RecordButtonState extends State<RecordButton>
                         ),
                       ],
                     ),
-                    child: Icon(
-                      _isPressed ? Icons.mic : Icons.mic_none,
-                      color: Colors.white,
-                      size: widget.size * 0.45,
+                    alignment: Alignment.center,
+                    child: Text(
+                      '🎤',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: widget.size * 0.45,
+                      ),
                     ),
                   ),
                 ),

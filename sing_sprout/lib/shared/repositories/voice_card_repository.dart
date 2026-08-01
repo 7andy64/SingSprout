@@ -11,7 +11,7 @@ class VoiceCardRepository {
   Future<void> insert(VoiceCard card) async {
     final db = await _db.database;
     await db.insert('voice_cards', _toRow(card),
-        conflictAlgorithm: ConflictAlgorithm.replace);
+        conflictAlgorithm: ConflictAlgorithm.replace,);
   }
 
   // ── 读取 ──

@@ -5,7 +5,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_routes.dart';
 import '../../shared/models/voice_card.dart';
-import '../../shared/models/music_work.dart';
 import '../../shared/providers/app_state.dart';
 
 /// 声音邮局 — 亲子音乐明信片收发
@@ -45,12 +44,12 @@ class PostOfficePage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Tab 切换：发件箱 / 收件箱
-            DefaultTabController(
+            const DefaultTabController(
               length: 2,
               child: Expanded(
                 child: Column(
                   children: [
-                    const TabBar(
+                    TabBar(
                       labelColor: AppTheme.primaryGreen,
                       unselectedLabelColor: AppTheme.textSecondary,
                       indicatorColor: AppTheme.primaryGreen,
@@ -129,7 +128,7 @@ class _CardItem extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+          backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
           child: Text(
             work?.styleSeed.icon ?? '🎵',
             style: const TextStyle(fontSize: 20),
@@ -148,7 +147,7 @@ class _CardItem extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: AppTheme.textSecondary.withOpacity(0.8),
+                  color: AppTheme.textSecondary.withValues(alpha: 0.8),
                   fontSize: 13,
                 ),
               ),

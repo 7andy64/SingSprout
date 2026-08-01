@@ -7,6 +7,16 @@
 .buildlog/
 .history
 
+# Claude Code local config (contains tokens, DO NOT COMMIT)
+.claude/
+
+# Environment secrets
+.env
+*.apk
+
+# Duplicate project copy
+SingSprout-main/
+
 
 
 # Flutter repo-specific

@@ -43,7 +43,7 @@ class SeedGrowthPainter extends CustomPainter {
 
   void _drawGround(Canvas canvas, Size size, double groundY) {
     final paint = Paint()
-      ..color = AppTheme.primarySoil.withOpacity(0.2)
+      ..color = AppTheme.primarySoil.withValues(alpha: 0.2)
       ..style = PaintingStyle.fill;
     canvas.drawRect(
       Rect.fromLTWH(0, groundY, size.width, size.height - groundY),
@@ -60,7 +60,7 @@ class SeedGrowthPainter extends CustomPainter {
       )!
       ..style = PaintingStyle.fill;
 
-    final seedWidth = 16.0;
+    const seedWidth = 16.0;
     final seedHeight = 10.0 + t * 2;
     canvas.drawOval(
       Rect.fromCenter(
@@ -89,7 +89,7 @@ class SeedGrowthPainter extends CustomPainter {
     if (t > 0.6) {
       final leafT = (t - 0.6) / 0.4;
       final leafPaint = Paint()
-        ..color = const Color(0xFFA8D5A2).withOpacity(leafT)
+        ..color = const Color(0xFFA8D5A2).withValues(alpha: leafT)
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(
@@ -167,7 +167,7 @@ class SeedGrowthPainter extends CustomPainter {
           AppTheme.primaryGreen,
           accentColor,
           0.3 * t,
-        )!.withOpacity(leafT)
+        )!.withValues(alpha: leafT)
         ..style = PaintingStyle.fill;
 
       // 左叶
@@ -193,7 +193,7 @@ class SeedGrowthPainter extends CustomPainter {
   }
 
   void _drawCanopy(Canvas canvas, double centerX, double groundY, double t, Random rng) {
-    final stemHeight = 80.0;
+    const stemHeight = 80.0;
     final canopyY = groundY - stemHeight;
     final baseRadius = 18 + t * 18;
 
@@ -202,7 +202,7 @@ class SeedGrowthPainter extends CustomPainter {
         AppTheme.primaryGreen,
         accentColor,
         0.35,
-      )!.withOpacity(0.75 + t * 0.15)
+      )!.withValues(alpha: 0.75 + t * 0.15)
       ..style = PaintingStyle.fill;
 
     // 多个树冠圆叠加
@@ -230,7 +230,7 @@ class SeedGrowthPainter extends CustomPainter {
         final dx = centerX + rng.nextDouble() * 30 - 15;
         final dy = canopyY + rng.nextDouble() * 20 - 10;
         final fruitPaint = Paint()
-          ..color = fruitColors[i % fruitColors.length].withOpacity(fruitT)
+          ..color = fruitColors[i % fruitColors.length].withValues(alpha: fruitT)
           ..style = PaintingStyle.fill;
         canvas.drawCircle(Offset(dx, dy), 4 * fruitT, fruitPaint);
       }
@@ -240,7 +240,7 @@ class SeedGrowthPainter extends CustomPainter {
     if (t > 0.7) {
       final noteOpacity = ((t - 0.7) / 0.3).clamp(0.0, 1.0);
       final notePaint = Paint()
-        ..color = accentColor.withOpacity(noteOpacity * 0.5)
+        ..color = accentColor.withValues(alpha: noteOpacity * 0.5)
         ..style = PaintingStyle.fill;
 
       for (int i = 0; i < 3; i++) {

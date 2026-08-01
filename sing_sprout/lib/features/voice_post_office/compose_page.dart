@@ -3,10 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_routes.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/models/voice_card.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/providers/connectivity_provider.dart';
+import '../../shared/services/outbox_queue_service.dart';
 import '../../shared/utils/postcard_generator.dart';
 
 /// 撰写音乐明信片 — 选择作品 + 写一句话 → 生成卡片 → 微信分享
@@ -64,6 +65,7 @@ class _ComposePageState extends State<ComposePage> {
       final appState = context.read<AppState>();
       final profile = appState.userProfile;
       final senderName = profile?.nickname ?? '声芽用户';
+      final isOnline = context.read<ConnectivityProvider>().isConnected;
 
       // 1. 生成明信片图片
       final imagePath = await PostcardGenerator.generate(
@@ -72,7 +74,7 @@ class _ComposePageState extends State<ComposePage> {
         senderName: senderName,
       );
 
-      // 2. 保存明信片记录到数据库
+      // 2. 保存明信片记录
       final card = VoiceCard.send(
         senderId: profile?.localId ?? 'anonymous',
         workId: _selectedWork!.id,
@@ -84,16 +86,26 @@ class _ComposePageState extends State<ComposePage> {
 
       if (!mounted) return;
 
-      // 3. 分享到微信/系统分享
-      await Share.shareXFiles(
-        [XFile(imagePath)],
-        text: '🎵 ${_selectedWork!.title} — ${_messageController.text.trim()}',
-      );
+      if (isOnline) {
+        // 3. 在线：直接分享
+        await Share.shareXFiles(
+          [XFile(imagePath)],
+          text: '🎵 ${_selectedWork!.title} — ${_messageController.text.trim()}',
+        );
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('明信片已生成，可通过微信分享给家人')),
-      );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('明信片已生成，可通过微信分享给家人')),
+        );
+      } else {
+        // 3. 离线：缓存到发件箱
+        await OutboxQueueService().enqueue(card);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已保存到发件箱，联网后自动发送')),
+        );
+      }
       context.pop();
     } catch (e) {
       if (!mounted) return;
@@ -109,6 +121,10 @@ class _ComposePageState extends State<ComposePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('写音乐明信片'),
         centerTitle: true,
       ),
@@ -138,14 +154,14 @@ class _ComposePageState extends State<ComposePage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppTheme.primaryGreen.withOpacity(0.06),
-                      AppTheme.primaryWarm.withOpacity(0.03),
+                      AppTheme.primaryGreen.withValues(alpha: 0.06),
+                      AppTheme.primaryWarm.withValues(alpha: 0.03),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryGreen.withOpacity(0.05),
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -179,11 +195,11 @@ class _ComposePageState extends State<ComposePage> {
                   hintText: '比如：妈妈我好想你...',
                 ),
               ),
-              if (_message.isNotEmpty)
+              if (_messageController.text.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    '预览: ${_message.length > 30 ? '${_message.substring(0, 30)}...' : _message}',
+                    '预览: ${_messageController.text.length > 30 ? '${_messageController.text.substring(0, 30)}...' : _messageController.text}',
                     style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                   ),
                 ),
@@ -201,7 +217,7 @@ class _ComposePageState extends State<ComposePage> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.send_rounded),
+                      : const Text('📤', style: TextStyle(fontSize: 20)),
                   label: Text(_generating ? '生成中...' : '生成明信片并分享'),
                 ),
               ),
@@ -254,8 +270,8 @@ class _WorkSelector extends StatelessWidget {
               width: 160,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.primaryGreen.withOpacity(0.1)
-                    : AppTheme.primaryGreen.withOpacity(0.05),
+                    ? AppTheme.primaryGreen.withValues(alpha: 0.1)
+                    : AppTheme.primaryGreen.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected ? AppTheme.primaryGreen : AppTheme.divider,

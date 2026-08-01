@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart' show AudioRecorder, RecordConfig, AudioEncoder, Amplitude;
 import 'package:permission_handler/permission_handler.dart';
@@ -16,6 +18,7 @@ class AudioService {
   AudioService._();
 
   final _audioRecorder = AudioRecorder();
+  final _player = AudioPlayer();
   final _fileStorage = FileStorageService();
 
   bool _isRecording = false;
@@ -50,6 +53,12 @@ class AudioService {
 
   /// 最近一次停止录音后的真实时长（录制停止后有效）。
   Duration? get lastDuration => _lastDuration;
+
+  Stream<Duration> get position => _player.positionStream;
+  Stream<Duration?> get duration => _player.durationStream;
+  Stream<PlayerState> get playerState => _player.playerStateStream;
+  Stream<double> get amplitude =>
+      amplitudeStream.map((a) => a.current.clamp(-60.0, 0.0));
 
   // ── 权限处理 ──
 
@@ -96,7 +105,7 @@ class AudioService {
 
   // ── 录音 ──
 
-  /// 开始录音。
+  /// 开始录音（AAC 格式，通用场景）。
   ///
   /// 录音文件以 [当前时间戳].m4a 命名，保存到 FileStorageService
   /// 管理的 recordings/ 目录。
@@ -105,6 +114,41 @@ class AudioService {
   ///
   /// 可能抛出 [AudioRecordException] 包含具体错误信息。
   Future<String?> startRecording() async {
+    return _startRecordingInternal(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        bitRate: 128000,
+        sampleRate: 44100,
+        numChannels: 1,
+        autoGain: true,
+        echoCancel: true,
+        noiseSuppress: true,
+      ),
+      extension: 'm4a',
+    );
+  }
+
+  /// 开始录音（WAV PCM 格式，用于哼唱分析）。
+  ///
+  /// WAV 录制用于 AI 流水线的音高检测阶段。
+  /// 16-bit PCM, 44100Hz, 单声道。
+  ///
+  /// 返回录音文件的完整路径，如果权限不足或发生错误则返回 null。
+  Future<String?> startWavRecording() async {
+    return _startRecordingInternal(
+      const RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 44100,
+        numChannels: 1,
+        autoGain: true,
+        echoCancel: true,
+        noiseSuppress: true,
+      ),
+      extension: 'wav',
+    );
+  }
+
+  Future<String?> _startRecordingInternal(RecordConfig config, {required String extension}) async {
     // ── 1. 状态检查 ──
     if (_isRecording) {
       debugPrint('[AudioService] 已在录音中，忽略重复请求');
@@ -114,18 +158,17 @@ class AudioService {
     // ── 2. 权限检查 ──
     final hasPermission = await requestMicPermission();
     if (!hasPermission) {
-      throw AudioRecordException('麦克风权限未授予，无法开始录音。'
+      throw const AudioRecordException('麦克风权限未授予，无法开始录音。'
           '请在系统设置中允许声芽访问麦克风。');
     }
 
     // ── 3. 检查录音器是否可用 ──
     if (!await _audioRecorder.hasPermission()) {
-      throw AudioRecordException('录音权限检查失败，请确认系统设置中已授权。');
+      throw const AudioRecordException('录音权限检查失败，请确认系统设置中已授权。');
     }
 
     // ── 4. 生成文件路径 ──
-    // 格式: recordings/rec_20260725_143000_m4a_12345.m4a
-    _currentRecordingPath = _fileStorage.generateRecordingPath(extension: 'm4a');
+    _currentRecordingPath = _fileStorage.generateRecordingPath(extension: extension);
 
     // ── 5. 确保目录存在 ──
     try {
@@ -137,18 +180,7 @@ class AudioService {
       throw AudioRecordException('无法创建录音目录: $e');
     }
 
-    // ── 6. 配置录音参数 ──
-    const config = RecordConfig(
-      encoder: AudioEncoder.aacLc,   // AAC 编码 → .m4a 文件
-      bitRate: 128000,               // 128 kbps，语音/哼唱质量
-      sampleRate: 44100,             // 44.1 kHz 采样率
-      numChannels: 1,                // 单声道（人声/哼唱）
-      autoGain: true,                // 自动增益控制
-      echoCancel: true,              // 回声消除
-      noiseSuppress: true,           // 噪声抑制
-    );
-
-    // ── 7. 开始录音 ──
+    // ── 6. 开始录音 ──
     try {
       final filePath = _currentRecordingPath!;
       await _audioRecorder.start(config, path: filePath);
@@ -158,19 +190,6 @@ class AudioService {
 
       debugPrint('[AudioService] ✅ 开始录音 → $filePath');
       return filePath;
-    } on Exception catch (e) {
-      _isRecording = false;
-      _recordingStartedAt = null;
-      _currentRecordingPath = null;
-      throw AudioRecordException('录音启动失败: $e');
-    } on FileSystemException catch (e) {
-      // 存储空间不足或路径不可写
-      _isRecording = false;
-      _recordingStartedAt = null;
-      _currentRecordingPath = null;
-      throw AudioRecordException(
-        '存储空间不足或文件写入失败: ${e.message}。请清理存储后重试。',
-      );
     } catch (e) {
       _isRecording = false;
       _recordingStartedAt = null;
@@ -358,10 +377,11 @@ class AudioService {
 
   // ── 播放 ──
 
-  /// 播放音频文件（预留接口，由 just_audio 调用方实现）。
+  /// 播放音频文件。
   Future<void> playAudio(String filePath) async {
     try {
-      await _player.play(DeviceFileSource(filePath));
+      await _player.setFilePath(filePath);
+      await _player.play();
       _isPlaying = true;
     } catch (e) {
       debugPrint('[AudioService] playAudio error: $e');
@@ -388,7 +408,7 @@ class AudioService {
 
   Future<void> resumePlayback() async {
     try {
-      await _player.resume();
+      await _player.play();
     } catch (e) {
       debugPrint('[AudioService] resumePlayback error: $e');
     }

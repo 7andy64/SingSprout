@@ -4,11 +4,11 @@ class AppConfig {
 
   static const String appName = '声芽';
   static const String appNameEn = 'SingSprout';
-  static const String version = '0.4.0';
+  static const String version = '0.9.0';
 
   // 功能开关（MVP 阶段仅开启 P0 功能）
   static const bool enableMoodRadio = true;      // P1: 完整心情收音机
-  static const bool enableFieldSoundLab = false;  // P1: 田野声音实验室
+  static const bool enableFieldSoundLab = true;   // P1: 田野声音实验室
   static const bool enableRhythmTribe = false;    // P2: 节奏部落
 
   // 隐私与安全
@@ -35,4 +35,7 @@ class AppConfig {
   // 用户年龄范围
   static const int userAgeMin = 8;
   static const int userAgeMax = 13;
+
+  // 设备分级：≥2GB RAM 启用端侧 AI 模型 (CREPE TFLite)
+  static const int highEndDeviceRamMB = 2048;
 }

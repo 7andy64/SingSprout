@@ -7,6 +7,7 @@ import 'app.dart';
 import 'shared/providers/app_state.dart';
 import 'shared/providers/audio_provider.dart';
 import 'shared/providers/connectivity_provider.dart';
+import 'shared/providers/notification_provider.dart';
 import 'core/routes/app_router.dart';
 import 'shared/services/update_service.dart';
 import 'shared/services/encryption_service.dart';
@@ -55,10 +56,10 @@ void main() async {
                   const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   const Text('应用初始化失败',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),),
                   const SizedBox(height: 8),
                   const Text('请重启应用，如问题持续请重新安装',
-                      style: TextStyle(color: Colors.grey)),
+                      style: TextStyle(color: Colors.grey),),
                   const SizedBox(height: 24),
                   FilledButton(
                     onPressed: () {
@@ -85,6 +86,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AppState()),
         ChangeNotifierProvider(create: (_) => AudioProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: const SingSproutApp(),
     ),

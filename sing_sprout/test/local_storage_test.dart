@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart' show databaseFactory;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import 'package:sing_sprout/shared/services/database_service.dart';
@@ -40,10 +39,8 @@ class _FakePathProvider extends PathProviderPlatform {
   @override
   Future<String?> getExternalStoragePath() async => _tempDir;
 
-  @override
   Future<List<String>?> getExternalCacheDirectories() async => [_tempDir];
 
-  @override
   Future<List<String>?> getExternalStorageDirectories({StorageDirectory? type}) async =>
       [_tempDir];
 
@@ -51,6 +48,7 @@ class _FakePathProvider extends PathProviderPlatform {
   Future<String?> getLibraryPath() async => _tempDir;
 
   // 以下方法为兼容性预留，非 override
+  @override
   Future<String?> getApplicationCachePath() async => _tempDir;
 
   Future<String?> getExternalCachePath() async => _tempDir;
@@ -67,8 +65,6 @@ void main() {
   //  声芽 SingSprout — 本地存储技术基础层验证测试
   //  覆盖: Database / Encryption / FileStorage / 4×Repository
   // ================================================================
-
-  late String _testTempDir;
 
   setUpAll(() {
     // 初始化 Flutter 绑定
@@ -284,7 +280,7 @@ void main() {
     test('解密旧版 Base64 混淆数据可兼容', () {
       const plain = 'legacy_data';
       // 手动 Base64 编码（模拟未初始化时的回退）
-      final base64Only =
+      const base64Only =
           'bGVnYWN5X2RhdGE='; // base64("legacy_data")
       // 未初始化就直接 base64 解码
       final decrypted = EncryptionService().decryptText(base64Only);
@@ -317,7 +313,7 @@ void main() {
         fileService.exportsDir,
       ]) {
         expect(await Directory(dir).exists(), isTrue,
-            reason: '$dir 应存在');
+            reason: '$dir 应存在',);
       }
     });
 
@@ -365,7 +361,8 @@ void main() {
     });
 
     test('fileExists 对不存在文件返回 false', () async {
-      final exists = await fileService.fileExists('/nonexistent/file.xyz');
+      final path = '${fileService.recordingsDir}/nonexistent.file';
+      final exists = await fileService.fileExists(path);
       expect(exists, isFalse);
     });
 
@@ -393,17 +390,17 @@ void main() {
 
   group('4. WorkRepository — 作品仓库', () {
     late WorkRepository repo;
-    int _workCounter = 0;
+    int workCounter = 0;
 
     setUp(() async {
       repo = WorkRepository();
     });
 
-    MusicWork _makeWork({String title = '测试作品', String sourceModule = 'humming_garden'}) {
-      _workCounter++;
+    MusicWork makeWork({String title = '测试作品', String sourceModule = 'humming_garden'}) {
+      workCounter++;
       final now = DateTime.now();
       return MusicWork(
-        id: '${now.millisecondsSinceEpoch}_${now.microsecondsSinceEpoch % 100000}_$_workCounter',
+        id: '${now.millisecondsSinceEpoch}_${now.microsecondsSinceEpoch % 100000}_$workCounter',
         title: title,
         audioPath: '/test/audio.mp3',
         duration: const Duration(seconds: 30),
@@ -415,7 +412,7 @@ void main() {
     }
 
     test('insert → getById 写入并读取', () async {
-      final work = _makeWork();
+      final work = makeWork();
       await repo.insert(work);
 
       final fetched = await repo.getById(work.id);
@@ -426,17 +423,17 @@ void main() {
     });
 
     test('getAll 返回所有作品', () async {
-      await repo.insert(_makeWork(title: 'A'));
-      await repo.insert(_makeWork(title: 'B'));
-      await repo.insert(_makeWork(title: 'C'));
+      await repo.insert(makeWork(title: 'A'));
+      await repo.insert(makeWork(title: 'B'));
+      await repo.insert(makeWork(title: 'C'));
 
       final all = await repo.getAll();
       expect(all.length, 3);
     });
 
     test('getByModule 按模块筛选', () async {
-      await repo.insert(_makeWork(title: 'Garden', sourceModule: 'humming_garden'));
-      await repo.insert(_makeWork(title: 'Radio', sourceModule: 'mood_radio'));
+      await repo.insert(makeWork(title: 'Garden', sourceModule: 'humming_garden'));
+      await repo.insert(makeWork(title: 'Radio', sourceModule: 'mood_radio'));
 
       final garden = await repo.getByModule('humming_garden');
       expect(garden.length, 1);
@@ -444,8 +441,8 @@ void main() {
     });
 
     test('getFavorites 只返回收藏作品', () async {
-      final w1 = _makeWork(title: 'fav');
-      final w2 = _makeWork(title: 'not_fav');
+      final w1 = makeWork(title: 'fav');
+      final w2 = makeWork(title: 'not_fav');
       await repo.insert(w1.copyWith(isFavorite: true));
       await repo.insert(w2);
 
@@ -455,7 +452,7 @@ void main() {
     });
 
     test('toggleFavorite 切换收藏状态', () async {
-      final work = _makeWork();
+      final work = makeWork();
       await repo.insert(work);
 
       await repo.toggleFavorite(work.id);
@@ -468,7 +465,7 @@ void main() {
     });
 
     test('update 更新作品字段', () async {
-      final work = _makeWork(title: '原始标题');
+      final work = makeWork(title: '原始标题');
       await repo.insert(work);
 
       await repo.update(work.copyWith(title: '修改后的标题'));
@@ -477,9 +474,9 @@ void main() {
     });
 
     test('search 模糊搜索标题', () async {
-      await repo.insert(_makeWork(title: '春江花月夜'));
-      await repo.insert(_makeWork(title: '夏日漱石'));
-      await repo.insert(_makeWork(title: '秋日私语'));
+      await repo.insert(makeWork(title: '春江花月夜'));
+      await repo.insert(makeWork(title: '夏日漱石'));
+      await repo.insert(makeWork(title: '秋日私语'));
 
       final results = await repo.search('花月');
       expect(results.length, 1);
@@ -487,7 +484,7 @@ void main() {
     });
 
     test('delete 删除作品', () async {
-      final work = _makeWork();
+      final work = makeWork();
       await repo.insert(work);
 
       await repo.delete(work.id);
@@ -496,8 +493,8 @@ void main() {
     });
 
     test('deleteAll 批量删除', () async {
-      final w1 = _makeWork(title: 'A');
-      final w2 = _makeWork(title: 'B');
+      final w1 = makeWork(title: 'A');
+      final w2 = makeWork(title: 'B');
       await repo.insert(w1);
       await repo.insert(w2);
 
@@ -508,7 +505,7 @@ void main() {
 
     test('count 返回正确数量', () async {
       for (var i = 0; i < 5; i++) {
-        await repo.insert(_makeWork(title: 'W$i'));
+        await repo.insert(makeWork(title: 'W$i'));
       }
       final c = await repo.count();
       expect(c, 5);
@@ -526,7 +523,7 @@ void main() {
       repo = SoundRepository();
     });
 
-    SoundSample _makeSample({String name = '测试声音'}) {
+    SoundSample makeSample({String name = '测试声音'}) {
       return SoundSample.create(
         name: name,
         audioPath: '/samples/test.wav',
@@ -538,7 +535,7 @@ void main() {
     }
 
     test('insert → getAll 写入并正确读取 (验证蛇形命名)', () async {
-      final sample = _makeSample(name: '鸟鸣声');
+      final sample = makeSample(name: '鸟鸣声');
       await repo.insert(sample);
 
       final all = await repo.getAll();
@@ -553,7 +550,7 @@ void main() {
     });
 
     test('getById 按 ID 查询', () async {
-      final sample = _makeSample(name: '流水声');
+      final sample = makeSample(name: '流水声');
       await repo.insert(sample);
 
       final fetched = await repo.getById(sample.id);
@@ -562,7 +559,7 @@ void main() {
     });
 
     test('update 更新样本', () async {
-      final sample = _makeSample(name: '原始');
+      final sample = makeSample(name: '原始');
       await repo.insert(sample);
 
       await repo.update(SoundSample(
@@ -571,7 +568,7 @@ void main() {
         audioPath: sample.audioPath,
         type: SoundType.mechanical,
         createdAt: sample.createdAt,
-      ));
+      ),);
 
       final fetched = await repo.getById(sample.id);
       expect(fetched!.name, '更新后');
@@ -579,7 +576,7 @@ void main() {
     });
 
     test('delete 删除样本', () async {
-      final sample = _makeSample();
+      final sample = makeSample();
       await repo.insert(sample);
 
       await repo.delete(sample.id);
@@ -588,8 +585,8 @@ void main() {
     });
 
     test('count 返回正确数量', () async {
-      await repo.insert(_makeSample(name: 'S1'));
-      await repo.insert(_makeSample(name: 'S2'));
+      await repo.insert(makeSample(name: 'S1'));
+      await repo.insert(makeSample(name: 'S2'));
 
       expect(await repo.count(), 2);
     });
@@ -601,19 +598,19 @@ void main() {
 
   group('6. VoiceCardRepository — 明信片仓库', () {
     late VoiceCardRepository repo;
-    int _cardCounter = 0;
+    int cardCounter = 0;
 
     setUp(() async {
       repo = VoiceCardRepository();
     });
 
-    VoiceCard _makeCard({
+    VoiceCard makeCard({
       String workId = 'work_001',
       VoiceCardDirection direction = VoiceCardDirection.sent,
     }) {
-      _cardCounter++;
+      cardCounter++;
       return VoiceCard(
-        id: 'card_${DateTime.now().millisecondsSinceEpoch}_$_cardCounter',
+        id: 'card_${DateTime.now().millisecondsSinceEpoch}_$cardCounter',
         workId: workId,
         senderId: 'sender_001',
         recipientId: 'recipient_001',
@@ -625,24 +622,24 @@ void main() {
     }
 
     test('insert → getAll 写入并读取', () async {
-      await repo.insert(_makeCard(workId: 'w1'));
-      await repo.insert(_makeCard(workId: 'w2'));
+      await repo.insert(makeCard(workId: 'w1'));
+      await repo.insert(makeCard(workId: 'w2'));
 
       final all = await repo.getAll();
       expect(all.length, 2);
     });
 
     test('getSent / getReceived 按方向筛选', () async {
-      await repo.insert(_makeCard(workId: 'sent1', direction: VoiceCardDirection.sent));
-      await repo.insert(_makeCard(workId: 'sent2', direction: VoiceCardDirection.sent));
-      await repo.insert(_makeCard(workId: 'recv1', direction: VoiceCardDirection.received));
+      await repo.insert(makeCard(workId: 'sent1', direction: VoiceCardDirection.sent));
+      await repo.insert(makeCard(workId: 'sent2', direction: VoiceCardDirection.sent));
+      await repo.insert(makeCard(workId: 'recv1', direction: VoiceCardDirection.received));
 
       expect((await repo.getSent()).length, 2);
       expect((await repo.getReceived()).length, 1);
     });
 
     test('getById 按 ID 查询 (新方法)', () async {
-      final card = _makeCard(workId: 'w_target');
+      final card = makeCard(workId: 'w_target');
       await repo.insert(card);
 
       final fetched = await repo.getById(card.id);
@@ -651,17 +648,17 @@ void main() {
     });
 
     test('getByWorkId 按作品 ID 查询 (新方法)', () async {
-      await repo.insert(_makeCard(workId: 'song_A'));
-      await repo.insert(_makeCard(workId: 'song_A'));
-      await repo.insert(_makeCard(workId: 'song_B'));
+      await repo.insert(makeCard(workId: 'song_A'));
+      await repo.insert(makeCard(workId: 'song_A'));
+      await repo.insert(makeCard(workId: 'song_B'));
 
       final cards = await repo.getByWorkId('song_A');
       expect(cards.length, 2);
     });
 
     test('getUnread 返回未读明信片 (新方法)', () async {
-      final card1 = _makeCard(workId: 'unread1');
-      final card2 = _makeCard(workId: 'unread2');
+      final card1 = makeCard(workId: 'unread1');
+      final card2 = makeCard(workId: 'unread2');
       await repo.insert(card1);
       await repo.insert(card2);
 
@@ -674,7 +671,7 @@ void main() {
     });
 
     test('markAsRead 设置 read_at', () async {
-      final card = _makeCard();
+      final card = makeCard();
       await repo.insert(card);
 
       await repo.markAsRead(card.id);
@@ -685,7 +682,7 @@ void main() {
     });
 
     test('delete 删除明信片', () async {
-      final card = _makeCard();
+      final card = makeCard();
       await repo.insert(card);
 
       await repo.delete(card.id);
@@ -705,7 +702,7 @@ void main() {
       repo = UserProfileRepository();
     });
 
-    UserProfile _makeProfile({String nickname = '小明'}) {
+    UserProfile makeProfile({String nickname = '小明'}) {
       return UserProfile(
         localId: 'local_001',
         nickname: nickname,
@@ -718,7 +715,7 @@ void main() {
     }
 
     test('save → get 写入并读取', () async {
-      await repo.save(_makeProfile(nickname: '小红'));
+      await repo.save(makeProfile(nickname: '小红'));
 
       final profile = await repo.get();
       expect(profile, isNotNull);
@@ -729,16 +726,16 @@ void main() {
     });
 
     test('save 更新已有档案', () async {
-      await repo.save(_makeProfile(nickname: '原始昵称'));
+      await repo.save(makeProfile(nickname: '原始昵称'));
 
-      await repo.save(_makeProfile(nickname: '新昵称'));
+      await repo.save(makeProfile(nickname: '新昵称'));
 
       final profile = await repo.get();
       expect(profile!.nickname, '新昵称');
     });
 
     test('setOnboardingCompleted 更新引导状态', () async {
-      await repo.save(_makeProfile());
+      await repo.save(makeProfile());
 
       await repo.setOnboardingCompleted(true);
 
@@ -747,7 +744,7 @@ void main() {
     });
 
     test('delete 删除档案 (新方法)', () async {
-      await repo.save(_makeProfile());
+      await repo.save(makeProfile());
 
       await repo.delete();
 

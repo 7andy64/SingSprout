@@ -193,12 +193,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
               child: Container(
                 width: 52,
                 height: 52,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(26),
                   border: Border.all(color: AppTheme.divider),
                 ),
-                child: const Icon(Icons.arrow_back, color: AppTheme.textSecondary),
+                child: const Text('←', style: TextStyle(fontSize: 24, color: AppTheme.textSecondary)),
               ),
             ),
 
@@ -284,12 +285,12 @@ class _StepPickAnimal extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.primaryGreen.withOpacity(0.08)
+                        ? AppTheme.primaryGreen.withValues(alpha: 0.08)
                         : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: isSelected
                         ? Border.all(
-                            color: AppTheme.primaryGreen.withOpacity(0.4),
+                            color: AppTheme.primaryGreen.withValues(alpha: 0.4),
                             width: 2,
                           )
                         : Border.all(color: AppTheme.divider),
@@ -336,13 +337,14 @@ class _StepTellAboutYou extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            '介绍一下你自己',
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '介绍一下你自己',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -387,12 +389,12 @@ class _StepTellAboutYou extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.primaryGreen.withOpacity(0.08)
+                            ? AppTheme.primaryGreen.withValues(alpha: 0.08)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: isSelected
                             ? Border.all(
-                                color: AppTheme.primaryGreen.withOpacity(0.4),
+                                color: AppTheme.primaryGreen.withValues(alpha: 0.4),
                                 width: 2,
                               )
                             : Border.all(color: AppTheme.divider),
@@ -433,16 +435,17 @@ class _StepTellAboutYou extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          TextField(
-            controller: controller,
-            maxLength: 12,
-            decoration: const InputDecoration(
-              hintText: '输入你的昵称',
-              counterText: '',
+            TextField(
+              controller: controller,
+              maxLength: 12,
+              decoration: const InputDecoration(
+                hintText: '输入你的昵称',
+                counterText: '',
+              ),
+              textInputAction: TextInputAction.done,
             ),
-            textInputAction: TextInputAction.done,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -529,7 +532,7 @@ class _StepReady extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen.withOpacity(0.1),
+                          color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
