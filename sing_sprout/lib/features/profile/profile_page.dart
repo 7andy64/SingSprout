@@ -679,7 +679,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final identityService = IdentityService();
     final newCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
-    String? errorMsg;
+    bool? success;
 
     final result = await showDialog<bool>(
       context: context,
@@ -702,18 +702,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   '为了安全地切换身份（学生/老师/家长），\n请先设置一个身份切换密码。',
                   style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
                 ),
-                if (errorMsg != null) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppTheme.error.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(errorMsg!, style: const TextStyle(fontSize: 12, color: AppTheme.error)),
-                  ),
-                ],
                 const SizedBox(height: 16),
                 TextField(
                   controller: newCtrl,
@@ -735,7 +723,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   onSubmitted: (_) => _doSetInitial(
                     ctx, setDlgState, identityService,
-                    newCtrl, confirmCtrl,
+                    newCtrl, confirmCtrl, success,
                   ),
                 ),
               ],
@@ -751,7 +739,7 @@ class _ProfilePageState extends State<ProfilePage> {
               FilledButton(
                 onPressed: () => _doSetInitial(
                   ctx, setDlgState, identityService,
-                  newCtrl, confirmCtrl,
+                  newCtrl, confirmCtrl, success,
                 ),
                 child: const Text('确认设置'),
               ),
@@ -763,7 +751,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try { newCtrl.dispose(); } catch (_) {}
     try { confirmCtrl.dispose(); } catch (_) {}
-    return result == true ? null : (errorMsg ?? '已取消');
+    return result == true ? null : '已取消';
   }
 
   Future<void> _doSetInitial(
@@ -772,12 +760,12 @@ class _ProfilePageState extends State<ProfilePage> {
     IdentityService identityService,
     TextEditingController newCtrl,
     TextEditingController confirmCtrl,
+    bool? success,
   ) async {
     final newPw = newCtrl.text;
     final confirmPw = confirmCtrl.text;
 
     if (newPw != confirmPw) {
-      setDlgState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('两次输入的密码不一致'), behavior: SnackBarBehavior.floating),
       );
@@ -786,7 +774,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final error = await identityService.setInitialPassword(newPw);
     if (error != null) {
-      setDlgState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
       );
