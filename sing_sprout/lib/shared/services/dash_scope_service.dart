@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Alibaba Cloud DashScope (百炼) API service.
 ///
@@ -641,6 +642,75 @@ class DashScopeService {
         '音高: $midiNums, '
         '平均: $noteName (MIDI $avgMidi), '
         '时长: ${totalDuration.toStringAsFixed(1)}秒';
+  }
+
+  // ── 语音合成 (CosyVoice TTS) ──
+
+  static const _ttsBase = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation';
+
+  /// 使用 CosyVoice 将文字合成为语音，返回本地文件路径。
+  /// [voice] 默认使用童声 longhuhu_v3。
+  Future<String?> synthesizeSpeech({
+    required String text,
+    String voice = 'longhuhu_v3',
+    double rate = 1.0,
+    int volume = 50,
+    String format = 'mp3',
+  }) async {
+    final key = await _getKey();
+    if (key == null || key.isEmpty) return null;
+
+    try {
+      final response = await _client
+          .post(
+            Uri.parse(_ttsBase),
+            headers: {
+              'Authorization': 'Bearer $key',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'model': 'cosyvoice-v3-flash',
+              'input': {'text': text},
+              'parameters': {
+                'voice': voice,
+                'format': format,
+                'volume': volume,
+                'rate': rate,
+              },
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode != 200) {
+        debugPrint('[DashScope] TTS failed: ${response.statusCode} ${response.body}');
+        return null;
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final output = data['output'] as Map<String, dynamic>?;
+      final audio = output?['audio'] as Map<String, dynamic>?;
+      final audioUrl = audio?['url'] as String?;
+      if (audioUrl == null) return null;
+
+      // Download audio to local file
+      final audioResp = await _client.get(Uri.parse(audioUrl)).timeout(const Duration(seconds: 30));
+      if (audioResp.statusCode != 200) return null;
+
+      final docsDir = await getApplicationDocumentsDirectory();
+      final greetingsDir = Directory('${docsDir.path}/greetings');
+      if (!await greetingsDir.exists()) {
+        await greetingsDir.create(recursive: true);
+      }
+      final filename = 'greeting_${DateTime.now().millisecondsSinceEpoch}.$format';
+      final file = File('${greetingsDir.path}/$filename');
+      await file.writeAsBytes(audioResp.bodyBytes);
+
+      debugPrint('[DashScope] TTS saved: ${file.path}');
+      return file.path;
+    } catch (e) {
+      debugPrint('[DashScope] TTS error: $e');
+      return null;
+    }
   }
 
   void dispose() => _client.close();

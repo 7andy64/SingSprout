@@ -1,6 +1,6 @@
 name: sing_sprout
 description: 声芽 SingSprout - AI音乐启蒙创作工具
-version: 0.9.0+1
+version: 0.9.1+1
 publish_to: none
 
 environment:
@@ -36,9 +36,11 @@ flutter:
   uses-material-design: true
   assets:
     # Basic Pitch TFLite for on-device pitch detection (~0.84MB).
-    # Downloaded from litert-community/Basic-Pitch-LiteRT (HuggingFace).
-    # When missing, PitchDetectionService falls back to YIN gracefully.
     - assets/models/basicpitch.tflite
+    # YAMNet TFLite (~1.5MB) — on-device sound classification (521 AudioSet classes).
+    # When missing, SoundClassificationService falls back to SenseVoice cloud API.
+    - assets/models/yamnet.tflite
+    - assets/models/yamnet_class_map.csv
 
 dev_dependencies:
   flutter_test:

@@ -117,6 +117,8 @@ class VoiceCardRepository {
         'cover_url': card.coverUrl,
         'reply_to_id': card.replyToId,
         'direction': card.direction.name,
+        'greeting_audio_path': card.greetingAudioPath,
+        'greeting_text': card.greetingText,
         'created_at': card.createdAt.toIso8601String(),
         'read_at': card.readAt?.toIso8601String(),
       };
@@ -134,6 +136,8 @@ class VoiceCardRepository {
           (e) => e.name == row['direction'],
           orElse: () => VoiceCardDirection.sent,
         ),
+        greetingAudioPath: row['greeting_audio_path'] as String?,
+        greetingText: row['greeting_text'] as String?,
         createdAt: DateTime.parse(row['created_at'] as String),
         readAt: row['read_at'] != null
             ? DateTime.parse(row['read_at'] as String)

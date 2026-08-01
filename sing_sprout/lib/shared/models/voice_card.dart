@@ -11,6 +11,8 @@ class VoiceCard {
   final String? coverUrl;
   final String? replyToId;
   final VoiceCardDirection direction;
+  final String? greetingAudioPath;
+  final String? greetingText;
   final DateTime createdAt;
   final DateTime? readAt;
 
@@ -24,6 +26,8 @@ class VoiceCard {
     this.coverUrl,
     this.replyToId,
     required this.direction,
+    this.greetingAudioPath,
+    this.greetingText,
     required this.createdAt,
     this.readAt,
   });
@@ -36,6 +40,8 @@ class VoiceCard {
     String? textContent,
     String? coverUrl,
     String? replyToId,
+    String? greetingAudioPath,
+    String? greetingText,
   }) {
     final now = DateTime.now();
     return VoiceCard(
@@ -47,6 +53,8 @@ class VoiceCard {
       textContent: textContent,
       coverUrl: coverUrl,
       replyToId: replyToId,
+      greetingAudioPath: greetingAudioPath,
+      greetingText: greetingText,
       direction: VoiceCardDirection.sent,
       createdAt: now,
     );
@@ -65,6 +73,8 @@ class VoiceCard {
     String? audioPath,
     String? coverUrl,
     String? replyToId,
+    String? greetingAudioPath,
+    String? greetingText,
     required DateTime createdAt,
   }) {
     return VoiceCard(
@@ -75,6 +85,8 @@ class VoiceCard {
       audioPath: audioPath,
       coverUrl: coverUrl,
       replyToId: replyToId,
+      greetingAudioPath: greetingAudioPath,
+      greetingText: greetingText,
       direction: VoiceCardDirection.received,
       createdAt: createdAt,
       readAt: null,
@@ -91,6 +103,8 @@ class VoiceCard {
         'cover_url': coverUrl,
         'reply_to_id': replyToId,
         'direction': direction.name,
+        'greeting_audio_path': greetingAudioPath,
+        'greeting_text': greetingText,
         'created_at': createdAt.toIso8601String(),
         'read_at': readAt?.toIso8601String(),
       };
@@ -108,6 +122,8 @@ class VoiceCard {
           (e) => e.name == json['direction'],
           orElse: () => VoiceCardDirection.sent,
         ),
+        greetingAudioPath: json['greeting_audio_path'] as String?,
+        greetingText: json['greeting_text'] as String?,
         createdAt: DateTime.parse(json['created_at'] as String),
         readAt: json['read_at'] != null
             ? DateTime.parse(json['read_at'] as String)
@@ -124,6 +140,8 @@ class VoiceCard {
     String? coverUrl,
     String? replyToId,
     VoiceCardDirection? direction,
+    String? greetingAudioPath,
+    String? greetingText,
     DateTime? createdAt,
     DateTime? readAt,
   }) {
@@ -137,6 +155,8 @@ class VoiceCard {
       coverUrl: coverUrl ?? this.coverUrl,
       replyToId: replyToId ?? this.replyToId,
       direction: direction ?? this.direction,
+      greetingAudioPath: greetingAudioPath ?? this.greetingAudioPath,
+      greetingText: greetingText ?? this.greetingText,
       createdAt: createdAt ?? this.createdAt,
       readAt: readAt ?? this.readAt,
     );
