@@ -25,4 +25,8 @@ class AppRoutes {
   static const String privacySettings = '/privacy-settings';
   static const String fieldSoundLab = '/field-sound-lab';
   static const String rhythmTribe = '/rhythm-tribe';
+  static const String rhythmGame = '/rhythm-game';
+  static const String melodyChallenge = '/melody-challenge';
+  static const String shop = '/shop';
+  static const String inventory = '/inventory';
 }

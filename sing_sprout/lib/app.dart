@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'shared/providers/app_state.dart';
 import 'shared/providers/audio_provider.dart';
 import 'shared/providers/notification_provider.dart';
+import 'shared/providers/economy_provider.dart';
 import 'shared/services/audio_service.dart';
 import 'shared/services/outbox_queue_service.dart';
 import 'shared/services/pitch_detection_service.dart';
@@ -28,6 +29,7 @@ class _SingSproutAppState extends State<SingSproutApp>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().loadLocalData();
       context.read<NotificationProvider>().loadInitialCount();
+      context.read<EconomyProvider>().init();
     });
     // 后台初始化端侧 AI 模型（延迟到首帧后，避免启动卡顿）
     WidgetsBinding.instance.addPostFrameCallback((_) {

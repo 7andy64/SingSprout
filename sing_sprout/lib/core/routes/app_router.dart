@@ -13,6 +13,10 @@ import '../../features/mood_radio/mood_radio_page.dart';
 import '../../features/music_tree/music_tree_page.dart';
 import '../../features/field_sound_lab/field_sound_lab_page.dart';
 import '../../features/rhythm_tribe/rhythm_tribe_page.dart';
+import '../../features/rhythm_tribe/rhythm_game_page.dart';
+import '../../features/rhythm_tribe/melody_challenge_page.dart';
+import '../../features/shop/shop_page.dart';
+import '../../features/shop/inventory_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/profile/privacy_settings_page.dart';
 import '../../features/profile/works_page.dart';
@@ -223,6 +227,26 @@ class AppRouter {
         path: AppRoutes.rhythmTribe,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RhythmTribePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.rhythmGame,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const RhythmGamePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.melodyChallenge,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const MelodyChallengePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.shop,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ShopPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.inventory,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const InventoryPage(),
       ),
     ],
   );
