@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/music_work.dart';
 import '../models/user_profile.dart';
 import '../models/music_tree_data.dart';
@@ -32,8 +34,11 @@ class AppState extends ChangeNotifier {
   List<SoundSample> _sounds = [];
   List<VoiceCard> _cards = [];
 
+  String? _avatarPath;
   bool _dataLoaded = false;
   String? _loadError; // 加载失败时的错误信息
+
+  static const _avatarPathKey = 'avatar_path';
 
   // ── Getters ──
 
@@ -56,6 +61,7 @@ class AppState extends ChangeNotifier {
   int get totalWorks => _works.length;
   int get totalSounds => _sounds.length;
   int get totalCards => _cards.length;
+  String? get avatarPath => _avatarPath;
 
   // ── 初始化：从本地数据库加载所有数据 ──
 
@@ -79,6 +85,10 @@ class AppState extends ChangeNotifier {
     try {
       // 加载用户档案
       _userProfile = await _profileRepo.get();
+
+      // 加载头像路径
+      final prefs = await SharedPreferences.getInstance();
+      _avatarPath = prefs.getString(_avatarPathKey);
 
       // 加载所有作品、声音、明信片
       _works = await _workRepo.getAll();
@@ -155,6 +165,27 @@ class AppState extends ChangeNotifier {
       await _profileRepo.save(profile);
     }
     notifyListeners();
+  }
+
+  /// 设置自定义头像路径并持久化到 shared_preferences。
+  Future<void> setAvatarPath(String path) async {
+    _avatarPath = path;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_avatarPathKey, path);
+  }
+
+  /// 清除自定义头像。
+  Future<void> clearAvatar() async {
+    if (_avatarPath != null) {
+      try { await File(_avatarPath!).delete(); } catch (_) {}
+    }
+    _avatarPath = null;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_avatarPathKey);
   }
 
   Future<void> completeOnboarding() async {
