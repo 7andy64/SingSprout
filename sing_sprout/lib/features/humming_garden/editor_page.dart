@@ -151,10 +151,12 @@ class _EditorPageState extends State<EditorPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: Icon(
-                        _isPlaying ? Icons.pause_circle : Icons.play_circle,
-                        size: 56,
-                        color: AppTheme.primaryGreen,
+                      icon: Text(
+                        _isPlaying ? '⏸' : '▶',
+                        style: const TextStyle(
+                          fontSize: 56,
+                          color: AppTheme.primaryGreen,
+                        ),
                       ),
                       onPressed: _togglePlayPause,
                     ),
