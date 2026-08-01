@@ -42,7 +42,7 @@ class BottomActions extends StatelessWidget {
                   onPressed: vm.hasRecording
                       ? () => _saveToLibrary(context)
                       : null,
-                  icon: const Icon(Icons.save_alt_rounded, size: 22),
+                  icon: const Text('💾', style: TextStyle(fontSize: 22)),
                   label: const Text(
                     '保存到我的声音库',
                     style: TextStyle(
@@ -114,7 +114,7 @@ class BottomActions extends StatelessWidget {
                   decoration: const InputDecoration(
                     labelText: '给声音起个名字吧',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.edit, size: 20),
+                    prefixIcon: const Text('✏️', style: TextStyle(fontSize: 20)),
                   ),
                   autofocus: true,
                 ),
@@ -192,19 +192,37 @@ class BottomActions extends StatelessWidget {
 //  Weekly Task Tile — 基于真实数据
 // ═══════════════════════════════════════════════
 
-class _WeeklyTaskTile extends StatelessWidget {
+class _WeeklyTaskTile extends StatefulWidget {
   final FieldSoundLabViewModel vm;
   const _WeeklyTaskTile({required this.vm});
 
   @override
-  Widget build(BuildContext context) {
-    // 从 AppState 获取本周采集的声音类型
-    final sounds = context.watch<AppState>().sounds;
-    final typesThisWeek = _getWeeklyTypes(sounds);
-    vm.updateWeeklyProgress(typesThisWeek);
+  State<_WeeklyTaskTile> createState() => _WeeklyTaskTileState();
+}
 
-    final collected = vm.weeklyCollected;
-    final target = vm.weeklyTarget;
+class _WeeklyTaskTileState extends State<_WeeklyTaskTile> {
+  @override
+  void initState() {
+    super.initState();
+    _update();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _update();
+  }
+
+  void _update() {
+    final sounds = context.read<AppState>().sounds;
+    final typesThisWeek = _getWeeklyTypes(sounds);
+    widget.vm.updateWeeklyProgress(typesThisWeek);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final collected = widget.vm.weeklyCollected;
+    final target = widget.vm.weeklyTarget;
     final color = const Color(0xFFFF7043);
 
     return GestureDetector(

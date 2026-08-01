@@ -93,6 +93,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       _ringRotateController.repeat();
       _breatheController.repeat(reverse: true);
       await _vm.startRecording();
+      if (_vm.recordedFilePath == null) return;
     }
 
     if (_vm.stage == CreativeFlowStage.recording &&
@@ -259,6 +260,20 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
             await Future.delayed(const Duration(milliseconds: 300));
             if (!_isLongPressing || !mounted) return;
             await _vm.startRecording();
+            if (_vm.recordedFilePath == null) {
+              // 录音启动失败，回退动画并提示用户
+              if (mounted) {
+                setState(() => _isLongPressing = false);
+                _pressScaleController.reverse();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('录音启动失败，请重试'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+              return;
+            }
             _waveController.repeat();
             _ringRotateController.repeat();
             _breatheController.repeat(reverse: true);

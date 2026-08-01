@@ -14,6 +14,7 @@ import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/role_gate.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/providers/theme_provider.dart';
+import '../../shared/providers/economy_provider.dart';
 
 /// 个人中心 — MVP P0 功能
 class ProfilePage extends StatefulWidget {
@@ -150,6 +151,36 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
 
+                      MenuSection(
+                        title: '趣味',
+                        items: [
+                          MenuItem(
+                            icon: Icons.storefront_outlined,
+                            label: '森林集市',
+                            trailing: Consumer<EconomyProvider>(
+                              builder: (_, eco, __) => Text(
+                                '🌰 ${eco.balance}',
+                                style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                              ),
+                            ),
+                            onTap: () => context.push(AppRoutes.shop),
+                          ),
+                          MenuItem(
+                            icon: Icons.backpack_outlined,
+                            label: '我的背包',
+                            onTap: () => context.push(AppRoutes.inventory),
+                          ),
+                          MenuItem(
+                            icon: Icons.games_outlined,
+                            label: '节奏部落',
+                            trailing: const Text(
+                              '玩游戏赚松果',
+                              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                            ),
+                            onTap: () => context.push(AppRoutes.rhythmTribe),
+                          ),
+                        ],
+                      ),
                       MenuSection(
                         title: '设置',
                         items: [

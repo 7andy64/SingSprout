@@ -239,7 +239,9 @@ class FieldSoundLabViewModel extends ChangeNotifier {
   /// 每周任务目标为采集 5 种不同类型的声音。
   void updateWeeklyProgress(List<SoundType> collectedTypesThisWeek) {
     final uniqueTypes = collectedTypesThisWeek.toSet();
-    _weeklyCollected = uniqueTypes.length.clamp(0, _weeklyTarget);
+    final newCount = uniqueTypes.length.clamp(0, _weeklyTarget);
+    if (newCount == _weeklyCollected) return;
+    _weeklyCollected = newCount;
     notifyListeners();
   }
 
