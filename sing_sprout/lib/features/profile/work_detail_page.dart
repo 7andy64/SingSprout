@@ -424,7 +424,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
     return Row(
       children: [
         _MetaChip(
-          icon: Icons.palette_outlined,
+          icon: '🎨',
           label: '${work.styleSeed.icon} ${work.styleSeed.label}',
         ),
         const SizedBox(width: 8),
