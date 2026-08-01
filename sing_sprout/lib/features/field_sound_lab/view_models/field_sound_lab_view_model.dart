@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/constants/enums.dart';
@@ -18,6 +19,7 @@ class FieldSoundLabViewModel extends ChangeNotifier {
 
   // ── Recording state ──
   bool _isRecording = false;
+  bool _isStartingRecording = false; // 异步间隙过渡态
   int _recordSecondsRemaining = 30;
   double _currentAmplitude = 0;
   String? _recordedFilePath;
@@ -53,6 +55,7 @@ class FieldSoundLabViewModel extends ChangeNotifier {
   // ═══════════════════════════════════════════════
 
   bool get isRecording => _isRecording;
+  bool get isStartingRecording => _isStartingRecording;
   int get recordSecondsRemaining => _recordSecondsRemaining;
   double get currentAmplitude => _currentAmplitude;
   String? get recordedFilePath => _recordedFilePath;
@@ -143,13 +146,33 @@ class FieldSoundLabViewModel extends ChangeNotifier {
       if (!granted) return 'permission_denied';
     }
 
+    // 标记过渡态，避免 UI 闪烁
+    _isStartingRecording = true;
+    notifyListeners();
+
     try {
       // 先停止可能正在进行的回放
       await _audioService.stopPlayback();
       _isPlaying = false;
 
+      // 清理上一次录音的临时文件，防止存储泄漏
+      if (_recordedFilePath != null) {
+        try {
+          final oldFile = File(_recordedFilePath!);
+          if (await oldFile.exists()) {
+            await oldFile.delete();
+          }
+        } catch (_) {
+          // 删除失败不影响新录音
+        }
+      }
+
       final path = await _audioService.startWavRecording();
-      if (path == null) return 'recording_failed';
+      if (path == null) {
+        _isStartingRecording = false;
+        notifyListeners();
+        return 'recording_failed';
+      }
 
       _isRecording = true;
       _recordSecondsRemaining = 30;
@@ -172,10 +195,13 @@ class FieldSoundLabViewModel extends ChangeNotifier {
         }
       });
 
+      _isStartingRecording = false;
       notifyListeners();
       return null; // success
     } catch (e) {
+      _isStartingRecording = false;
       debugPrint('[FieldSoundLabVM] startRecording error: $e');
+      notifyListeners();
       return 'recording_error';
     }
   }
