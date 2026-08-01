@@ -5,7 +5,10 @@ import 'package:just_audio/just_audio.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_work.dart';
+import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/services/role_permissions.dart';
+import '../../shared/widgets/role_gate.dart';
 import '../../shared/utils/formatters.dart';
 
 /// 作品详情 / 播放页
@@ -82,6 +85,37 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
   }
 
   // ── 编辑 ──
+
+  List<Widget> _buildAppBarActions() {
+    final appState = context.read<AppState>();
+    final role = appState.userProfile?.role ?? UserRole.student;
+    final canEdit = RoleGate.isAllowed(Feature.editWork, role);
+    final canDelete = RoleGate.isAllowed(Feature.deleteWork, role);
+
+    final actions = <Widget>[];
+    if (canEdit) {
+      if (!_isEditing) {
+        actions.add(IconButton(
+          icon: const Icon(Icons.edit_outlined),
+          tooltip: '编辑',
+          onPressed: _toggleEdit,
+        ));
+      } else {
+        actions.add(TextButton(
+          onPressed: _toggleEdit,
+          child: const Text('完成'),
+        ));
+      }
+    }
+    if (canDelete) {
+      actions.add(IconButton(
+        icon: const Icon(Icons.delete_outline),
+        tooltip: '删除',
+        onPressed: _confirmDelete,
+      ));
+    }
+    return actions;
+  }
 
   void _toggleEdit() {
     setState(() => _isEditing = !_isEditing);
@@ -193,7 +227,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
         actions: [
           if (!_isEditing)
             IconButton(
-              icon: const Icon(Icons.edit_outlined),
+              icon: const Text('✏️', style: TextStyle(fontSize: 20)),
               tooltip: '编辑',
               onPressed: _toggleEdit,
             ),
@@ -203,7 +237,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
               child: const Text('完成'),
             ),
           IconButton(
-            icon: const Icon(Icons.delete_outline),
+            icon: const Text('🗑️', style: TextStyle(fontSize: 20)),
             tooltip: '删除',
             onPressed: _confirmDelete,
           ),
@@ -361,10 +395,12 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
                   ],
                 ),
                 child: IconButton(
-                  icon: Icon(
-                    _isPlaying ? Icons.pause : Icons.play_arrow,
-                    color: Colors.white,
-                    size: 32,
+                  icon: Text(
+                    _isPlaying ? '⏸' : '▶',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                    ),
                   ),
                   onPressed: _togglePlayPause,
                 ),
@@ -394,13 +430,13 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
         const SizedBox(width: 8),
         if (work.moodSticker != null) ...[
           _MetaChip(
-            icon: Icons.emoji_emotions_outlined,
+            icon: '😊',
             label: '${work.moodSticker!.emoji} ${work.moodSticker!.label}',
           ),
           const SizedBox(width: 8),
         ],
         _MetaChip(
-          icon: Icons.access_time,
+          icon: '⏱️',
           label: Formatters.formatDuration(work.duration),
         ),
       ],
@@ -421,7 +457,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
         children: [
           const Row(
             children: [
-              Icon(Icons.notes_rounded, size: 16, color: AppTheme.textSecondary),
+              Text('📝', style: const TextStyle(fontSize: 16)),
               SizedBox(width: 6),
               Text(
                 '创作故事',
@@ -455,7 +491,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
           children: [
             // 收藏
             _ActionButton(
-              icon: work.isFavorite ? Icons.favorite : Icons.favorite_border,
+              icon: work.isFavorite ? '❤️' : '🤍',
               color: work.isFavorite ? AppTheme.moodRed : AppTheme.textSecondary,
               label: work.isFavorite ? '已收藏' : '收藏',
               onTap: _toggleFavorite,
@@ -465,7 +501,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
             Expanded(
               child: FilledButton.icon(
                 onPressed: _shareAsCard,
-                icon: const Icon(Icons.mail_outline, size: 20),
+                icon: const Text('✉️', style: TextStyle(fontSize: 20)),
                 label: const Text('制作明信片'),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.primaryGreen,
@@ -485,7 +521,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
 
 /// 元数据标签
 class _MetaChip extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final String label;
 
   const _MetaChip({required this.icon, required this.label});
@@ -501,7 +537,7 @@ class _MetaChip extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, size: 18, color: AppTheme.textSecondary),
+            Text(icon, style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 4),
             Text(
               label,
@@ -519,7 +555,7 @@ class _MetaChip extends StatelessWidget {
 
 /// 底部操作按钮
 class _ActionButton extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final Color color;
   final String label;
   final VoidCallback onTap;
@@ -536,7 +572,7 @@ class _ActionButton extends StatelessWidget {
     return Expanded(
       child: OutlinedButton.icon(
         onPressed: onTap,
-        icon: Icon(icon, size: 20, color: color),
+        icon: Text(icon, style: TextStyle(fontSize: 20, color: color)),
         label: Text(label, style: TextStyle(color: color, fontSize: 13)),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),

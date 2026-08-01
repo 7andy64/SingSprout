@@ -23,6 +23,9 @@ import '../../features/profile/storage_page.dart';
 import '../../features/onboarding/onboarding_page.dart';
 import '../../shared/widgets/notification_badge.dart';
 import '../../shared/providers/notification_provider.dart';
+import '../../shared/models/user_profile.dart';
+import '../../shared/providers/app_state.dart';
+import '../../shared/services/role_permissions.dart';
 import '../constants/app_routes.dart';
 import '../theme/app_theme.dart';
 
@@ -33,9 +36,32 @@ class AppRouter {
   static final rootNavigatorKey = GlobalKey<NavigatorState>();
   static final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+  /// 路由 → 所需权限映射
+  static final _protectedRoutes = <String, Feature>{
+    AppRoutes.creativeFlow: Feature.createMusic,
+    AppRoutes.recording: Feature.createMusic,
+    AppRoutes.editor: Feature.editWork,
+    AppRoutes.observation: Feature.accessObservation,
+  };
+
+  static String? _guardRedirect(BuildContext context, GoRouterState state) {
+    final feature = _protectedRoutes[state.uri.path];
+    if (feature == null) return null; // 非保护路由，放行
+
+    final appState = context.read<AppState>();
+    final role = appState.userProfile?.role ?? UserRole.student;
+
+    if (!rolePermissions[feature]!.contains(role)) {
+      // 无权限 → 重定向到花园页
+      return AppRoutes.hummingGarden;
+    }
+    return null; // 允许访问
+  }
+
   static final router = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.hummingGarden,
+    redirect: _guardRedirect,
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('页面未找到')),
       body: Center(
