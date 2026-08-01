@@ -12,7 +12,7 @@ class DatabaseService {
   DatabaseService._();
 
   static const _dbName = 'singsprout.db';
-  static const _dbVersion = 2;
+  static const _dbVersion = 3;
 
   Database? _db;
   Future<Database>? _dbFuture;
@@ -90,6 +90,8 @@ class DatabaseService {
           cover_url TEXT,
           reply_to_id TEXT,
           direction TEXT NOT NULL DEFAULT 'sent',
+          greeting_audio_path TEXT,
+          greeting_text TEXT,
           created_at TEXT NOT NULL,
           read_at TEXT
         )
@@ -141,6 +143,15 @@ class DatabaseService {
       // v1 → v2: 添加私密作品字段
       await db.execute(
         'ALTER TABLE works ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    if (oldVersion < 3) {
+      // v2 → v3: 明信片语音祝福
+      await db.execute(
+        'ALTER TABLE voice_cards ADD COLUMN greeting_audio_path TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE voice_cards ADD COLUMN greeting_text TEXT',
       );
     }
   }
