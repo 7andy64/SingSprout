@@ -6,6 +6,7 @@ import '../../core/constants/app_routes.dart';
 import '../../core/constants/app_config.dart';
 import '../../shared/widgets/update_dialog.dart';
 import '../../shared/models/user_profile.dart';
+import '../../shared/providers/economy_provider.dart';
 import 'widgets/profile_widgets.dart';
 import '../../shared/services/update_service.dart';
 import '../../shared/services/file_storage_service.dart';
@@ -14,7 +15,6 @@ import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/role_gate.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/providers/theme_provider.dart';
-import '../../shared/providers/economy_provider.dart';
 
 /// 个人中心 — MVP P0 功能
 class ProfilePage extends StatefulWidget {
@@ -344,6 +344,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 20),
                 ...GuardianAnimal.values.map((animal) {
                   final isSelected = profile?.guardianAnimal == animal;
+                  final economy = context.read<EconomyProvider>();
+                  final owned = economy.isAnimalOwned(animal.name);
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
@@ -359,15 +361,17 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: ListTile(
                       leading: Text(
-                        animal.emoji,
+                        owned ? animal.emoji : '🔒',
                         style: const TextStyle(fontSize: 30),
                       ),
                       title: Text(
-                        animal.displayName,
+                        owned ? animal.displayName : '${animal.displayName}（需购买）',
                         style: TextStyle(
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: AppTheme.textPrimary,
+                          color: owned
+                              ? AppTheme.textPrimary
+                              : AppTheme.textSecondary,
                         ),
                       ),
                       trailing: isSelected
@@ -377,7 +381,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      onTap: () => Navigator.pop(ctx, animal),
+                      onTap: owned
+                          ? () => Navigator.pop(ctx, animal)
+                          : () {
+                              Navigator.pop(ctx);
+                              context.push('/shop');
+                            },
                     ),
                   );
                 }),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/animal_avatar.dart';
 import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
+import '../../../shared/providers/economy_provider.dart';
 
 /// 用户信息头部 — 头像、昵称、角色、陪伴动物
 class ProfileHeader extends StatelessWidget {
@@ -23,6 +25,7 @@ class ProfileHeader extends StatelessWidget {
             animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
             size: 80,
             speechBubble: hasProfile ? '嘿！今天想做什么？' : null,
+            frameEmoji: context.watch<EconomyProvider>().equippedAvatarFrameEmoji,
           ),
           const SizedBox(height: 12),
           if (loading)

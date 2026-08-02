@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
+import '../../../shared/providers/economy_provider.dart';
 import '../../../shared/widgets/animal_avatar.dart';
 import '../view_models/creative_flow_view_model.dart';
 
@@ -92,12 +93,13 @@ class IdleStageWidget extends StatelessWidget {
                     scale: 1.0 + breatheController.value * 0.03,
                     child: child,
                   ),
-                  child: Consumer<AppState>(
-                    builder: (_, app, __) => AnimalAvatar(
+                  child: Consumer2<AppState, EconomyProvider>(
+                    builder: (_, app, economy, __) => AnimalAvatar(
                         animal: app.userProfile?.guardianAnimal ??
                             GuardianAnimal.panda,
                         size: 80,
-                        speechBubble: null,),
+                        speechBubble: null,
+                        frameEmoji: economy.equippedAvatarFrameEmoji,),
                   ),
                 ),
               ),

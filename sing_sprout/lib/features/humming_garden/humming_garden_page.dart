@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_tree_data.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/providers/economy_provider.dart';
 import '../../shared/services/music_tree_service.dart';
 import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/animal_avatar.dart';
@@ -89,13 +90,14 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                 builder: (context, _) {
                   return Transform.scale(
                     scale: 1.0 + _animalBreatheController.value * 0.03,
-                    child: Consumer<AppState>(
-                      builder: (_, app, __) => AnimalAvatar(
+                    child: Consumer2<AppState, EconomyProvider>(
+                      builder: (_, app, economy, __) => AnimalAvatar(
                           animal: app.userProfile?.guardianAnimal ??
                               GuardianAnimal.panda,
                           size: 72,
                           speechBubble:
-                              '嘿！今天想哼点什么？\n试试用音乐种一棵树吧～'),
+                              '嘿！今天想哼点什么？\n试试用音乐种一棵树吧～',
+                          frameEmoji: economy.equippedAvatarFrameEmoji,),
                     ),
                   );
                 },
