@@ -67,50 +67,30 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
     final db = DatabaseService();
     try {
       final dbRef = await db.database;
-      // 查询所有录音样本，按分类和名称分组
+      // 按分类统计录音数量
       final rows = await dbRef.rawQuery(
-        'SELECT DISTINCT LOWER(name) as name, type FROM sound_samples',
+        'SELECT type, COUNT(*) as cnt FROM sound_samples GROUP BY type',
       );
 
       _collectedNamesByCat.clear();
 
+      // 统计每个分类的录音总数
+      final catCounts = <String, int>{};
       for (final r in rows) {
-        final name = (r['name'] as String).toLowerCase();
         final cat = _catFromDbType(r['type'] as String?);
-
-        _collectedNamesByCat.putIfAbsent(cat, () => []);
-
-        // 先尝试精确匹配目标名称（用户命名包含目标关键词）
-        final exactMatch = _targets.where(
-          (t) => t.cat == cat && name.contains(t.name),
-        );
-        if (exactMatch.isNotEmpty) {
-          for (final m in exactMatch) {
-            if (!_collectedNamesByCat[cat]!.contains(m.name)) {
-              _collectedNamesByCat[cat]!.add(m.name);
-            }
-          }
-        }
+        final cnt = (r['cnt'] as num).toInt();
+        catCounts[cat] = (catCounts[cat] ?? 0) + cnt;
       }
 
-      // 按录音数量自动分配未匹配的目标
+      // 按录音数量依次解锁该分类下的目标
       for (final cat in _SoundCat.values) {
         final targetsInCat = _targets.where((t) => t.cat == cat).toList();
-        final exactCount = (_collectedNamesByCat[cat]?.length ?? 0);
-        // 计算该分类下非精确匹配的录音数量
-        final totalInCat = rows
-            .where((r) => _catFromDbType(r['type'] as String?) == cat)
-            .length;
-        final autoCount = (totalInCat - exactCount).clamp(0, targetsInCat.length - exactCount);
+        final unlockCount = (catCounts[cat] ?? 0).clamp(0, targetsInCat.length);
 
-        _collectedNamesByCat.putIfAbsent(cat, () => []);
-        final existing = _collectedNamesByCat[cat]!;
-        for (final t in targetsInCat) {
-          if (existing.length >= exactCount + autoCount) break;
-          if (!existing.contains(t.name)) {
-            existing.add(t.name);
-          }
-        }
+        _collectedNamesByCat[cat] = targetsInCat
+            .take(unlockCount)
+            .map((t) => t.name)
+            .toList();
       }
 
       // 计算总收集数
