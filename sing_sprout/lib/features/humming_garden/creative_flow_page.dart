@@ -10,6 +10,7 @@ import '../../core/constants/enums.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/providers/economy_provider.dart';
 import '../../shared/services/audio_service.dart';
 import '../../shared/services/dash_scope_service.dart';
 import '../../shared/utils/audio_generator.dart'
@@ -324,6 +325,8 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         return EditingStageWidget(
           vm: _vm,
           onSaveLocally: () => _saveWork(thenShare: false),
+          ownedInstrumentIds:
+              context.read<EconomyProvider>().ownedItemIds,
           onSaveAndShare: () => _saveWork(thenShare: true),
         );
     }

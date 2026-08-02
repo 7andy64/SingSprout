@@ -211,25 +211,35 @@ class _ShopItemCard extends StatelessWidget {
     required this.treeState,
   });
 
-  void _onTap(BuildContext context) {
+  void _onTap(BuildContext context) async {
     final owned = economy.ownedItemIds.contains(item.id);
     final equipped = economy.equippedItemIds.contains(item.id);
 
     if (equipped) {
       // 点击已装备 → 卸下
-      economy.unequipItem(item.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已卸下「${item.name}」'), duration: const Duration(seconds: 1)),
-      );
+      await economy.unequipItem(item.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已卸下「${item.name}」'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
       return;
     }
 
     if (owned) {
       // 点击已拥有 → 装备
-      economy.equipItem(item.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已装备「${item.name}」${item.emoji}'), duration: const Duration(seconds: 1)),
-      );
+      await economy.equipItem(item.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已装备「${item.name}」${item.emoji}'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
       return;
     }
 
