@@ -35,6 +35,11 @@ class _SoundsPageState extends State<SoundsPage>
   void initState() {
     super.initState();
 
+    // 标记声音已查看，重置守护动物的 curious 状态
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppState>().markSoundsViewed();
+    });
+
     // 容器入场微动画 — 柔和呼吸感
     _pulseCtrl = AnimationController(
       vsync: this,
