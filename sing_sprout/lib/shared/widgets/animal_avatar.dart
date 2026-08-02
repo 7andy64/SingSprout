@@ -30,10 +30,11 @@ class _AnimalAvatarState extends State<AnimalAvatar>
   int? _greetingIndex; // 用于记录已消失的气泡，防止重建时闪现
 
   static const _greetings = [
-    '哇！今天又有新故事？',
-    '我想听你唱歌了！',
-    '你的声音库又变大了！',
-    '去田野里走走？',
+    '嘻嘻！',
+    '哎！',
+    '哟！',
+    '嗯？',
+    '嘿！',
   ];
 
   @override
@@ -41,16 +42,15 @@ class _AnimalAvatarState extends State<AnimalAvatar>
     super.initState();
     _bounceCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 300),
     );
     _bounceAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.2), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: 1.2, end: 0.9), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: 0.9, end: 1.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.7), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.7, end: 1.0), weight: 1),
     ]).animate(
       CurvedAnimation(
         parent: _bounceCtrl,
-        curve: Curves.easeInOutBack,
+        curve: Curves.easeInOut,
       ),
     );
 
@@ -75,8 +75,8 @@ class _AnimalAvatarState extends State<AnimalAvatar>
       _greetingIndex = idx;
       _showGreeting = true;
     });
-    // 3 秒后自动消失
-    Future.delayed(const Duration(seconds: 3), () {
+    // 1.5 秒后自动消失
+    Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted && _greetingIndex == idx) {
         setState(() => _showGreeting = false);
       }
