@@ -41,7 +41,7 @@ class RecordingControls extends StatelessWidget {
               // ── 操作提示文字 ──
               if (vm.isRecording)
                 const Text(
-                  '松开停止录音',
+                  '点击完成录音',
                   style: TextStyle(
                     fontSize: 13,
                     color: Color(0xFFEF5350),
@@ -52,7 +52,7 @@ class RecordingControls extends StatelessWidget {
                 Column(
                   children: [
                     Text(
-                      vm.hasPermission ? '长按按钮开始采集' : '点击按钮开启麦克风权限',
+                      vm.hasPermission ? '轻点开始采集' : '点击按钮开启麦克风权限',
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF666666),
@@ -85,24 +85,21 @@ class _RecordButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPressStart: (_) async {
-        if (!vm.isRecording) {
+      onTap: () async {
+        if (vm.isRecording) {
+          vm.stopRecording();
+        } else {
           final error = await vm.startRecording();
           if (error == 'permission_denied') {
             onPermissionDenied?.call();
           }
         }
       },
-      onLongPressEnd: (_) {
-        if (vm.isRecording) vm.stopRecording();
-      },
-      onLongPressCancel: () {
-        if (vm.isRecording) vm.stopRecording();
-      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: vm.isRecording ? 110 : 96,
         height: vm.isRecording ? 110 : 96,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: vm.isRecording
@@ -156,7 +153,7 @@ class _IdleHint extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          vm.hasPermission ? '长按按钮开始采集' : '点击按钮开启麦克风权限',
+          vm.hasPermission ? '轻点开始采集' : '点击按钮开启麦克风权限',
           style: const TextStyle(fontSize: 13, color: Color(0xFF999999)),
         ),
       ],
