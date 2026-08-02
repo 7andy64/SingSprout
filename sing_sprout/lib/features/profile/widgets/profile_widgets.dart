@@ -128,27 +128,6 @@ class ProfileHeader extends StatelessWidget {
             const SizedBox(height: 4),
           ],
           if (!loading && hasProfile) ...[
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${profile!.role.emoji} ${profile!.role.label}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.primaryGreen,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
             Text(
               '${profile!.guardianAnimal.displayName} 陪伴你',
               style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
