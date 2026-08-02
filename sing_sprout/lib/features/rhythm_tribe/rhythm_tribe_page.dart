@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/providers/economy_provider.dart';
@@ -42,7 +43,7 @@ class RhythmTribePage extends StatelessWidget {
                 subtitle: '跟着节拍点击，比比谁更准',
                 reward: '每局最高 +10 🌰',
                 color: const Color(0xFFFF6B6B),
-                onTap: () => Navigator.pushNamed(context, '/rhythm-game'),
+                onTap: () => context.push('/rhythm-game'),
               ),
               const SizedBox(height: 10),
 
@@ -52,7 +53,7 @@ class RhythmTribePage extends StatelessWidget {
                 subtitle: '听一段旋律，哼唱模仿',
                 reward: '音高越准，奖励越多',
                 color: const Color(0xFF4D96FF),
-                onTap: () => Navigator.pushNamed(context, '/melody-challenge'),
+                onTap: () => context.push('/melody-challenge'),
               ),
               const SizedBox(height: 10),
 
@@ -62,10 +63,7 @@ class RhythmTribePage extends StatelessWidget {
                 subtitle: '在田野里发现各种声音',
                 reward: '每发现新声音 +3 🌰',
                 color: const Color(0xFF6BCB77),
-                onTap: () {
-                  // 跳转到田野声景实验室
-                  Navigator.pushNamed(context, '/field-sound-lab');
-                },
+                onTap: () => context.push('/sound-collection'),
               ),
               const SizedBox(height: 32),
 
@@ -147,7 +145,7 @@ class _CoinCard extends StatelessWidget {
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pushNamed(context, '/shop'),
+            onPressed: () => context.push('/shop'),
             style: TextButton.styleFrom(foregroundColor: AppTheme.primarySoil),
             child: const Text('去集市 🛍️'),
           ),
@@ -201,7 +199,7 @@ class _DailyChallengeCard extends StatelessWidget {
             const Text('+6 🌰', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primaryGreen))
           else
             FilledButton(
-              onPressed: () => Navigator.pushNamed(context, '/melody-challenge'),
+              onPressed: () => context.push('/melody-challenge'),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(72, 36),
                 textStyle: const TextStyle(fontSize: 13),

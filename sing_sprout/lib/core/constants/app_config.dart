@@ -9,7 +9,7 @@ class AppConfig {
   // 功能开关（MVP 阶段仅开启 P0 功能）
   static const bool enableMoodRadio = true;      // P1: 完整心情收音机
   static const bool enableFieldSoundLab = true;   // P1: 田野声音实验室
-  static const bool enableRhythmTribe = false;    // P2: 节奏部落
+  static const bool enableRhythmTribe = true;     // P2: 节奏部落
 
   // 隐私与安全
   static const bool localEncryptionEnabled = true;
