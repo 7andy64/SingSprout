@@ -15,6 +15,7 @@ import '../../features/field_sound_lab/field_sound_lab_page.dart';
 import '../../features/rhythm_tribe/rhythm_tribe_page.dart';
 import '../../features/rhythm_tribe/rhythm_game_page.dart';
 import '../../features/rhythm_tribe/melody_challenge_page.dart';
+import '../../features/rhythm_tribe/sound_collection_page.dart';
 import '../../features/shop/shop_page.dart';
 import '../../features/shop/inventory_page.dart';
 import '../../features/profile/profile_page.dart';
@@ -219,7 +220,7 @@ class AppRouter {
         builder: (context, state) => const PrivacySettingsPage(),
       ),
       GoRoute(
-        path: AppRoutes.fieldSoundLab,
+        path: AppRoutes.fieldSoundLabRecord,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const FieldSoundLabPage(),
       ),
@@ -237,6 +238,11 @@ class AppRouter {
         path: AppRoutes.melodyChallenge,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const MelodyChallengePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.soundCollection,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SoundCollectionPage(),
       ),
       GoRoute(
         path: AppRoutes.shop,

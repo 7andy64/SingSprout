@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/enums.dart';
@@ -232,10 +233,22 @@ class _SoundsPageState extends State<SoundsPage>
   }
 
   void _onShare(SoundSample sound) {
+    final file = File(sound.audioPath);
+    if (!file.existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('音频文件不存在，无法分享'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     SharePlus.instance.share(
       ShareParams(
         text: '来听听我在「声芽」里采集的声音：${sound.name} 🎵',
         subject: sound.name,
+        files: [XFile(file.path)],
       ),
     );
   }
