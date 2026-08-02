@@ -23,8 +23,7 @@ class SoundCollectionPage extends StatefulWidget {
 
 class _SoundCollectionPageState extends State<SoundCollectionPage> {
   bool _loading = true;
-  final Set<String> _collectedNames = {};
-  final Map<String, int> _collectedCounts = {}; // 类别收集计数
+  final Map<String, List<String>> _collectedNamesByCat = {}; // cat → [name, ...]
   int _totalCollected = 0;
 
   // ── 目标声音清单 ──
@@ -68,23 +67,56 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
     final db = DatabaseService();
     try {
       final dbRef = await db.database;
+      // 查询所有录音样本，按分类和名称分组
       final rows = await dbRef.rawQuery(
         'SELECT DISTINCT LOWER(name) as name, type FROM sound_samples',
       );
 
-      _collectedNames.clear();
-      _collectedCounts.clear();
+      _collectedNamesByCat.clear();
+
       for (final r in rows) {
         final name = (r['name'] as String).toLowerCase();
-        _collectedNames.add(name);
         final cat = _catFromDbType(r['type'] as String?);
-        _collectedCounts[cat] = (_collectedCounts[cat] ?? 0) + 1;
+
+        _collectedNamesByCat.putIfAbsent(cat, () => []);
+
+        // 先尝试精确匹配目标名称（用户命名包含目标关键词）
+        final exactMatch = _targets.where(
+          (t) => t.cat == cat && name.contains(t.name),
+        );
+        if (exactMatch.isNotEmpty) {
+          for (final m in exactMatch) {
+            if (!_collectedNamesByCat[cat]!.contains(m.name)) {
+              _collectedNamesByCat[cat]!.add(m.name);
+            }
+          }
+        }
       }
 
-      // 精确匹配目标
+      // 按录音数量自动分配未匹配的目标
+      for (final cat in _SoundCat.values) {
+        final targetsInCat = _targets.where((t) => t.cat == cat).toList();
+        final exactCount = (_collectedNamesByCat[cat]?.length ?? 0);
+        // 计算该分类下非精确匹配的录音数量
+        final totalInCat = rows
+            .where((r) => _catFromDbType(r['type'] as String?) == cat)
+            .length;
+        final autoCount = (totalInCat - exactCount).clamp(0, targetsInCat.length - exactCount);
+
+        _collectedNamesByCat.putIfAbsent(cat, () => []);
+        final existing = _collectedNamesByCat[cat]!;
+        for (final t in targetsInCat) {
+          if (existing.length >= exactCount + autoCount) break;
+          if (!existing.contains(t.name)) {
+            existing.add(t.name);
+          }
+        }
+      }
+
+      // 计算总收集数
       int count = 0;
-      for (final t in _targets) {
-        if (_collectedNames.contains(t.name)) count++;
+      for (final names in _collectedNamesByCat.values) {
+        count += names.length;
       }
       _totalCollected = count;
     } catch (_) {
@@ -107,7 +139,11 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
       _targets.where((t) => t.cat == cat).length;
 
   int _categoryCollected(String cat) =>
-      _targets.where((t) => t.cat == cat && _collectedNames.contains(t.name)).length;
+      (_collectedNamesByCat[cat]?.length ?? 0)
+          .clamp(0, _categoryProgress(cat));
+
+  bool _isCollected(_SoundTarget target) =>
+      _collectedNamesByCat[target.cat]?.contains(target.name) ?? false;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +283,7 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
           itemCount: items.length,
           itemBuilder: (context, i) => _SoundCard(
             target: items[i],
-            collected: _collectedNames.contains(items[i].name),
+            collected: _isCollected(items[i]),
           ),
         ),
       ],
