@@ -33,7 +33,6 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
   // ── 阶段 ──
   bool _isRecording = false;
   bool _isFinished = false;
-  int _currentIndex = 0;
   late AnimationController _progressController;
 
   // ── 判定 ──
@@ -48,7 +47,6 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
   double? _livePitch; // 当前检测到的音高 (MIDI)
   Timer? _pitchPollTimer;
 
-  late final String? _recordingPath;
 
   @override
   void initState() {
@@ -104,7 +102,6 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
     setState(() {
       _isRecording = true;
       _isFinished = false;
-      _currentIndex = 0;
       _results.clear();
       _score = 0;
       _matchedNotes = 0;
@@ -149,9 +146,6 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
   void _advanceNote() {
     // 录音中途不做音高判定，只推进进度
     // 实际判定在录音结束后进行
-    setState(() {
-      _currentIndex++;
-    });
     HapticFeedback.selectionClick();
   }
 
@@ -202,8 +196,6 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
 
       // 按时间段分割，每个音符段取平均音高
       final noteDurationSec = _noteDuration;
-      final segmentFrames =
-          (noteDurationSec * 44100 / 512).round().clamp(1, 100);
 
       for (int ni = 0; ni < _targetMidi.length; ni++) {
         final segStart = ni * noteDurationSec;
@@ -291,7 +283,6 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
     setState(() {
       _isFinished = false;
       _isRecording = false;
-      _currentIndex = 0;
       _results.clear();
       _score = 0;
       _matchedNotes = 0;
@@ -300,18 +291,6 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
       _maxCombo = 0;
       _livePitch = null;
     });
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  //  MIDI → 频率 转换
-  // ═══════════════════════════════════════════════════════════
-
-  static double _midiToFreq(double midi) =>
-      440.0 * pow(2.0, (midi - 69) / 12.0);
-
-  static double _midiToY(double midi, double minMidi, double maxMidi, double height) {
-    final norm = 1.0 - (midi - minMidi) / (maxMidi - minMidi);
-    return (norm * height).clamp(20.0, height - 20);
   }
 
   // ═══════════════════════════════════════════════════════════

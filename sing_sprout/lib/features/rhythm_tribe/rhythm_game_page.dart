@@ -1,10 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/economy_models.dart';
@@ -68,7 +65,7 @@ class _Note {
 class _HitParticle {
   Offset position;
   final Color color;
-  double age;
+  double age = 0;
   final double speed;
   final double angle;
   final double size;
@@ -77,7 +74,6 @@ class _HitParticle {
   _HitParticle({
     required this.position,
     required this.color,
-    this.age = 0,
     required this.speed,
     required this.angle,
     required this.size,
@@ -90,88 +86,23 @@ class _HitText {
   final String text;
   final Color color;
   Offset position;
-  double age; // 0..1
-  _HitText({required this.text, required this.color, required this.position, this.age = 0});
+  double age = 0; // 0..1
+  _HitText({required this.text, required this.color, required this.position});
 }
 
 /// 判定线命中闪光
 class _HitFlash {
   final Offset position;
   final Color color;
-  double age; // 0..1
-  _HitFlash({required this.position, required this.color, this.age = 0});
+  double age = 0; // 0..1
+  _HitFlash({required this.position, required this.color});
 }
 
 /// 轨道震动（Miss 时水平抖动）
 class _TrackShake {
   final int track;
-  double intensity; // 1..0 衰减
-  _TrackShake({required this.track, this.intensity = 1.0});
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 节拍器（生成 click WAV 文件，供 audioplayers 使用）
-// ═══════════════════════════════════════════════════════════════
-
-class _BeatPlayer {
-  static String? _clickPath;
-  static bool _generating = false;
-
-  static Future<String?> _ensureClickFile() async {
-    if (_clickPath != null) return _clickPath;
-    if (_generating) return null;
-    _generating = true;
-    try {
-      const sampleRate = 44100;
-      const freq = 1000;
-      const durationSec = 0.025;
-      final numSamples = (sampleRate * durationSec).round();
-      final dataSize = numSamples * 2;
-      final fileSize = 44 + dataSize;
-      final bytes = ByteData(fileSize);
-
-      _w(bytes, 0, 'RIFF');
-      bytes.setUint32(4, fileSize - 8, Endian.little);
-      _w(bytes, 8, 'WAVE');
-      _w(bytes, 12, 'fmt ');
-      bytes.setUint32(16, 16, Endian.little);
-      bytes.setUint16(20, 1, Endian.little);
-      bytes.setUint16(22, 1, Endian.little);
-      bytes.setUint32(24, sampleRate, Endian.little);
-      bytes.setUint32(28, sampleRate * 2, Endian.little);
-      bytes.setUint16(32, 2, Endian.little);
-      bytes.setUint16(34, 16, Endian.little);
-      _w(bytes, 36, 'data');
-      bytes.setUint32(40, dataSize, Endian.little);
-
-      for (int i = 0; i < numSamples; i++) {
-        final t = i / sampleRate;
-        final env = exp(-t * 120);
-        final sample = (sin(2 * pi * freq * t) * env * 16000).round();
-        bytes.setInt16(44 + i * 2, sample.clamp(-32768, 32767), Endian.little);
-      }
-
-      final dir = await getTemporaryDirectory();
-      final f = File('${dir.path}/singsprout_beat_click.wav');
-      await f.writeAsBytes(bytes.buffer.asUint8List());
-      _clickPath = f.path;
-      return _clickPath;
-    } catch (_) {
-      return null;
-    } finally {
-      _generating = false;
-    }
-  }
-
-  static void _w(ByteData b, int o, String s) {
-    for (int i = 0; i < s.length; i++) {
-      b.setUint8(o + i, s.codeUnitAt(i));
-    }
-  }
-
-  static Future<void> play() async {
-    await _ensureClickFile();
-  }
+  double intensity = 1.0; // 1..0 衰减
+  _TrackShake({required this.track});
 }
 
 // ═══════════════════════════════════════════════════════════════
