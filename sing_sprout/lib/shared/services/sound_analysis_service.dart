@@ -2,31 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'dash_scope_service.dart';
+import 'sound_classification_service.dart';
 import '../../core/constants/enums.dart';
 
-/// AI 声音分析结果
-class SoundAnalysisResult {
-  final SoundType type;
-  final double estimatedBpm;
-  final String description; // 声音特征描述
-  final String recommendedUse; // 推荐用途
-
-  const SoundAnalysisResult({
-    required this.type,
-    required this.estimatedBpm,
-    required this.description,
-    required this.recommendedUse,
-  });
-}
-
-/// 田野声音 AI 分析服务
+/// 田野声音 AI 分析服务（文本路径）
 ///
-/// 使用阿里云 DashScope (qwen-plus) 对录制的声音样本进行智能分析：
-/// - 声音分类（人声/动物/自然/机械）
-/// - BPM 估计
-/// - 创意用途推荐
-///
-/// 分析基于录音上下文信息，适合儿童音乐启蒙场景。
+/// 使用阿里云 DashScope (qwen-plus) 对录制的声音样本进行智能分析。
+/// 注意：此服务发送的是文件元数据而非音频数据。
+/// 推荐使用 [SoundClassificationService] 进行真实的音频分类。
 class SoundAnalysisService {
   final DashScopeService _dashScope = DashScopeService();
 
@@ -116,7 +99,6 @@ class SoundAnalysisService {
   SoundAnalysisResult? _parseResult(String raw) {
     try {
       var jsonStr = raw.trim();
-      // 去掉可能的 markdown 代码块包裹
       if (jsonStr.startsWith('```')) {
         jsonStr = jsonStr.replaceFirst(RegExp(r'```\w*\n?'), '');
         jsonStr = jsonStr.replaceFirst(RegExp(r'\n?```$'), '');
@@ -125,7 +107,7 @@ class SoundAnalysisService {
       final obj = jsonDecode(jsonStr) as Map<String, dynamic>;
 
       final typeStr = (obj['type'] as String?) ?? 'unknown';
-      final type = SoundType.values.firstWhere(
+      final soundType = SoundType.values.firstWhere(
         (e) => e.name == typeStr,
         orElse: () => SoundType.unknown,
       );
@@ -135,10 +117,11 @@ class SoundAnalysisService {
       final recommendedUse = (obj['recommended_use'] as String?) ?? '';
 
       return SoundAnalysisResult(
-        type: type,
-        estimatedBpm: bpm.clamp(40, 180),
-        description: description,
+        soundType: soundType,
+        bpm: bpm.clamp(40, 180),
         recommendedUse: recommendedUse,
+        rawLabels: description.isNotEmpty ? [description] : [],
+        confidence: 1.0,
       );
     } catch (e) {
       debugPrint('[SoundAnalysis] JSON 解析失败: $e\n原始响应: $raw');
