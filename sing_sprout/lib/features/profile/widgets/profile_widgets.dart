@@ -402,8 +402,8 @@ class ProfileHeader extends StatelessWidget {
     final srcW = image.width;
     final srcH = image.height;
     final scale = maxSize / (srcW > srcH ? srcW : srcH);
-    final targetW = (srcW * scale).round();
-    final targetH = (srcH * scale).round();
+    final targetW = (srcW * scale).round().clamp(1, maxSize);
+    final targetH = (srcH * scale).round().clamp(1, maxSize);
 
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -416,10 +416,16 @@ class ProfileHeader extends StatelessWidget {
     final picture = recorder.endRecording();
     final resizedImage = await picture.toImage(targetW, targetH);
     final pngBytes = await resizedImage.toByteData(format: ui.ImageByteFormat.png);
+
+    // 释放 Native 资源
     image.dispose();
     resizedImage.dispose();
+    picture.dispose();
+    codec.dispose();
 
-    return pngBytes!.buffer.asUint8List();
+    // 兜底：如果转换失败返回原始 bytes
+    if (pngBytes == null) return bytes;
+    return pngBytes.buffer.asUint8List();
   }
 
   String _formatDate(DateTime date) {
