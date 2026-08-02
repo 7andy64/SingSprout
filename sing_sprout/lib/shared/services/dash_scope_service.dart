@@ -720,37 +720,6 @@ class DashScopeService {
 // Data models
 // ═══════════════════════════════════════════
 
-/// AI bass accompaniment style.
-enum AiBassStyle {
-  held,
-  alternating,
-  rootOnBeats,
-}
-
-/// AI chord accompaniment style.
-enum AiChordStyle {
-  pad,
-  staccato,
-  arpeggiated,
-}
-
-/// AI-generated arrangement recipe — creative decisions made by AI.
-class AiArrangementRecipe {
-  final AiChordStyle chordStyle;
-  final AiBassStyle bassStyle;
-  final List<int> chordProgression;
-  final double tempoBpm;
-  final bool addPercussion;
-
-  const AiArrangementRecipe({
-    required this.chordStyle,
-    required this.bassStyle,
-    required this.chordProgression,
-    required this.tempoBpm,
-    this.addPercussion = false,
-  });
-}
-
 /// Full per-bar accompaniment score written by AI.
 class AiFullScore {
   final double tempoBpm;

@@ -7,7 +7,6 @@ enum AudioStatus { idle, recording, processing, playing, paused }
 
 class AudioProvider extends ChangeNotifier {
   final _service = AudioService();
-  StreamSubscription<dynamic>? _recordSub;
   StreamSubscription<dynamic>? _ampSub;
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<Duration>? _positionSub;
@@ -158,7 +157,6 @@ class AudioProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _recordSub?.cancel();
     _ampSub?.cancel();
     _playerStateSub?.cancel();
     _positionSub?.cancel();

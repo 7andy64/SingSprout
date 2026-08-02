@@ -123,7 +123,6 @@ class _ComposePageState extends State<ComposePage> {
       final profile = appState.userProfile;
       final senderName = profile?.nickname ?? '声芽用户';
       final isOnline = context.read<ConnectivityProvider>().isConnected;
-      final deviceId = profile?.localId ?? 'default';
 
       // 1. 生成明信片图片
       final imagePath = await PostcardGenerator.generate(
@@ -154,11 +153,8 @@ class _ComposePageState extends State<ComposePage> {
         SocialShareService.showShareOptions(
           context,
           imagePath: imagePath,
-          cardId: card.id,
           title: _selectedWork!.title,
           message: _messageController.text.trim(),
-          deviceId: deviceId,
-          audioOssKey: _selectedWork!.audioPath,
         );
       } else {
         // 3. 离线：缓存到发件箱

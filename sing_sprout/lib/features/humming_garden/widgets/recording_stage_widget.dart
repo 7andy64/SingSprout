@@ -115,7 +115,6 @@ class IdleStageWidget extends StatelessWidget {
             Transform.scale(
               scale: 1.0 + t * 0.3,
               child: GestureDetector(
-                onTap: () => onGoToRecording(),
                 onLongPressStart: (_) => onGoToRecording(),
                 onLongPressMoveUpdate: (details) {
                   final isInside = details.localPosition.dy > -60;

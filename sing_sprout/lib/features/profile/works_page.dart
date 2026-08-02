@@ -44,7 +44,7 @@ class _WorksPageState extends State<WorksPage> {
         break;
       case WorkFilter.byModule:
         if (_filterModule != null) {
-          result = result.where((w) => w.sourceModule == _filterModule).toList();
+          result = result.where((w) => w.styleSeed.name == _filterModule).toList();
         }
         break;
     }
@@ -225,10 +225,10 @@ class _WorksPageState extends State<WorksPage> {
             ),
             ...StyleSeed.values.map((seed) => ListTile(
               leading: Icon(
-                _filter == WorkFilter.byModule && _filterModule == 'humming_garden'
+                _filter == WorkFilter.byModule && _filterModule == seed.name
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
-                color: _filter == WorkFilter.byModule && _filterModule == 'humming_garden'
+                color: _filter == WorkFilter.byModule && _filterModule == seed.name
                     ? AppTheme.primaryGreen
                     : AppTheme.textSecondary,
               ),
@@ -236,7 +236,7 @@ class _WorksPageState extends State<WorksPage> {
               onTap: () {
                 setState(() {
                   _filter = WorkFilter.byModule;
-                  _filterModule = 'humming_garden';
+                  _filterModule = seed.name;
                 });
                 Navigator.pop(ctx);
               },

@@ -459,8 +459,7 @@ class AudioService {
 
   Future<List<String>> listRecordings() async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final recordingsDir = Directory('${dir.path}/singsprout/recordings');
+      final recordingsDir = Directory(_fileStorage.recordingsDir);
       if (!await recordingsDir.exists()) return [];
       return recordingsDir
           .listSync()

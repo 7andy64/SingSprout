@@ -207,7 +207,6 @@ class _CardItem extends StatelessWidget {
 
   void _reshareCard(BuildContext context) {
     final appState = context.read<AppState>();
-    final profile = appState.userProfile;
     final work = appState.works.where((w) => w.id == card.workId).firstOrNull;
 
     if (card.coverUrl == null || card.coverUrl!.isEmpty) {
@@ -220,11 +219,8 @@ class _CardItem extends StatelessWidget {
     SocialShareService.showShareOptions(
       context,
       imagePath: card.coverUrl!,
-      cardId: card.id,
       title: work?.title ?? '音乐明信片',
       message: card.textContent ?? '',
-      deviceId: profile?.localId ?? 'default',
-      audioOssKey: card.audioPath,
     );
   }
 

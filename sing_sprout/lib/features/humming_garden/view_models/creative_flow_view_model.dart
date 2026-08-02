@@ -48,7 +48,6 @@ class CreativeFlowViewModel extends ChangeNotifier {
   bool isReRendering = false;
 
   // ── Speech ──
-  bool speechMode = false;
   String? speechText;
 
   // ── Internal ──
@@ -165,9 +164,7 @@ class CreativeFlowViewModel extends ChangeNotifier {
           speechText: speechText,
           onProgress: (p) {
             pipelineProgress = p;
-            if (p.fraction >= 1.0) {
-              completedStageIndex = 4;
-            } else if (p.fraction >= 0.90) {
+            if (p.fraction >= 0.90) {
               completedStageIndex = 4;
             } else if (p.fraction >= 0.70) {
               completedStageIndex = 3;

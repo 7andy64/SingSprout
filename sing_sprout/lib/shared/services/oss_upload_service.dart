@@ -139,7 +139,20 @@ class OSSUploadService {
   }
 
   String _nonce() => (Random().nextInt(99999) + 10000).toString();
-  String _rfc1123Date() => DateTime.now().toUtc().toIso8601String();
+
+  String _rfc1123Date() {
+    final now = DateTime.now().toUtc();
+    const wd = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const mo = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final d = now.day.toString().padLeft(2, '0');
+    final h = now.hour.toString().padLeft(2, '0');
+    final m = now.minute.toString().padLeft(2, '0');
+    final s = now.second.toString().padLeft(2, '0');
+    return '${wd[now.weekday - 1]}, $d ${mo[now.month - 1]} ${now.year} $h:$m:$s GMT';
+  }
 }
 
 String _hmacSha1Base64(String key, String data) {

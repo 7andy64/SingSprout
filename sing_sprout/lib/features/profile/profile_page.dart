@@ -679,7 +679,6 @@ class _ProfilePageState extends State<ProfilePage> {
     final identityService = IdentityService();
     final newCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
-    bool? success;
 
     final result = await showDialog<bool>(
       context: context,
@@ -723,7 +722,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   onSubmitted: (_) => _doSetInitial(
                     ctx, setDlgState, identityService,
-                    newCtrl, confirmCtrl, success,
+                    newCtrl, confirmCtrl,
                   ),
                 ),
               ],
@@ -739,7 +738,7 @@ class _ProfilePageState extends State<ProfilePage> {
               FilledButton(
                 onPressed: () => _doSetInitial(
                   ctx, setDlgState, identityService,
-                  newCtrl, confirmCtrl, success,
+                  newCtrl, confirmCtrl,
                 ),
                 child: const Text('确认设置'),
               ),
@@ -760,7 +759,6 @@ class _ProfilePageState extends State<ProfilePage> {
     IdentityService identityService,
     TextEditingController newCtrl,
     TextEditingController confirmCtrl,
-    bool? success,
   ) async {
     final newPw = newCtrl.text;
     final confirmPw = confirmCtrl.text;

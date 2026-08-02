@@ -46,6 +46,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   // UI-only state (not business logic)
   bool _isLongPressing = false;
   bool _isFingerInside = true;
+  Timer? _silenceTimer;
 
   @override
   void initState() {
@@ -81,6 +82,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     _pressScaleController.dispose();
     _ringRotateController.dispose();
     _breatheController.dispose();
+    _silenceTimer?.cancel();
     _vm.dispose();
     super.dispose();
   }
@@ -154,6 +156,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     if (silentSec >= 4 &&
         _vm.stage == CreativeFlowStage.recording &&
         _isLongPressing) {
+      _silenceTimer?.cancel();
       _pressScaleController.reverse();
       setState(() {
         _isLongPressing = false;
@@ -211,11 +214,6 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
 
   @override
   Widget build(BuildContext context) {
-    // Check for silence auto-stop each build during recording
-    if (_vm.stage == CreativeFlowStage.recording && _isLongPressing) {
-      _onSilenceAutoStop();
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_stageLabel()),
@@ -278,6 +276,9 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
             _ringRotateController.repeat();
             _breatheController.repeat(reverse: true);
             setState(() => _vm.stage = CreativeFlowStage.recording);
+            _silenceTimer?.cancel();
+            _silenceTimer = Timer.periodic(
+                const Duration(seconds: 1), (_) => _onSilenceAutoStop());
           },
           onFingerInsideChanged: (v) =>
               setState(() => _isFingerInside = v),
@@ -293,6 +294,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
               if (_isFingerInside) {
                 _stopRecordingFlow();
               } else {
+                _silenceTimer?.cancel();
                 _vm.cleanupRecording().then((_) {
                   if (mounted) {
                     setState(() => _vm.stage = CreativeFlowStage.idle);
@@ -330,6 +332,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   }
 
   Future<void> _stopRecordingFlow() async {
+    _silenceTimer?.cancel();
     _ringRotateController.stop();
     _breatheController.stop();
     await _vm.stopRecording();

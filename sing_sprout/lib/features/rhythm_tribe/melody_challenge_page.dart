@@ -61,6 +61,7 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
   void dispose() {
     _progressController.dispose();
     _pitchPollTimer?.cancel();
+    _audio.dispose();
     super.dispose();
   }
 
@@ -129,18 +130,8 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
     }
   }
 
-  Future<void> _startPitchPolling() async {
+  void _startPitchPolling() {
     _pitchPollTimer?.cancel();
-    _pitchPollTimer = Timer.periodic(const Duration(milliseconds: 150), (_) async {
-      if (!_isRecording || !mounted) return;
-      try {
-        // 实时检测：取最近约 50ms 的录音数据做 YIN
-        // 由于 AudioService 不是流式的，这里用一个简化方案：
-        // 不中断录音，临时停止并重启来获取数据太复杂。
-        // 实时音高显示会在录音结束后一次性分析。
-        // 这里只做 UI 动画的驱动。
-      } catch (_) {}
-    });
   }
 
   void _advanceNote() {

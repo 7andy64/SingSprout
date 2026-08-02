@@ -224,24 +224,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
       appBar: AppBar(
         title: _isEditing ? const Text('编辑作品') : const Text('作品详情'),
         centerTitle: true,
-        actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Text('✏️', style: TextStyle(fontSize: 20)),
-              tooltip: '编辑',
-              onPressed: _toggleEdit,
-            ),
-          if (_isEditing)
-            TextButton(
-              onPressed: _toggleEdit,
-              child: const Text('完成'),
-            ),
-          IconButton(
-            icon: const Text('🗑️', style: TextStyle(fontSize: 20)),
-            tooltip: '删除',
-            onPressed: _confirmDelete,
-          ),
-        ],
+        actions: _buildAppBarActions(),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

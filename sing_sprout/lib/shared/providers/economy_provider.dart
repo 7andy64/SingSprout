@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/economy_models.dart';
@@ -59,12 +60,15 @@ class EconomyProvider extends ChangeNotifier {
   Future<void> init() async {
     if (_loaded) return;
 
-    await _loadWallet();
-    await _loadTransactions();
-    await _loadShopItems();
-    await _loadInventory();
-
-    _loaded = true;
+    try {
+      await _loadWallet();
+      await _loadTransactions();
+      await _loadShopItems();
+      await _loadInventory();
+      _loaded = true;
+    } catch (e) {
+      debugPrint('[EconomyProvider] init failed: $e');
+    }
     notifyListeners();
   }
 
@@ -161,8 +165,8 @@ class EconomyProvider extends ChangeNotifier {
     _wallet = _wallet.copyWith(balance: _wallet.balance - amount);
     _transactions.insert(0, tx);
 
-    _repo.updateBalance(-amount);
-    _repo.addTransaction(tx);
+    unawaited(_repo.updateBalance(-amount));
+    unawaited(_repo.addTransaction(tx));
 
     notifyListeners();
     return true;

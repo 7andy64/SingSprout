@@ -21,7 +21,6 @@ class SoundCollectionPage extends StatefulWidget {
 class _SoundCollectionPageState extends State<SoundCollectionPage> {
   bool _loading = true;
   final Set<String> _collectedNames = {};
-  final Map<String, int> _collectedCounts = {}; // 类别收集计数
   int _totalCollected = 0;
 
   // ── 目标声音清单 ──
@@ -70,12 +69,9 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
       );
 
       _collectedNames.clear();
-      _collectedCounts.clear();
       for (final r in rows) {
         final name = (r['name'] as String).toLowerCase();
         _collectedNames.add(name);
-        final cat = _catFromDbType(r['type'] as String?);
-        _collectedCounts[cat] = (_collectedCounts[cat] ?? 0) + 1;
       }
 
       // 精确匹配目标
@@ -88,16 +84,6 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
       // 数据库为空或不存在的处理
     }
     if (mounted) setState(() => _loading = false);
-  }
-
-  String _catFromDbType(String? type) {
-    if (type == null) return 'other';
-    final t = type.toLowerCase();
-    if (t.contains('animal')) return _SoundCat.animal;
-    if (t.contains('nature') || t.contains('natural')) return _SoundCat.nature;
-    if (t.contains('voice') || t.contains('human')) return _SoundCat.voice;
-    if (t.contains('mechanical') || t.contains('machine')) return _SoundCat.mechanical;
-    return 'other';
   }
 
   int _categoryProgress(String cat) =>

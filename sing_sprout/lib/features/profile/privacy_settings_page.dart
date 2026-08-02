@@ -128,6 +128,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
   Future<void> _showChangePasswordDialog() async {
     final oldPwCtrl = TextEditingController();
     final oldOk = await _verifyCurrentPassword(oldPwCtrl);
+    final oldPw = oldPwCtrl.text.trim();
     oldPwCtrl.dispose();
     if (oldOk != true || !mounted) return;
 
@@ -165,7 +166,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
     if (pw1.length < 4) { _showError('密码长度不能少于4位'); return; }
     if (pw1 != pw2) { _showError('两次输入的密码不一致'); return; }
 
-    final success = await PrivateSpaceService().changePassword(oldPwCtrl.text.trim(), pw1);
+    final success = await PrivateSpaceService().changePassword(oldPw, pw1);
     if (success) {
       await _loadState();
       if (mounted) {

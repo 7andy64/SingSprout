@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/providers/economy_provider.dart';
-import '../../shared/providers/app_state.dart';
 
 /// 节奏部落 — 音乐游戏大厅
 ///
@@ -19,8 +18,8 @@ class RhythmTribePage extends StatelessWidget {
         title: const Text('节奏部落'),
         centerTitle: true,
       ),
-      body: Consumer2<EconomyProvider, AppState>(
-        builder: (context, economy, appState, _) {
+      body: Consumer<EconomyProvider>(
+        builder: (context, economy, _) {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [

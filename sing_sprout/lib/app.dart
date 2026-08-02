@@ -7,6 +7,7 @@ import 'shared/providers/notification_provider.dart';
 import 'shared/providers/theme_provider.dart';
 import 'shared/providers/economy_provider.dart';
 import 'shared/services/audio_service.dart';
+import 'shared/services/oss_upload_service.dart';
 import 'shared/services/outbox_queue_service.dart';
 import 'shared/services/pitch_detection_service.dart';
 import 'shared/services/sound_classification_service.dart';
@@ -75,7 +76,9 @@ class _SingSproutAppState extends State<SingSproutApp>
       debugPrint('[Lifecycle] 应用恢复，存在已保存的录音片段');
     }
 
-    OutboxQueueService().processQueue(deviceId: 'default').then((_) {
+    final deviceId = context.read<AppState>().userProfile?.localId ?? 'default';
+    OSSUploadService().setDeviceId(deviceId);
+    OutboxQueueService().processQueue(deviceId: deviceId).then((_) {
       if (mounted) {
         context.read<NotificationProvider>().refresh();
       }

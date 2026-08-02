@@ -394,50 +394,6 @@ class _WaveformPainter extends CustomPainter {
       oldDelegate.amplitude != amplitude || oldDelegate.frozen != frozen;
 }
 
-class _RecordButton extends StatelessWidget {
-  final bool isRecording;
-  final VoidCallback onStart;
-  final VoidCallback onStop;
-
-  const _RecordButton({
-    required this.isRecording,
-    required this.onStart,
-    required this.onStop,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isRecording ? onStop : onStart,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: isRecording ? 96 : 80,
-        height: isRecording ? 96 : 80,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isRecording ? AppTheme.error : AppTheme.primaryGreen,
-          boxShadow: [
-            BoxShadow(
-              color: (isRecording ? AppTheme.error : AppTheme.primaryGreen)
-                  .withValues(alpha: 0.35),
-              blurRadius: isRecording ? 24 : 12,
-              spreadRadius: isRecording ? 6 : 0,
-            ),
-          ],
-        ),
-        child: Text(
-          isRecording ? '⏹' : '🎤',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 40,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
 /// 来电中断恢复横幅
 class _RecoveryBanner extends StatelessWidget {
   final VoidCallback onRecover;
