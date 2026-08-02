@@ -212,16 +212,22 @@ class EconomyProvider extends ChangeNotifier {
   // ═══════════════════════════════════════════════════════════
 
   Future<void> equipItem(String itemId) async {
-    final shopItem = _shopItems.where((s) => s.id == itemId).firstOrNull;
-    if (shopItem == null) return;
+    // 从商店物品列表中找分类（已加载 + 内置回退）
+    ShopItem? shopItem = _shopItems.where((s) => s.id == itemId).firstOrNull;
+    shopItem ??= ShopItem.builtInItems.where((s) => s.id == itemId).firstOrNull;
+    if (shopItem == null) {
+      debugPrint('[Economy] equipItem: item $itemId not found');
+      return;
+    }
 
-    await _repo.equipItem(itemId, shopItem.category);
+    await _repo.unequipCategory(shopItem.category.code);
+    await _repo.setEquipped(itemId, true);
     await _loadInventory();
     notifyListeners();
   }
 
   Future<void> unequipItem(String itemId) async {
-    await _repo.unequipItem(itemId);
+    await _repo.setEquipped(itemId, false);
     await _loadInventory();
     notifyListeners();
   }

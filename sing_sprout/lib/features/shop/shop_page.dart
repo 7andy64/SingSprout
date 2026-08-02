@@ -297,11 +297,19 @@ class _ShopItemCard extends StatelessWidget {
       onTap: locked ? null : () => _onTap(context),
       child: Container(
         decoration: BoxDecoration(
-          color: equipped ? AppTheme.primaryGreen.withValues(alpha: 0.1) : Colors.white,
+          color: equipped
+              ? AppTheme.primaryGreen.withValues(alpha: 0.15)
+              : owned
+                  ? AppTheme.primaryWarm.withValues(alpha: 0.06)
+                  : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: equipped ? AppTheme.primaryGreen : AppTheme.divider,
-            width: equipped ? 2 : 1,
+            color: equipped
+                ? AppTheme.primaryGreen
+                : owned
+                    ? AppTheme.primaryGreen.withValues(alpha: 0.3)
+                    : AppTheme.divider,
+            width: equipped ? 2.5 : (owned ? 1.5 : 1),
           ),
         ),
         child: Column(
@@ -316,23 +324,38 @@ class _ShopItemCard extends StatelessWidget {
               Text(item.emoji, style: const TextStyle(fontSize: 34)),
               if (equipped)
                 Container(
-                  margin: const EdgeInsets.only(top: 2),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  margin: const EdgeInsets.only(top: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryGreen,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('使用中', style: TextStyle(fontSize: 9, color: Colors.white)),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('✅', style: TextStyle(fontSize: 10)),
+                      SizedBox(width: 2),
+                      Text('使用中',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                    ],
+                  ),
                 ),
               if (owned && !equipped)
                 Container(
-                  margin: const EdgeInsets.only(top: 2),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  margin: const EdgeInsets.only(top: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppTheme.textSecondary.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
+                    color: AppTheme.primaryWarm.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('已拥有', style: TextStyle(fontSize: 9, color: AppTheme.textSecondary)),
+                  child: const Text('已拥有',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primarySoil)),
                 ),
             ],
             const SizedBox(height: 4),
@@ -340,7 +363,11 @@ class _ShopItemCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 item.name,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: equipped ? FontWeight.w700 : FontWeight.w500,
+                  color: equipped ? AppTheme.primaryGreen : AppTheme.textPrimary,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
