@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/economy_models.dart';
@@ -16,7 +17,7 @@ class InventoryPage extends StatelessWidget {
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: () => Navigator.pushNamed(context, '/shop'),
+            onPressed: () => context.push('/shop'),
             child: const Text('去集市 🛍️'),
           ),
         ],
@@ -37,7 +38,7 @@ class InventoryPage extends StatelessWidget {
                       style: TextStyle(color: AppTheme.textSecondary)),
                   const SizedBox(height: 24),
                   FilledButton(
-                    onPressed: () => Navigator.pushNamed(context, '/shop'),
+                    onPressed: () => context.push('/shop'),
                     child: const Text('去森林集市'),
                   ),
                 ],
