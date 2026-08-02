@@ -398,10 +398,11 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                   ),
                   Consumer<AppState>(
                     builder: (_, app, __) => AnimalAvatar(
-                        animal: app.userProfile?.guardianAnimal ??
-                            GuardianAnimal.panda,
-                        size: 72,
-                        speechBubble: null,),
+                      animal: app.userProfile?.guardianAnimal ??
+                          GuardianAnimal.panda,
+                      size: 72,
+                      animalState: app.animalState,
+                    ),
                   ),
                 ],
               ),
