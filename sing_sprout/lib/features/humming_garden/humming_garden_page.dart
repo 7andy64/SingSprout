@@ -11,6 +11,7 @@ import '../../shared/providers/app_state.dart';
 import '../../shared/services/music_tree_service.dart';
 import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/animal_avatar.dart';
+import '../../shared/widgets/guardian_scene_bubble.dart';
 import '../../shared/widgets/role_gate.dart';
 import '../../shared/widgets/tree_visual.dart';
 import 'widgets/garden_widgets.dart';
@@ -82,7 +83,13 @@ class _HummingGardenPageState extends State<HummingGardenPage>
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(children: [
-              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Consumer<AppState>(
+                  builder: (_, app, __) => GuardianSceneBubble(appState: app),
+                ),
+              ),
+              const SizedBox(height: 8),
               // ── Mascot greeting ──
               AnimatedBuilder(
                 animation: _animalBreatheController,
@@ -91,11 +98,11 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                     scale: 1.0 + _animalBreatheController.value * 0.03,
                     child: Consumer<AppState>(
                       builder: (_, app, __) => AnimalAvatar(
-                          animal: app.userProfile?.guardianAnimal ??
-                              GuardianAnimal.panda,
-                          size: 72,
-                          speechBubble:
-                              '嘿！今天想哼点什么？\n试试用音乐种一棵树吧～'),
+                        animal: app.userProfile?.guardianAnimal ??
+                            GuardianAnimal.panda,
+                        size: 72,
+                        animalState: app.animalState,
+                      ),
                     ),
                   );
                 },
