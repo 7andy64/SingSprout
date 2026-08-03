@@ -5,6 +5,7 @@ import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
 import '../../../shared/providers/economy_provider.dart';
 import '../../../shared/widgets/animal_avatar.dart';
+import '../../../shared/widgets/guardian_scene_bubble.dart';
 import '../view_models/creative_flow_view_model.dart';
 
 /// Idle stage — "tap to record" prompt with panda mascot.
@@ -82,7 +83,14 @@ class IdleStageWidget extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 35),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Consumer<AppState>(
+                builder: (_, app, __) => GuardianSceneBubble(appState: app),
+              ),
+            ),
+            const SizedBox(height: 16),
             Opacity(
               opacity: 1.0 - t * 0.4,
               child: Transform.translate(
@@ -93,13 +101,13 @@ class IdleStageWidget extends StatelessWidget {
                     scale: 1.0 + breatheController.value * 0.03,
                     child: child,
                   ),
-                  child: Consumer2<AppState, EconomyProvider>(
-                    builder: (_, app, economy, __) => AnimalAvatar(
-                        animal: app.userProfile?.guardianAnimal ??
-                            GuardianAnimal.panda,
-                        size: 80,
-                        speechBubble: null,
-                        frameEmoji: economy.equippedAvatarFrameEmoji,),
+                  child: Consumer<AppState>(
+                    builder: (_, app, __) => AnimalAvatar(
+                      animal: app.userProfile?.guardianAnimal ??
+                          GuardianAnimal.panda,
+                      size: 80,
+                      animalState: app.animalState,
+                    ),
                   ),
                 ),
               ),

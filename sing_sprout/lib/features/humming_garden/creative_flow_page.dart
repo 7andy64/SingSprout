@@ -399,13 +399,13 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                       ),
                     ),
                   ),
-                  Consumer2<AppState, EconomyProvider>(
-                    builder: (_, app, economy, __) => AnimalAvatar(
-                        animal: app.userProfile?.guardianAnimal ??
-                            GuardianAnimal.panda,
-                        size: 72,
-                        speechBubble: null,
-                        frameEmoji: economy.equippedAvatarFrameEmoji,),
+                  Consumer<AppState>(
+                    builder: (_, app, __) => AnimalAvatar(
+                      animal: app.userProfile?.guardianAnimal ??
+                          GuardianAnimal.panda,
+                      size: 72,
+                      animalState: app.animalState,
+                    ),
                   ),
                 ],
               ),

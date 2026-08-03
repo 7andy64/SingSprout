@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
-import '../../shared/models/economy_models.dart';
-import '../../shared/providers/economy_provider.dart';
 import '../../shared/services/database_service.dart';
 import '../../core/constants/app_routes.dart';
 

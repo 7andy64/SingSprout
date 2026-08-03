@@ -555,6 +555,29 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
             ),
           ),
 
+          const SizedBox(height: 16),
+
+          // 头像隐私说明
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE3F2FD),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.account_circle_outlined, color: Color(0xFF4D96FF), size: 24),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '自定义头像仅保存在手机本地，不会上传到任何服务器，请放心使用。',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textPrimary, height: 1.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: 24),
 
           // ── 私密空间 ──
@@ -659,7 +682,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
                       child: ListTile(
                         leading: const Icon(Icons.swap_horiz_rounded, color: AppTheme.textSecondary, size: 22),
                         title: const Text('身份切换密码', style: TextStyle(fontSize: 15)),
-                        subtitle: const Text('默认密码 123456，可在此修改', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                        subtitle: const Text('修改身份切换所需的验证密码', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
                         trailing: const Icon(Icons.chevron_right, color: AppTheme.divider),
                         onTap: _showChangeIdentityPassword,
                       ),
@@ -745,7 +768,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                '修改后，切换身份时需要输入新密码。\n默认密码：123456',
+                '修改后，切换身份时需要输入新密码。\n密码需至少 6 位，并包含至少一个数字。',
                 style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.5),
               ),
               const SizedBox(height: 16),
@@ -762,7 +785,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
                 controller: newCtrl,
                 obscureText: true,
                 decoration: const InputDecoration(
-                  labelText: '新密码（至少4位）',
+                  labelText: '新密码（至少6位+数字）',
                   prefixIcon: Icon(Icons.lock_reset),
                 ),
               ),
@@ -792,9 +815,15 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
               final newPw = newCtrl.text;
               final confirmPw = confirmCtrl.text;
 
-              if (newPw.length < 4) {
+              if (newPw.length < 6) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('新密码至少4位'), behavior: SnackBarBehavior.floating),
+                  const SnackBar(content: Text('新密码至少6位'), behavior: SnackBarBehavior.floating),
+                );
+                return;
+              }
+              if (!RegExp(r'\d').hasMatch(newPw)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('新密码需包含至少一个数字'), behavior: SnackBarBehavior.floating),
                 );
                 return;
               }

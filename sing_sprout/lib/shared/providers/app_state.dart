@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/music_work.dart';
 import '../models/user_profile.dart';
 import '../models/music_tree_data.dart';
@@ -10,6 +12,9 @@ import '../repositories/sound_repository.dart';
 import '../repositories/voice_card_repository.dart';
 import '../repositories/user_profile_repository.dart';
 import '../services/file_storage_service.dart';
+
+/// 守护动物状态
+enum AnimalState { happy, curious, expecting, miss, neutral }
 
 /// 全局应用状态
 ///
@@ -32,8 +37,19 @@ class AppState extends ChangeNotifier {
   List<SoundSample> _sounds = [];
   List<VoiceCard> _cards = [];
 
+  String? _avatarPath;
   bool _dataLoaded = false;
   String? _loadError; // 加载失败时的错误信息
+
+  // 守护动物状态
+  AnimalState _animalState = AnimalState.neutral;
+  String? _lastLoginDate;
+  String? _lastSoundViewedAt;
+
+  static const _avatarPathKey = 'avatar_path';
+  static const _animalStateKey = 'animal_state';
+  static const _lastLoginDateKey = 'last_login_date';
+  static const _lastSoundViewedAtKey = 'last_sound_viewed_at';
 
   // ── Getters ──
 
@@ -56,6 +72,13 @@ class AppState extends ChangeNotifier {
   int get totalWorks => _works.length;
   int get totalSounds => _sounds.length;
   int get totalCards => _cards.length;
+  String? get avatarPath => _avatarPath;
+  AnimalState get animalState => _animalState;
+
+  /// 是否有未读回信
+  bool get hasUnreadReply => _cards.any(
+    (c) => c.direction == VoiceCardDirection.received && c.readAt == null,
+  );
 
   // ── 初始化：从本地数据库加载所有数据 ──
 
@@ -79,6 +102,14 @@ class AppState extends ChangeNotifier {
     try {
       // 加载用户档案
       _userProfile = await _profileRepo.get();
+
+      // 加载头像路径
+      final prefs = await SharedPreferences.getInstance();
+      _avatarPath = prefs.getString(_avatarPathKey);
+
+      // 加载守护动物状态
+      await _loadAnimalState(prefs);
+      await _updateLastLogin(prefs);
 
       // 加载所有作品、声音、明信片
       _works = await _workRepo.getAll();
@@ -155,6 +186,27 @@ class AppState extends ChangeNotifier {
       await _profileRepo.save(profile);
     }
     notifyListeners();
+  }
+
+  /// 设置自定义头像路径并持久化到 shared_preferences。
+  Future<void> setAvatarPath(String path) async {
+    _avatarPath = path;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_avatarPathKey, path);
+  }
+
+  /// 清除自定义头像。
+  Future<void> clearAvatar() async {
+    if (_avatarPath != null) {
+      try { await File(_avatarPath!).delete(); } catch (_) {}
+    }
+    _avatarPath = null;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_avatarPathKey);
   }
 
   Future<void> completeOnboarding() async {
@@ -257,12 +309,14 @@ class AppState extends ChangeNotifier {
   Future<void> addSound(SoundSample sample) async {
     if (!kIsWeb) await _soundRepo.insert(sample);
     _sounds.insert(0, sample);
+    _updateAnimalState();
     notifyListeners();
   }
 
   Future<void> deleteSound(String id) async {
     if (!kIsWeb) await _soundRepo.delete(id);
     _sounds.removeWhere((s) => s.id == id);
+    _updateAnimalState();
     notifyListeners();
   }
 
@@ -284,6 +338,7 @@ class AppState extends ChangeNotifier {
     if (!kIsWeb) await _cardRepo.insert(card);
     _cards.insert(0, card);
     _updateTree();
+    _updateAnimalState();
     notifyListeners();
   }
 
@@ -293,6 +348,7 @@ class AppState extends ChangeNotifier {
     if (index != -1) {
       _cards[index] = _cards[index].copyWith(readAt: DateTime.now());
     }
+    _updateAnimalState();
     notifyListeners();
   }
 
@@ -300,6 +356,7 @@ class AppState extends ChangeNotifier {
     if (!kIsWeb) await _cardRepo.delete(id);
     _cards.removeWhere((c) => c.id == id);
     _updateTree();
+    _updateAnimalState();
     notifyListeners();
   }
 
@@ -321,5 +378,95 @@ class AppState extends ChangeNotifier {
       _isOnline = online;
       notifyListeners();
     }
+  }
+
+  // ── 守护动物状态 ──
+
+  /// 从 SharedPreferences 恢复守护动物状态。
+  Future<void> _loadAnimalState(SharedPreferences prefs) async {
+    final stateStr = prefs.getString(_animalStateKey);
+    _lastLoginDate = prefs.getString(_lastLoginDateKey);
+    _lastSoundViewedAt = prefs.getString(_lastSoundViewedAtKey);
+
+    if (stateStr != null) {
+      _animalState = AnimalState.values.firstWhere(
+        (s) => s.name == stateStr,
+        orElse: () => AnimalState.neutral,
+      );
+    }
+    _updateAnimalState();
+  }
+
+  /// 更新最后登录日期为今天，并持久化。
+  Future<void> _updateLastLogin(SharedPreferences prefs) async {
+    final today = _todayString();
+    _lastLoginDate = today;
+    await prefs.setString(_lastLoginDateKey, today);
+  }
+
+  /// 根据当前数据重新计算守护动物状态（优先级：happy > curious > expecting > miss > neutral）。
+  void _updateAnimalState() {
+    final today = _todayString();
+    final soundLastViewed = _lastSoundViewedAt != null
+        ? DateTime.tryParse(_lastSoundViewedAt!)
+        : null;
+
+    // 1. happy — 今日已登录
+    if (_lastLoginDate == today) {
+      _animalState = AnimalState.happy;
+      _persistAnimalState();
+      return;
+    }
+
+    // 2. curious — 声音库有新声音（存在 createdAt > lastSoundViewedAt 的声音）
+    if (_sounds.isNotEmpty &&
+        soundLastViewed != null &&
+        _sounds.any((s) => s.createdAt.isAfter(soundLastViewed))) {
+      _animalState = AnimalState.curious;
+      _persistAnimalState();
+      return;
+    }
+
+    // 3. expecting — 有未读回信
+    if (hasUnreadReply) {
+      _animalState = AnimalState.expecting;
+      _persistAnimalState();
+      return;
+    }
+
+    // 4. miss — 最后登录距今 ≥ 3 天
+    if (_lastLoginDate != null) {
+      final lastLogin = DateTime.tryParse(_lastLoginDate!);
+      if (lastLogin != null &&
+          DateTime.now().difference(lastLogin).inDays >= 3) {
+        _animalState = AnimalState.miss;
+        _persistAnimalState();
+        return;
+      }
+    }
+
+    // 5. neutral — 兜底
+    _animalState = AnimalState.neutral;
+    _persistAnimalState();
+  }
+
+  /// 用户查看声音库后调用，重置 curious 状态。
+  Future<void> markSoundsViewed() async {
+    _lastSoundViewedAt = DateTime.now().toIso8601String();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastSoundViewedAtKey, _lastSoundViewedAt!);
+    _updateAnimalState();
+    notifyListeners();
+  }
+
+  /// 持久化当前动物状态到 SharedPreferences。
+  Future<void> _persistAnimalState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_animalStateKey, _animalState.name);
+  }
+
+  String _todayString() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 }
