@@ -12,6 +12,7 @@ import '../../shared/widgets/instrument_mixer.dart';
 import '../../shared/widgets/role_gate.dart';
 import '../../shared/services/role_permissions.dart';
 import '../../shared/models/user_profile.dart';
+import '../../shared/providers/economy_provider.dart';
 import 'widgets/save_work_dialog.dart';
 
 /// 作品编辑器 — 播放预览 + 具象化微调 + 保存/分享
@@ -202,6 +203,8 @@ class _EditorPageState extends State<EditorPage> {
               InstrumentMixer(
                 value: _instrumentMix,
                 onChanged: (v) => setState(() => _instrumentMix = v),
+                ownedInstrumentIds:
+                    context.watch<EconomyProvider>().ownedItemIds,
               ),
 
               const SizedBox(height: 44),

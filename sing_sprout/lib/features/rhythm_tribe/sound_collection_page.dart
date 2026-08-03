@@ -20,8 +20,7 @@ class SoundCollectionPage extends StatefulWidget {
 
 class _SoundCollectionPageState extends State<SoundCollectionPage> {
   bool _loading = true;
-  final Set<String> _collectedNames = {};
-  final Map<String, int> _collectedCounts = {}; // 类别收集计数
+  final Map<String, List<String>> _collectedNamesByCat = {}; // cat → [name, ...]
   int _totalCollected = 0;
 
   // ── 目标声音清单 ──
@@ -65,23 +64,36 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
     final db = DatabaseService();
     try {
       final dbRef = await db.database;
+      // 按分类统计录音数量
       final rows = await dbRef.rawQuery(
-        'SELECT DISTINCT LOWER(name) as name, type FROM sound_samples',
+        'SELECT type, COUNT(*) as cnt FROM sound_samples GROUP BY type',
       );
 
-      _collectedNames.clear();
-      _collectedCounts.clear();
+      _collectedNamesByCat.clear();
+
+      // 统计每个分类的录音总数
+      final catCounts = <String, int>{};
       for (final r in rows) {
-        final name = (r['name'] as String).toLowerCase();
-        _collectedNames.add(name);
         final cat = _catFromDbType(r['type'] as String?);
-        _collectedCounts[cat] = (_collectedCounts[cat] ?? 0) + 1;
+        final cnt = (r['cnt'] as num).toInt();
+        catCounts[cat] = (catCounts[cat] ?? 0) + cnt;
       }
 
-      // 精确匹配目标
+      // 按录音数量依次解锁该分类下的目标
+      for (final cat in _SoundCat.values) {
+        final targetsInCat = _targets.where((t) => t.cat == cat).toList();
+        final unlockCount = (catCounts[cat] ?? 0).clamp(0, targetsInCat.length);
+
+        _collectedNamesByCat[cat] = targetsInCat
+            .take(unlockCount)
+            .map((t) => t.name)
+            .toList();
+      }
+
+      // 计算总收集数
       int count = 0;
-      for (final t in _targets) {
-        if (_collectedNames.contains(t.name)) count++;
+      for (final names in _collectedNamesByCat.values) {
+        count += names.length;
       }
       _totalCollected = count;
     } catch (_) {
@@ -104,7 +116,11 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
       _targets.where((t) => t.cat == cat).length;
 
   int _categoryCollected(String cat) =>
-      _targets.where((t) => t.cat == cat && _collectedNames.contains(t.name)).length;
+      (_collectedNamesByCat[cat]?.length ?? 0)
+          .clamp(0, _categoryProgress(cat));
+
+  bool _isCollected(_SoundTarget target) =>
+      _collectedNamesByCat[target.cat]?.contains(target.name) ?? false;
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +260,7 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
           itemCount: items.length,
           itemBuilder: (context, i) => _SoundCard(
             target: items[i],
-            collected: _collectedNames.contains(items[i].name),
+            collected: _isCollected(items[i]),
           ),
         ),
       ],

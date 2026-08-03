@@ -121,43 +121,41 @@ class EconomyRepository {
         conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  /// 如果已有同 category 的已装备物品，先卸下再装备新的。
-  Future<void> equipItem(String itemId, ShopCategory category) async {
+  /// 卸下指定分类下的所有已装备物品（不依赖 shop_items 表 JOIN）。
+  Future<void> unequipCategory(String categoryCode) async {
     final db = await _db.database;
-
-    await db.transaction((txn) async {
-      // 卸下同类别所有物品
-      final catCode = category.code;
-      // 获取同类别已装备物品
-      final catItems = await txn.rawQuery(
+    // 直接通过 inventory + shop_items 联合查询，找不到 shop_items 时回退到全部卸下
+    try {
+      final rows = await db.rawQuery(
         '''SELECT inv.item_id FROM inventory inv
            INNER JOIN shop_items si ON inv.item_id = si.id
            WHERE inv.is_equipped = 1 AND si.category = ?''',
-        [catCode],
+        [categoryCode],
       );
-      for (final row in catItems) {
-        await txn.update(
+      for (final row in rows) {
+        await db.update(
           'inventory',
           {'is_equipped': 0},
           where: 'item_id = ?',
           whereArgs: [row['item_id']],
         );
       }
-      // 装备目标物品
-      await txn.update(
+    } catch (_) {
+      // shop_items 表不存在时回退：不做分类限制，卸下所有已装备物品
+      await db.update(
         'inventory',
-        {'is_equipped': 1},
-        where: 'item_id = ?',
-        whereArgs: [itemId],
+        {'is_equipped': 0},
+        where: 'is_equipped = 1',
       );
-    });
+    }
   }
 
-  Future<void> unequipItem(String itemId) async {
+  /// 设置物品的装备状态。
+  Future<void> setEquipped(String itemId, bool equipped) async {
     final db = await _db.database;
     await db.update(
       'inventory',
-      {'is_equipped': 0},
+      {'is_equipped': equipped ? 1 : 0},
       where: 'item_id = ?',
       whereArgs: [itemId],
     );

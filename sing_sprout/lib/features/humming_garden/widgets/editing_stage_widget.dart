@@ -10,12 +10,14 @@ class EditingStageWidget extends StatelessWidget {
   final CreativeFlowViewModel vm;
   final VoidCallback onSaveLocally;
   final VoidCallback onSaveAndShare;
+  final Set<String> ownedInstrumentIds;
 
   const EditingStageWidget({
     super.key,
     required this.vm,
     required this.onSaveLocally,
     required this.onSaveAndShare,
+    this.ownedInstrumentIds = const {},
   });
 
   @override
@@ -188,6 +190,7 @@ class EditingStageWidget extends StatelessWidget {
           InstrumentMixer(
             value: vm.instrumentMix,
             onChanged: (v) => vm.updateModulation(instrumentMix: v),
+            ownedInstrumentIds: ownedInstrumentIds,
           ),
           if (vm.isReRendering)
             Padding(

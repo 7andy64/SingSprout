@@ -46,10 +46,42 @@ class EconomyProvider extends ChangeNotifier {
         .where((s) => s.category == category)
         .map((s) => s.id)
         .toSet();
+    // 内置列表回退
+    final allIds = shopIds.isNotEmpty
+        ? shopIds
+        : ShopItem.builtInItems
+            .where((s) => s.category == category)
+            .map((s) => s.id)
+            .toSet();
     return _inventory
-        .where((i) => i.isEquipped && shopIds.contains(i.itemId))
+        .where((i) => i.isEquipped && allIds.contains(i.itemId))
         .map((i) => i.itemId)
         .firstOrNull;
+  }
+
+  /// 已装备的头像框 emoji（用于显示），没有则返回 null。
+  String? get equippedAvatarFrameEmoji {
+    final id = getEquippedItemId(ShopCategory.avatarFrame);
+    if (id == null) return null;
+    return ShopItem.builtInItems
+        .where((s) => s.id == id)
+        .map((s) => s.emoji)
+        .firstOrNull;
+  }
+
+  /// 检查守护动物是否已拥有（或为默认熊猫）。
+  bool isAnimalOwned(String guardianAnimalName) {
+    // 默认熊猫始终拥有
+    if (guardianAnimalName == 'panda') return true;
+    // 映射：GuardianAnimal.name → shop item id
+    final shopId = switch (guardianAnimalName) {
+      'tit' => 'pet_blue_tit',
+      'frog' => 'pet_rainbow_frog',
+      'firefly' => 'pet_golden_firefly',
+      _ => null,
+    };
+    if (shopId == null) return false;
+    return ownedItemIds.contains(shopId);
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -212,16 +244,22 @@ class EconomyProvider extends ChangeNotifier {
   // ═══════════════════════════════════════════════════════════
 
   Future<void> equipItem(String itemId) async {
-    final shopItem = _shopItems.where((s) => s.id == itemId).firstOrNull;
-    if (shopItem == null) return;
+    // 从商店物品列表中找分类（已加载 + 内置回退）
+    ShopItem? shopItem = _shopItems.where((s) => s.id == itemId).firstOrNull;
+    shopItem ??= ShopItem.builtInItems.where((s) => s.id == itemId).firstOrNull;
+    if (shopItem == null) {
+      debugPrint('[Economy] equipItem: item $itemId not found');
+      return;
+    }
 
-    await _repo.equipItem(itemId, shopItem.category);
+    await _repo.unequipCategory(shopItem.category.code);
+    await _repo.setEquipped(itemId, true);
     await _loadInventory();
     notifyListeners();
   }
 
   Future<void> unequipItem(String itemId) async {
-    await _repo.unequipItem(itemId);
+    await _repo.setEquipped(itemId, false);
     await _loadInventory();
     notifyListeners();
   }
