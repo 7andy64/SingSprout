@@ -102,6 +102,16 @@ class _SoundCollectionPageState extends State<SoundCollectionPage> {
     if (mounted) setState(() => _loading = false);
   }
 
+  String _catFromDbType(String? dbType) {
+    return switch (dbType) {
+      'humanVoice' => _SoundCat.voice,
+      'animal' => _SoundCat.animal,
+      'nature' => _SoundCat.nature,
+      'mechanical' => _SoundCat.mechanical,
+      _ => _SoundCat.animal,
+    };
+  }
+
   int _categoryProgress(String cat) =>
       _targets.where((t) => t.cat == cat).length;
 

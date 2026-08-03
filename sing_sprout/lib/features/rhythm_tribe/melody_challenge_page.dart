@@ -31,6 +31,7 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
   late List<int> _targetMidi;
   late List<String> _noteNames;
   static const double _noteDuration = 1.4; // 每个音符持续时间（秒）
+  static const double _searchWindow = 0.2;  // 音高搜索窗口（秒）
   late double _gameDuration;
 
   // ── 阶段 ──
@@ -292,8 +293,8 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
 
       for (int ni = 0; ni < _targetMidi.length; ni++) {
         final expectedTime = ni * noteDurationSec;
-        final searchStart = (expectedTime - searchWindow).clamp(0.0, _gameDuration);
-        final searchEnd = (expectedTime + searchWindow).clamp(0.0, _gameDuration);
+        final searchStart = (expectedTime - _searchWindow).clamp(0.0, _gameDuration);
+        final searchEnd = (expectedTime + _searchWindow).clamp(0.0, _gameDuration);
 
         // 在搜索窗口内收集 pitch 数据
         final pitchesInWindow = <double>[];

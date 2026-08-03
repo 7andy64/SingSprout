@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/models/ai_music_models.dart';
 import '../../shared/models/economy_models.dart';
 import '../../shared/providers/economy_provider.dart';
+import 'package:just_audio/just_audio.dart';
 import '../../shared/services/ai_music_service.dart';
 
 // ═══════════════════════════════════════════════════════════════
@@ -482,7 +483,8 @@ class _RhythmGamePageState extends State<RhythmGamePage>
 
   Future<void> _playAiMusic() async {
     try {
-      await _audioPlayer.play(DeviceFileSource(_aiResult!.wavPath));
+      await _audioPlayer.setFilePath(_aiResult!.wavPath);
+      await _audioPlayer.play();
     } catch (e) {
       debugPrint('[RhythmGame] Audio playback failed: $e');
     }
