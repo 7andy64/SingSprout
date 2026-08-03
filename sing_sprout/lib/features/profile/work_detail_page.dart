@@ -120,7 +120,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
   void _toggleEdit() {
     setState(() => _isEditing = !_isEditing);
     if (!_isEditing) {
-      // 退出编辑时保存
+      // 退出编辑时保存（fire-and-forget，结果不影响 UI）
       _saveChanges();
     }
   }
