@@ -2,12 +2,12 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/animal_avatar.dart';
+import '../../../shared/widgets/avatar_crop_page.dart';
 import '../../../shared/widgets/guardian_scene_bubble.dart';
 import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
@@ -294,43 +294,19 @@ class ProfileHeader extends StatelessWidget {
       );
       if (picked == null) return; // 用户取消
 
-      // 圆形裁剪
-      CroppedFile? cropped;
-      try {
-        cropped = await ImageCropper().cropImage(
-          sourcePath: picked.path,
-          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-          uiSettings: [
-            AndroidUiSettings(
-              toolbarTitle: '裁剪头像',
-              toolbarColor: const Color(0xFF5B9A4B),
-              toolbarWidgetColor: Colors.white,
-              cropFrameColor: const Color(0xFF5B9A4B),
-              backgroundColor: Colors.black,
-              lockAspectRatio: true,
-            ),
-            IOSUiSettings(
-              title: '裁剪头像',
-              rotateButtonsHidden: true,
-              resetButtonHidden: true,
-              aspectRatioLockEnabled: true,
-            ),
-          ],
-          compressFormat: ImageCompressFormat.jpg,
-          compressQuality: 90,
-        );
-      } catch (_) {
-        // 裁剪取消或失败，继续使用原图
-      }
+      // 跳转自定义裁剪页面（替代原生 image_cropper，解决右上角确认按钮不灵敏问题）
+      if (!context.mounted) return;
+      final cropResult = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          builder: (_) => AvatarCropPage(imageFile: File(picked.path)),
+        ),
+      );
 
-      // 读取图片（裁剪后或用原图）
-      final cropPath = cropped?.path;
-      final cropBytes = cropPath != null
-          ? await File(cropPath).readAsBytes()
-          : await picked.readAsBytes();
+      // 用户取消裁剪
+      if (cropResult == null) return;
 
       // 压缩到 200x200
-      final resized = await _resizeImage(Uint8List.fromList(cropBytes), 200);
+      final resized = await _resizeImage(cropResult, 200);
 
       // 保存到 App documents
       final dir = await getApplicationDocumentsDirectory();
@@ -344,11 +320,6 @@ class ProfileHeader extends StatelessWidget {
       final oldPath = appState.avatarPath;
       if (oldPath != null) {
         try { await File(oldPath).delete(); } catch (_) {}
-      }
-
-      // 清理裁剪临时文件
-      if (cropPath != null) {
-        try { await File(cropPath).delete(); } catch (_) {}
       }
 
       await appState.setAvatarPath(avatarFile.path);
