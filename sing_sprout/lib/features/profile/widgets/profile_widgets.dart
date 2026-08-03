@@ -11,6 +11,7 @@ import '../../../shared/widgets/animal_avatar.dart';
 import '../../../shared/widgets/guardian_scene_bubble.dart';
 import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
+import '../../../shared/providers/economy_provider.dart';
 
 /// 用户信息头部 — 自定义头像、昵称、角色、陪伴动物
 class ProfileHeader extends StatelessWidget {

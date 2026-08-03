@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/models/ai_music_models.dart';
 import '../../shared/models/economy_models.dart';
 import '../../shared/providers/economy_provider.dart';
+import '../../shared/services/ai_music_service.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // 枚举 & 配置
@@ -14,6 +16,10 @@ import '../../shared/providers/economy_provider.dart';
 enum _Difficulty { easy, normal, hard }
 
 enum _GamePhase { idle, countdown, playing, paused, finished }
+
+enum _GameMode { classic, ai }
+
+enum _AiPhase { idle, selectingStyle, generating, ready }
 
 enum _Grade { s, a, b, c, d }
 
@@ -127,6 +133,15 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   int _countdownValue = 0;
   Timer? _countdownTimer;
 
+  // ── AI Mode ──
+  _GameMode _gameMode = _GameMode.classic;
+  _AiPhase _aiPhase = _AiPhase.idle;
+  AiMusicStyle? _selectedStyle;
+  AiMusicResult? _aiResult;
+  String? _aiError;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  double _effectiveBpm = 120;
+
   // ── 游戏参数 ──
   static const double hitY = 0.82;
   static const double perfectWindow = 0.06;
@@ -179,6 +194,7 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   void dispose() {
     _controller.dispose();
     _countdownTimer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -377,9 +393,46 @@ class _RhythmGamePageState extends State<RhythmGamePage>
     }
 
     _cfg = _DifficultyConfig.of(_difficulty);
+
+    if (_gameMode == _GameMode.ai && _aiResult != null) {
+      _startAiGame();
+    } else {
+      _startClassicGame();
+    }
+  }
+
+  void _startClassicGame() {
+    _effectiveBpm = _cfg.bpm;
     _generateBeatGrid();
     _generateNotes();
+    _beginCountdown();
+  }
 
+  void _startAiGame() {
+    _effectiveBpm = _aiResult!.tempo;
+    // Generate beat grid from AI tempo
+    _beatTimes.clear();
+    final beatInterval = 60.0 / _effectiveBpm;
+    for (double t = 0; t <= gameDuration + 2; t += beatInterval) {
+      _beatTimes.add(t);
+    }
+    // Map AI notes to game notes
+    _generateAiNotes();
+    _beginCountdown();
+  }
+
+  void _generateAiNotes() {
+    _notes.clear();
+    final result = _aiResult!;
+    for (final aiNote in result.notes) {
+      if (aiNote.startTime >= gameDuration - 1.0) continue;
+      final track = AiMusicService.pitchToTrack(aiNote.pitch, _cfg.trackCount);
+      _notes.add(_Note(time: aiNote.startTime, track: track));
+    }
+    _notes.sort((a, b) => a.time.compareTo(b.time));
+  }
+
+  void _beginCountdown() {
     // 清理上局状态
     _controller.reset();
     _countdownTimer?.cancel();
@@ -417,9 +470,74 @@ class _RhythmGamePageState extends State<RhythmGamePage>
         // 倒计时结束，开始游戏
         setState(() { _phase = _GamePhase.playing; });
         _controller.forward();
+        // Start background music for AI mode
+        if (_gameMode == _GameMode.ai && _aiResult != null) {
+          _playAiMusic();
+        }
       } else {
         setState(() { _countdownValue = next; });
       }
+    });
+  }
+
+  Future<void> _playAiMusic() async {
+    try {
+      await _audioPlayer.play(DeviceFileSource(_aiResult!.wavPath));
+    } catch (e) {
+      debugPrint('[RhythmGame] Audio playback failed: $e');
+    }
+  }
+
+  Future<void> _stopAiMusic() async {
+    try {
+      await _audioPlayer.stop();
+    } catch (_) {}
+  }
+
+  /// Start AI generation flow — show style picker.
+  void _enterAiMode() {
+    setState(() {
+      _gameMode = _GameMode.ai;
+      _aiPhase = _AiPhase.selectingStyle;
+      _aiError = null;
+    });
+  }
+
+  /// User selected a style — start generation.
+  Future<void> _selectStyle(AiMusicStyle style) async {
+    setState(() {
+      _selectedStyle = style;
+      _aiPhase = _AiPhase.generating;
+    });
+
+    final result = await AiMusicService().generateGameMusic(style);
+
+    if (!mounted) return;
+
+    if (result != null) {
+      setState(() {
+        _aiResult = result;
+        _aiPhase = _AiPhase.ready;
+      });
+      // Auto-start the game
+      _startGame();
+    } else {
+      setState(() {
+        _aiError = 'AI 音乐家正在休息，先试试经典模式吧 🌱';
+        _aiPhase = _AiPhase.idle;
+      });
+    }
+  }
+
+  /// Go back to mode selection.
+  void _backToModeSelect() {
+    _stopAiMusic();
+    setState(() {
+      _gameMode = _GameMode.classic;
+      _aiPhase = _AiPhase.idle;
+      _aiResult = null;
+      _selectedStyle = null;
+      _aiError = null;
     });
   }
 
@@ -438,14 +556,21 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   void _quitGame() {
     _controller.stop();
     _countdownTimer?.cancel();
+    _stopAiMusic();
     setState(() {
       _phase = _GamePhase.idle;
+      _gameMode = _GameMode.classic;
+      _aiPhase = _AiPhase.idle;
+      _aiResult = null;
+      _selectedStyle = null;
+      _aiError = null;
     });
   }
 
   void _finishGame() {
     _controller.stop();
     _countdownTimer?.cancel();
+    _stopAiMusic();
 
     final total = _perfectCount + _goodCount + _missCount;
     final accuracy = total > 0 ? (_perfectCount + _goodCount) / total : 0.0;
@@ -502,11 +627,38 @@ class _RhythmGamePageState extends State<RhythmGamePage>
         );
 
       case _GamePhase.idle:
+        if (_aiPhase == _AiPhase.selectingStyle) {
+          return Scaffold(
+            body: _AiStylePicker(
+              onSelected: _selectStyle,
+              onBack: _backToModeSelect,
+            ),
+          );
+        }
+        if (_aiPhase == _AiPhase.generating) {
+          return Scaffold(
+            body: _AiGeneratingScreen(style: _selectedStyle!),
+          );
+        }
+        if (_aiPhase == _AiPhase.idle && _aiError != null) {
+          // Show error then return to start screen
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_aiError!),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            setState(() { _aiError = null; });
+          });
+        }
         return Scaffold(
           body: _StartScreen(
             selectedDifficulty: _difficulty,
             onDifficultyChanged: (d) => setState(() { _difficulty = d; }),
             onStart: _startGame,
+            onAiMode: _enterAiMode,
           ),
         );
 
@@ -606,11 +758,13 @@ class _StartScreen extends StatelessWidget {
   final _Difficulty selectedDifficulty;
   final ValueChanged<_Difficulty> onDifficultyChanged;
   final VoidCallback onStart;
+  final VoidCallback onAiMode;
 
   const _StartScreen({
     required this.selectedDifficulty,
     required this.onDifficultyChanged,
     required this.onStart,
+    required this.onAiMode,
   });
 
   @override
@@ -694,6 +848,17 @@ class _StartScreen extends StatelessWidget {
                 onPressed: onStart,
                 style: FilledButton.styleFrom(minimumSize: const Size(200, 52)),
                 child: const Text('开始游戏'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: onAiMode,
+                icon: const Text('🤖', style: TextStyle(fontSize: 20)),
+                label: const Text('AI 创作音乐'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(200, 48),
+                  foregroundColor: AppTheme.primaryGreen,
+                  side: const BorderSide(color: AppTheme.primaryGreen),
+                ),
               ),
             ],
           ),
@@ -1261,6 +1426,209 @@ class _ResultScreen extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AI 风格选择界面
+// ═══════════════════════════════════════════════════════════════
+
+class _AiStylePicker extends StatelessWidget {
+  final Function(AiMusicStyle) onSelected;
+  final VoidCallback onBack;
+
+  const _AiStylePicker({required this.onSelected, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🤖🎵', style: TextStyle(fontSize: 64)),
+              const SizedBox(height: 12),
+              const Text(
+                'AI 为你创作音乐',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '选一种风格，AI 会为你生成\n独一无二的音乐和节奏',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.textSecondary, height: 1.5),
+              ),
+              const SizedBox(height: 24),
+              ...AiMusicStyle.values.map(
+                (style) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _StyleCard(
+                    style: style,
+                    onTap: () => onSelected(style),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: onBack,
+                child: const Text('返回经典模式'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StyleCard extends StatelessWidget {
+  final AiMusicStyle style;
+  final VoidCallback onTap;
+
+  const _StyleCard({required this.style, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final description = switch (style) {
+      AiMusicStyle.happy => '明亮活泼 · 大调旋律 · 跳跃节奏',
+      AiMusicStyle.calm => '温柔宁静 · 摇篮曲风 · 舒缓心情',
+      AiMusicStyle.energetic => '强烈动感 · 电子舞曲 · 附点节奏',
+      AiMusicStyle.electronic => '现代合成 · 琶音上行 · 电子音色',
+    };
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.divider),
+        ),
+        child: Row(
+          children: [
+            Text(style.emoji, style: const TextStyle(fontSize: 36)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    style.label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AI 生成中加载界面
+// ═══════════════════════════════════════════════════════════════
+
+class _AiGeneratingScreen extends StatefulWidget {
+  final AiMusicStyle style;
+  const _AiGeneratingScreen({required this.style});
+
+  @override
+  State<_AiGeneratingScreen> createState() => _AiGeneratingScreenState();
+}
+
+class _AiGeneratingScreenState extends State<_AiGeneratingScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animCtrl;
+  final List<String> _messages = const [
+    'AI 正在构思旋律...',
+    '正在编排节奏...',
+    '即将完成...',
+  ];
+  int _msgIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+
+    // Cycle through messages
+    Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _msgIndex = (_msgIndex + 1) % _messages.length;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(widget.style.emoji, style: const TextStyle(fontSize: 72)),
+            const SizedBox(height: 24),
+            AnimatedBuilder(
+              animation: _animCtrl,
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: _animCtrl.value * 2 * 3.14159,
+                  child: const Text('🎵', style: TextStyle(fontSize: 40)),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            Text(
+              _messages[_msgIndex],
+              style:
+                  const TextStyle(fontSize: 16, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${widget.style.label}风格 · 30秒音乐',
+              style:
+                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+          ],
         ),
       ),
     );

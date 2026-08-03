@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
+import '../../../shared/providers/economy_provider.dart';
 import '../../../shared/widgets/animal_avatar.dart';
 import '../../../shared/widgets/guardian_scene_bubble.dart';
 import '../view_models/creative_flow_view_model.dart';

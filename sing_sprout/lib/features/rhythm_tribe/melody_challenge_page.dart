@@ -24,11 +24,14 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
     with SingleTickerProviderStateMixin {
   final AudioService _audio = AudioService();
 
-  // ── 目标旋律（MIDI 音高 + 音名） ──
-  static const _targetMidi = [60, 64, 67, 64, 60]; // C4 E4 G4 E4 C4
-  static const _noteNames = ['C', 'E', 'G', 'E', 'C'];
+  // ── 目标旋律（运行时随机生成） ──
+  static const _noteNamesAll = [
+    'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+  ];
+  late List<int> _targetMidi;
+  late List<String> _noteNames;
   static const double _noteDuration = 1.4; // 每个音符持续时间（秒）
-  static final double _gameDuration = _noteDuration * _targetMidi.length; // ~7s
+  late double _gameDuration;
 
   // ── 阶段 ──
   bool _isRecording = false;
@@ -51,10 +54,104 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
   @override
   void initState() {
     super.initState();
+    _generateRandomMelody();
+    _gameDuration = _noteDuration * _targetMidi.length;
     _progressController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: (_gameDuration * 1000).round()),
     )..addListener(() => setState(() {}));
+  }
+
+  /// 随机生成一条五声音阶旋律，适合儿童哼唱。
+  void _generateRandomMelody() {
+    final rng = Random();
+
+    // 五声音阶集合（大调五声: do-re-mi-sol-la）
+    const pentatonicIntervals = [0, 2, 4, 7, 9];
+
+    // 随机选择根音（C4=60 到 A4=69 之间）
+    const rootOptions = [60, 62, 64, 65, 67, 69]; // C4 D4 E4 F4 G4 A4
+    final root = rootOptions[rng.nextInt(rootOptions.length)];
+
+    // 在当前八度和上方八度构建可用音集合
+    final availablePitches = <int>[
+      for (final interval in pentatonicIntervals)
+        root + interval,
+      for (final interval in pentatonicIntervals)
+        root + 12 + interval,
+    ]..removeWhere((p) => p < 55 || p > 84);
+
+    // 从可用音高中去重并排序
+    final uniquePitches = availablePitches.toSet().toList()..sort();
+
+    // 随机选择音符数量 4-7 个
+    final noteCount = 4 + rng.nextInt(4);
+
+    // 选择旋律模式
+    final pattern = rng.nextInt(5); // 0=上行, 1=下行, 2=拱形, 3=波浪, 4=下行收束
+
+    final midiList = <int>[];
+    switch (pattern) {
+      case 0: // 上行
+        for (int i = 0; i < noteCount; i++) {
+          final idx = i * (uniquePitches.length - 1) ~/ (noteCount - 1).clamp(1, 10);
+          midiList.add(uniquePitches[idx.clamp(0, uniquePitches.length - 1)]);
+        }
+        break;
+      case 1: // 下行
+        for (int i = 0; i < noteCount; i++) {
+          final idx = uniquePitches.length - 1 -
+              i * (uniquePitches.length - 1) ~/ (noteCount - 1).clamp(1, 10);
+          midiList.add(uniquePitches[idx.clamp(0, uniquePitches.length - 1)]);
+        }
+        break;
+      case 2: // 拱形（上→下）
+        final peak = noteCount ~/ 2;
+        for (int i = 0; i <= peak; i++) {
+          final idx = i * (uniquePitches.length - 1) ~/ peak.clamp(1, 10);
+          midiList.add(uniquePitches[idx.clamp(0, uniquePitches.length - 1)]);
+        }
+        for (int i = 1; i < noteCount - peak; i++) {
+          final idx = uniquePitches.length - 1 -
+              i * (uniquePitches.length - 1) ~/ (noteCount - peak - 1).clamp(1, 10);
+          midiList.add(uniquePitches[idx.clamp(0, uniquePitches.length - 1)]);
+        }
+        break;
+      case 3: // 波浪（上下交替）
+        for (int i = 0; i < noteCount; i++) {
+          // 在中音区上下波动
+          final mid = uniquePitches.length ~/ 2;
+          final offset = ((i % 2 == 0) ? i ~/ 2 : -(i ~/ 2 + 1));
+          final idx = (mid + offset).clamp(0, uniquePitches.length - 1);
+          midiList.add(uniquePitches[idx]);
+        }
+        break;
+      case 4: // 下行收束（从高到低，最后回到根音）
+        for (int i = 0; i < noteCount - 1; i++) {
+          final idx = uniquePitches.length - 1 -
+              i * (uniquePitches.length - 1) ~/ (noteCount - 2).clamp(1, 10);
+          midiList.add(uniquePitches[idx.clamp(0, uniquePitches.length - 1)]);
+        }
+        midiList.add(root); // 最后回到根音
+        break;
+    }
+
+    // 确保至少有 noteCount 个音符
+    while (midiList.length < noteCount) {
+      midiList.add(uniquePitches[rng.nextInt(uniquePitches.length)]);
+    }
+    // 截断到 noteCount
+    final finalMidi = midiList.take(noteCount).toList();
+
+    _targetMidi = finalMidi;
+    _noteNames = finalMidi.map((m) => _midiToNoteName(m)).toList();
+  }
+
+  /// MIDI 编号 → 音名（如 60 → C4）
+  static String _midiToNoteName(int midi) {
+    final name = _noteNamesAll[midi % 12];
+    final octave = midi ~/ 12 - 1;
+    return '$name$octave';
   }
 
   @override
@@ -174,39 +271,47 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
       final samples = await AudioProcessor.readWav(path);
       if (samples.isEmpty) return;
 
-      // YIN 音高检测
+      // YIN 音高检测 — 使用更适合儿童嗓音的参数
       final pitchContour = AudioProcessor.detectPitch(
         samples,
         44100,
         hopSize: 512,
         windowSize: 1024,
-        threshold: 0.15,
+        threshold: 0.22, // 比默认 0.15 更宽松，适合儿童嗓音
       );
 
       if (pitchContour.isEmpty) return;
 
-      // 按时间段分割，每个音符段取平均音高
+      // 收集有效音高数据（过滤静音/噪音）
+      final validPitches = pitchContour
+          .where((p) => p.frequencyHz > 65 && p.frequencyHz < 1200)
+          .toList();
+      if (validPitches.isEmpty) return;
+
       final noteDurationSec = _noteDuration;
 
       for (int ni = 0; ni < _targetMidi.length; ni++) {
-        final segStart = ni * noteDurationSec;
-        final segEnd = (ni + 1) * noteDurationSec;
+        final expectedTime = ni * noteDurationSec;
+        final searchStart = (expectedTime - searchWindow).clamp(0.0, _gameDuration);
+        final searchEnd = (expectedTime + searchWindow).clamp(0.0, _gameDuration);
 
-        // 收集该时间段内的 pitch 数据
-        final pitchesInSeg = <double>[];
-        for (final pp in pitchContour) {
-          if (pp.timeSeconds >= segStart && pp.timeSeconds < segEnd) {
-            if (pp.frequencyHz > 65 && pp.frequencyHz < 1200) {
-              // 转换为 MIDI
-              final midi = 12 * (log(pp.frequencyHz / 440) / ln2) + 69;
-              pitchesInSeg.add(midi);
+        // 在搜索窗口内收集 pitch 数据
+        final pitchesInWindow = <double>[];
+        for (final pp in validPitches) {
+          if (pp.timeSeconds >= searchStart && pp.timeSeconds < searchEnd) {
+            // MIDI 转换
+            final midi = 12 * (log(pp.frequencyHz / 440) / ln2) + 69;
+            // 过滤明显不相关的音高（距离目标超过一个八度忽略）
+            final target = _targetMidi[ni].toDouble();
+            if ((midi - target).abs() < 12) {
+              pitchesInWindow.add(midi);
             }
           }
         }
 
         // 判定
         final target = _targetMidi[ni].toDouble();
-        if (pitchesInSeg.isEmpty) {
+        if (pitchesInWindow.isEmpty) {
           // 没检测到音高 → Miss
           _results.add(_NoteResult(
             targetNote: _noteNames[ni],
@@ -216,9 +321,9 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
           ));
           _combo = 0;
         } else {
-          // 取中位数作为检测音高
-          pitchesInSeg.sort();
-          final detected = pitchesInSeg[pitchesInSeg.length ~/ 2];
+          // 使用中位数去除异常值
+          pitchesInWindow.sort();
+          final detected = pitchesInWindow[pitchesInWindow.length ~/ 2];
           final diff = (detected - target).abs();
 
           _Judgment judgment;
@@ -227,7 +332,7 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
             _matchedNotes++;
             _combo++;
             _score += 100 + (_combo * 10).clamp(0, 50);
-          } else if (diff < 3.5) {
+          } else if (diff < 3.0) {
             judgment = _Judgment.good;
             _combo++;
             _score += 50;
@@ -248,7 +353,10 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
       }
 
       // 计算金松果奖励
-      _coinReward = (_matchedNotes * 2).clamp(1, 10);
+      final accuracy = _targetMidi.length > 0
+          ? _matchedNotes / _targetMidi.length
+          : 0.0;
+      _coinReward = (accuracy * 10).round().clamp(1, 10);
 
       final economy = context.read<EconomyProvider>();
       if (_coinReward > 0 && mounted) {
@@ -270,6 +378,11 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
   }
 
   void _resetToStart() {
+    _generateRandomMelody();
+    _gameDuration = _noteDuration * _targetMidi.length;
+    _progressController.duration = Duration(
+      milliseconds: (_gameDuration * 1000).round(),
+    );
     _progressController.reset();
     setState(() {
       _isFinished = false;
@@ -353,8 +466,14 @@ class _MelodyChallengePageState extends State<MelodyChallengePage>
                   color: AppTheme.primaryGreen.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text('🎵 C → E → G → E → C',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primaryGreen)),
+                child: Text(
+                  '🎵 ${_noteNames.join(' → ')}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primaryGreen,
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               FilledButton(

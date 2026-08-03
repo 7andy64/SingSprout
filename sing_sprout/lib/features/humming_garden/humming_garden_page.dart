@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_tree_data.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/providers/economy_provider.dart';
 import '../../shared/services/music_tree_service.dart';
 import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/animal_avatar.dart';

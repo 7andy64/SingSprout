@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/providers/economy_provider.dart';
 
 /// 首次使用引导流程
 ///
@@ -273,8 +274,10 @@ class _StepPickAnimal extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: GuardianAnimal.values.map((animal) {
               final isSelected = selected == animal;
+              final economy = context.read<EconomyProvider>();
+              final owned = economy.isAnimalOwned(animal.name);
               return GestureDetector(
-                onTap: () => onSelected(animal),
+                onTap: owned ? () => onSelected(animal) : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: 130,
@@ -282,26 +285,38 @@ class _StepPickAnimal extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppTheme.primaryGreen.withValues(alpha: 0.08)
-                        : Colors.white,
+                        : owned
+                            ? Colors.white
+                            : AppTheme.divider.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                     border: isSelected
                         ? Border.all(
                             color: AppTheme.primaryGreen.withValues(alpha: 0.4),
                             width: 2,
                           )
-                        : Border.all(color: AppTheme.divider),
+                        : Border.all(
+                            color: owned ? AppTheme.divider : AppTheme.divider,
+                          ),
                   ),
                   child: Column(
                     children: [
-                      Text(animal.emoji, style: const TextStyle(fontSize: 40)),
+                      Text(
+                        owned ? animal.emoji : '🔒',
+                        style: TextStyle(
+                          fontSize: owned ? 40 : 30,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
-                        animal.displayName,
+                        owned ? animal.displayName : '${animal.displayName}\n需购买',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: AppTheme.textPrimary,
+                          color: owned
+                              ? AppTheme.textPrimary
+                              : AppTheme.textSecondary,
                         ),
                       ),
                     ],

@@ -39,7 +39,7 @@ class RhythmTribePage extends StatelessWidget {
               _GameEntryCard(
                 emoji: '🥁',
                 title: '节奏游戏',
-                subtitle: '跟着节拍点击，比比谁更准',
+                subtitle: '经典节奏挑战 · AI 为你创作音乐',
                 reward: '每局最高 +10 🌰',
                 color: const Color(0xFFFF6B6B),
                 onTap: () => context.push('/rhythm-game'),
