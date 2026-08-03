@@ -9,6 +9,8 @@ import '../../shared/models/economy_models.dart';
 import '../../shared/providers/economy_provider.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../shared/services/ai_music_service.dart';
+import '../../shared/services/dash_scope_service.dart';
+import 'package:go_router/go_router.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // 枚举 & 配置
@@ -140,6 +142,7 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   AiMusicStyle? _selectedStyle;
   AiMusicResult? _aiResult;
   String? _aiError;
+  bool _generationCancelled = false;
   final AudioPlayer _audioPlayer = AudioPlayer();
   double _effectiveBpm = 120;
 
@@ -497,7 +500,44 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   }
 
   /// Start AI generation flow — show style picker.
-  void _enterAiMode() {
+  Future<void> _enterAiMode() async {
+    // Check if API key is configured before showing style picker
+    final isConfigured = await DashScopeService().isConfigured;
+    if (!mounted) return;
+
+    if (!isConfigured) {
+      // Show dialog guiding user to configure API key
+      final shouldGo = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('AI 音乐需要配置密钥'),
+          content: const Text(
+            'AI 创作音乐功能需要连接阿里云百炼（DashScope）服务。\n\n'
+            '请在「我的 → 隐私与安全 → AI 设置」中配置 API Key 后再使用。\n\n'
+            '你也可以直接使用经典模式，无需配置即可畅玩节奏游戏！',
+            style: TextStyle(fontSize: 14, height: 1.6),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('先用经典模式'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('去配置'),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+      if (shouldGo == true) {
+        // Navigate to privacy settings for API key config
+        context.push('/privacy-settings');
+      }
+      return;
+    }
+
     setState(() {
       _gameMode = _GameMode.ai;
       _aiPhase = _AiPhase.selectingStyle;
@@ -507,14 +547,23 @@ class _RhythmGamePageState extends State<RhythmGamePage>
 
   /// User selected a style — start generation.
   Future<void> _selectStyle(AiMusicStyle style) async {
+    _generationCancelled = false;
     setState(() {
       _selectedStyle = style;
       _aiPhase = _AiPhase.generating;
     });
 
-    final result = await AiMusicService().generateGameMusic(style);
+    AiMusicResult? result;
+    try {
+      result = await AiMusicService()
+          .generateGameMusic(style)
+          .timeout(const Duration(seconds: 45));
+    } catch (e) {
+      debugPrint('[RhythmGame] AI generation error: $e');
+    }
 
     if (!mounted) return;
+    if (_generationCancelled) return;
 
     if (result != null) {
       setState(() {
@@ -524,11 +573,27 @@ class _RhythmGamePageState extends State<RhythmGamePage>
       // Auto-start the game
       _startGame();
     } else {
+      // Provide a more specific error message
+      final isConfigured = await DashScopeService().isConfigured;
+      final errorMsg = isConfigured
+          ? 'AI 生成超时或失败，请检查网络后重试 🌱'
+          : '未配置 AI 密钥，请在隐私设置中设置后再试 🌱';
       setState(() {
-        _aiError = 'AI 音乐家正在休息，先试试经典模式吧 🌱';
+        _aiError = errorMsg;
         _aiPhase = _AiPhase.idle;
       });
     }
+  }
+
+  /// Cancel the ongoing AI generation.
+  void _cancelGeneration() {
+    _generationCancelled = true;
+    setState(() {
+      _aiPhase = _AiPhase.idle;
+      _gameMode = _GameMode.classic;
+      _selectedStyle = null;
+      _aiError = null;
+    });
   }
 
   /// Go back to mode selection.
@@ -639,7 +704,10 @@ class _RhythmGamePageState extends State<RhythmGamePage>
         }
         if (_aiPhase == _AiPhase.generating) {
           return Scaffold(
-            body: _AiGeneratingScreen(style: _selectedStyle!),
+            body: _AiGeneratingScreen(
+              style: _selectedStyle!,
+              onCancel: _cancelGeneration,
+            ),
           );
         }
         if (_aiPhase == _AiPhase.idle && _aiError != null) {
@@ -760,7 +828,7 @@ class _StartScreen extends StatelessWidget {
   final _Difficulty selectedDifficulty;
   final ValueChanged<_Difficulty> onDifficultyChanged;
   final VoidCallback onStart;
-  final VoidCallback onAiMode;
+  final Future<void> Function() onAiMode;
 
   const _StartScreen({
     required this.selectedDifficulty,
@@ -853,7 +921,7 @@ class _StartScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: onAiMode,
+                onPressed: () => onAiMode(),
                 icon: const Text('🤖', style: TextStyle(fontSize: 20)),
                 label: const Text('AI 创作音乐'),
                 style: OutlinedButton.styleFrom(
@@ -1558,7 +1626,8 @@ class _StyleCard extends StatelessWidget {
 
 class _AiGeneratingScreen extends StatefulWidget {
   final AiMusicStyle style;
-  const _AiGeneratingScreen({required this.style});
+  final VoidCallback onCancel;
+  const _AiGeneratingScreen({required this.style, required this.onCancel});
 
   @override
   State<_AiGeneratingScreen> createState() => _AiGeneratingScreenState();
@@ -1567,6 +1636,8 @@ class _AiGeneratingScreen extends StatefulWidget {
 class _AiGeneratingScreenState extends State<_AiGeneratingScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animCtrl;
+  Timer? _msgTimer;
+  Timer? _timeoutTimer;
   final List<String> _messages = const [
     'AI 正在构思旋律...',
     '正在编排节奏...',
@@ -1583,20 +1654,25 @@ class _AiGeneratingScreenState extends State<_AiGeneratingScreen>
     )..repeat();
 
     // Cycle through messages
-    Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
+    _msgTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (!mounted) return;
       setState(() {
         _msgIndex = (_msgIndex + 1) % _messages.length;
       });
+    });
+
+    // Auto-timeout after 50 seconds (API has 45s timeout, plus buffer)
+    _timeoutTimer = Timer(const Duration(seconds: 50), () {
+      if (!mounted) return;
+      widget.onCancel();
     });
   }
 
   @override
   void dispose() {
     _animCtrl.dispose();
+    _msgTimer?.cancel();
+    _timeoutTimer?.cancel();
     super.dispose();
   }
 
@@ -1629,6 +1705,15 @@ class _AiGeneratingScreenState extends State<_AiGeneratingScreen>
               '${widget.style.label}风格 · 30秒音乐',
               style:
                   const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 36),
+            TextButton.icon(
+              onPressed: widget.onCancel,
+              icon: const Icon(Icons.close, size: 18),
+              label: const Text('取消'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.textSecondary,
+              ),
             ),
           ],
         ),
