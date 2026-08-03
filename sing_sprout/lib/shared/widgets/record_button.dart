@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
-/// 录音按钮 — 圆形，长按录音，松开停止
+/// 录音按钮 — 圆形，点击录音/停止
 class RecordButton extends StatefulWidget {
   final VoidCallback onRecordingStart;
   final VoidCallback onRecordingStop;

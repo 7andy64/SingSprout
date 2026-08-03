@@ -5,7 +5,6 @@ enum Feature {
   createMusic,            // 哼唱创作（录音+编曲）
   editWork,               // 编辑作品
   deleteWork,             // 删除作品
-  switchRole,             // 切换身份（仍需密码验证）
   changeIdentityPassword, // 修改身份切换密码
   accessObservation,      // 查看观察窗
   accessPrivacySettings,  // 访问隐私设置页
@@ -16,7 +15,6 @@ const rolePermissions = <Feature, Set<UserRole>>{
   Feature.createMusic:           {UserRole.student, UserRole.teacher},
   Feature.editWork:              {UserRole.student, UserRole.teacher},
   Feature.deleteWork:            {UserRole.student, UserRole.teacher},
-  Feature.switchRole:            {UserRole.student, UserRole.teacher, UserRole.parent},
   Feature.changeIdentityPassword:{UserRole.parent},
   Feature.accessObservation:     {UserRole.teacher, UserRole.parent},
   Feature.accessPrivacySettings: {UserRole.student, UserRole.teacher, UserRole.parent},

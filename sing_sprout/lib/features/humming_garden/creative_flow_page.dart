@@ -328,7 +328,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
           vm: _vm,
           onSaveLocally: () => _saveWork(thenShare: false),
           ownedInstrumentIds:
-              context.read<EconomyProvider>().ownedItemIds,
+              context.watch<EconomyProvider>().ownedItemIds,
           onSaveAndShare: () => _saveWork(thenShare: true),
         );
     }

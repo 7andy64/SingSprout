@@ -37,6 +37,17 @@ class _InstrumentMixerState extends State<InstrumentMixer> {
   void initState() {
     super.initState();
     _active = List.filled(_instruments.length, false);
+    _syncActive();
+  }
+
+  @override
+  void didUpdateWidget(covariant InstrumentMixer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) _syncActive();
+  }
+
+  void _syncActive() {
+    _active = List.filled(_instruments.length, false);
     final activeCount = (widget.value * _instruments.length).round();
     for (int i = 0; i < activeCount; i++) {
       _active[i] = true;
