@@ -79,6 +79,17 @@ class EconomyProvider extends ChangeNotifier {
       'tit' => 'pet_blue_tit',
       'frog' => 'pet_rainbow_frog',
       'firefly' => 'pet_golden_firefly',
+      'dog' => 'pet_golden_dog',
+      'cat' => 'pet_silver_cat',
+      'duck' => 'pet_yellow_duck',
+      'goat' => 'pet_white_goat',
+      'elf' => 'pet_magic_elf',
+      'elephant' => 'pet_wise_elephant',
+      'fox' => 'pet_cunning_fox',
+      'hedgehog' => 'pet_gentle_hedgehog',
+      'deer' => 'pet_graceful_deer',
+      'squirrel' => 'pet_lively_squirrel',
+      'rabbit' => 'pet_soft_rabbit',
       _ => null,
     };
     if (shopId == null) return false;
