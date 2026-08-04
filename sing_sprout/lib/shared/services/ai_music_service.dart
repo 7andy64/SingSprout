@@ -30,15 +30,11 @@ class AiMusicService {
     final isConfigured = await dashScope.isConfigured;
     if (!isConfigured) {
       debugPrint('[AiMusicService] DashScope not configured, using procedural fallback');
-      return _proceduralMusic(style);
+      return proceduralMusic(style);
     }
 
-    // Try AI generation with retries
+    // Try AI generation (single attempt for speed)
     for (var attempt = 0; attempt < _maxRetries; attempt++) {
-      if (attempt > 0) {
-        debugPrint('[AiMusicService] Retry attempt ${attempt + 1}/$_maxRetries');
-        await Future.delayed(Duration(seconds: attempt * 2));
-      }
 
       final rawJson = await dashScope.chatCompletion(
         systemPrompt: _systemPrompt(style),
@@ -89,16 +85,17 @@ class AiMusicService {
 
     // All AI attempts exhausted — use procedural fallback
     debugPrint('[AiMusicService] All AI attempts failed, using procedural music');
-    return _proceduralMusic(style);
+    return proceduralMusic(style);
   }
 
-  static const _maxRetries = 3;
+  static const _maxRetries = 1;
 
-  /// Procedural music generation — used as fallback when AI is unavailable.
+  /// Procedural music generation — always fast, no network.
   ///
   /// Generates pentatonic melody + style-appropriate percussion patterns
-  /// without any network calls. Always succeeds.
-  Future<AiMusicResult?> _proceduralMusic(AiMusicStyle style) async {
+  /// without any network calls. Used as fast-path first play, and fallback
+  /// when AI is unavailable.
+  Future<AiMusicResult> proceduralMusic(AiMusicStyle style) async {
     final rng = Random(DateTime.now().millisecondsSinceEpoch);
     final cfg = _styleConfig(style);
     final tempo = cfg.tempo;
@@ -170,8 +167,7 @@ class AiMusicService {
 
     final wavPath = await _synthesizeWav(melodyNotes, percussionNotes, tempo);
     if (wavPath == null) {
-      debugPrint('[AiMusicService] Procedural WAV synthesis failed');
-      return null;
+      throw Exception('[AiMusicService] Procedural WAV synthesis failed');
     }
 
     final allNotes = [...melodyNotes, ...percussionNotes]
@@ -189,24 +185,24 @@ class AiMusicService {
   _StyleCfg _styleConfig(AiMusicStyle style) {
     return switch (style) {
       AiMusicStyle.happy => const _StyleCfg(
-          tempo: 120, noteInterval: 0.18, noteIntervalVariance: 0.15,
-          maxNoteDuration: 0.8, percussionGrid: 0.5, kickEvery: 1,
-          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.6,
+          tempo: 120, noteInterval: 0.45, noteIntervalVariance: 0.20,
+          maxNoteDuration: 0.6, percussionGrid: 1.0, kickEvery: 1,
+          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.35,
         ),
       AiMusicStyle.calm => const _StyleCfg(
-          tempo: 75, noteInterval: 0.55, noteIntervalVariance: 0.4,
+          tempo: 75, noteInterval: 0.65, noteIntervalVariance: 0.4,
           maxNoteDuration: 1.2, percussionGrid: 1.0, kickEvery: 2,
           snareOffset: 0, snareEvery: 4, hhProbability: 0.15,
         ),
       AiMusicStyle.energetic => const _StyleCfg(
-          tempo: 135, noteInterval: 0.12, noteIntervalVariance: 0.1,
-          maxNoteDuration: 0.5, percussionGrid: 0.25, kickEvery: 1,
-          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.85,
+          tempo: 135, noteInterval: 0.30, noteIntervalVariance: 0.15,
+          maxNoteDuration: 0.5, percussionGrid: 0.5, kickEvery: 1,
+          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.40,
         ),
       AiMusicStyle.electronic => const _StyleCfg(
-          tempo: 125, noteInterval: 0.15, noteIntervalVariance: 0.12,
+          tempo: 125, noteInterval: 0.35, noteIntervalVariance: 0.15,
           maxNoteDuration: 0.6, percussionGrid: 0.5, kickEvery: 1,
-          snareOffset: 0.25, snareEvery: 2, hhProbability: 0.7,
+          snareOffset: 0.25, snareEvery: 2, hhProbability: 0.40,
         ),
     };
   }

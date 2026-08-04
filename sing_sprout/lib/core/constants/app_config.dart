@@ -4,12 +4,13 @@ class AppConfig {
 
   static const String appName = '声芽';
   static const String appNameEn = 'SingSprout';
-  static const String version = '0.9.4';
+  static const String version = '0.9.9';
 
-  // 功能开关（MVP 阶段仅开启 P0 功能）
-  static const bool enableMoodRadio = true;      // P1: 完整心情收音机
+  // 功能开关（MVP 最小闭环已包含：录音编曲 + 守护动物聊天 + 节奏游戏 + 金松果经济）
+  static const bool enableGuardianChat = true;    // P0: 守护动物 AI 聊天
+  static const bool enableMoodRadio = true;       // P1: 心情收音机
   static const bool enableFieldSoundLab = true;   // P1: 田野声音实验室
-  static const bool enableRhythmTribe = true;     // P2: 节奏部落
+  static const bool enableRhythmTribe = true;     // P0: 节奏部落
 
   // 隐私与安全
   static const bool localEncryptionEnabled = true;
