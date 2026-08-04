@@ -24,6 +24,8 @@ class ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasProfile = profile != null;
     final appState = context.watch<AppState>();
+    final economy = context.watch<EconomyProvider>();
+    final frameEmoji = economy.equippedAvatarFrameEmoji;
     final avatarPath = appState.avatarPath;
     final nickname = profile?.nickname ?? '新朋友';
     final initial = nickname.isNotEmpty ? nickname[0] : '🎵';
@@ -46,8 +48,10 @@ class ProfileHeader extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppTheme.primaryGreen.withValues(alpha: 0.3),
-                      width: 3,
+                      color: frameEmoji != null
+                          ? AppTheme.primaryGreen.withValues(alpha: 0.6)
+                          : AppTheme.primaryGreen.withValues(alpha: 0.3),
+                      width: frameEmoji != null ? 4 : 3,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -59,6 +63,33 @@ class ProfileHeader extends StatelessWidget {
                   ),
                   child: _buildAvatarContent(avatarPath, nickname, initial),
                 ),
+                // 头像框装饰
+                if (frameEmoji != null)
+                  Positioned(
+                    top: -6,
+                    right: -6,
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          frameEmoji,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ),
                 // 相机小图标
                 Positioned(
                   right: 0,

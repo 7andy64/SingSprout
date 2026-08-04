@@ -8,7 +8,7 @@ import '../../../shared/widgets/animal_avatar.dart';
 import '../../../shared/widgets/guardian_scene_bubble.dart';
 import '../view_models/creative_flow_view_model.dart';
 
-/// Idle stage — "tap to record" prompt with panda mascot.
+/// Idle stage — "tap to record" prompt with guardian mascot.
 class IdleStageWidget extends StatelessWidget {
   final CreativeFlowViewModel vm;
   final AnimationController breatheController;

@@ -176,10 +176,10 @@ class ShopItem {
         const ShopItem(id: 'frame_rainbow', category: ShopCategory.avatarFrame, name: '彩虹框', emoji: '🌈', price: 50, unlockTreeLevel: 3),
         const ShopItem(id: 'frame_moon', category: ShopCategory.avatarFrame, name: '月亮框', emoji: '🌙', price: 40),
         // 守护动物皮肤
-        const ShopItem(id: 'pet_golden_panda', category: ShopCategory.petSkin, name: '金熊猫', emoji: '🐼✨', price: 60, unlockTreeLevel: 2),
-        const ShopItem(id: 'pet_blue_tit', category: ShopCategory.petSkin, name: '蓝羽山雀', emoji: '🐦💙', price: 40),
-        const ShopItem(id: 'pet_rainbow_frog', category: ShopCategory.petSkin, name: '彩虹蛙', emoji: '🐸🌈', price: 50),
-        const ShopItem(id: 'pet_golden_firefly', category: ShopCategory.petSkin, name: '金萤火虫', emoji: '✨💛', price: 70, unlockTreeLevel: 4),
+        const ShopItem(id: 'pet_deer', category: ShopCategory.petSkin, name: '小鹿斑斑', emoji: '🦌', price: 20),
+        const ShopItem(id: 'pet_blue_tit', category: ShopCategory.petSkin, name: '蓝羽山雀', emoji: '🐦', price: 40),
+        const ShopItem(id: 'pet_rainbow_frog', category: ShopCategory.petSkin, name: '翠蛙', emoji: '🐸', price: 50),
+        const ShopItem(id: 'pet_ladybug', category: ShopCategory.petSkin, name: '七星瓢虫', emoji: '🐞', price: 70, unlockTreeLevel: 4),
         // 音乐树挂饰
         const ShopItem(id: 'deco_bell', category: ShopCategory.treeDeco, name: '风铃', emoji: '🎐', price: 15),
         const ShopItem(id: 'deco_star', category: ShopCategory.treeDeco, name: '小星星', emoji: '🌟', price: 20),
