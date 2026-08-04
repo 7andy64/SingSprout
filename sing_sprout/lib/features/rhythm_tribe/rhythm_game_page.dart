@@ -379,12 +379,27 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   void _generateAiNotes() {
     _notes.clear();
     final result = _aiResult!;
-    for (final aiNote in result.notes) {
-      if (aiNote.startTime >= gameDuration - 1.0) continue;
+
+    // Per-track last-note time for density culling.
+    final lastTime = List.filled(_cfg.trackCount, -999.0);
+    final minSpacing = switch (_difficulty) {
+      _Difficulty.easy => 0.50,
+      _Difficulty.normal => 0.35,
+      _Difficulty.hard => 0.20,
+    };
+
+    // Sort incoming notes by time, then thin by per-track spacing.
+    final sorted = result.notes
+        .where((n) => n.startTime < gameDuration - 1.0)
+        .toList()
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+    for (final aiNote in sorted) {
       final track = AiMusicService.pitchToTrack(aiNote.pitch, _cfg.trackCount);
+      if (aiNote.startTime - lastTime[track] < minSpacing) continue;
+      lastTime[track] = aiNote.startTime;
       _notes.add(_Note(time: aiNote.startTime, track: track));
     }
-    _notes.sort((a, b) => a.time.compareTo(b.time));
   }
 
   void _beginCountdown() {
@@ -612,7 +627,10 @@ class _RhythmGamePageState extends State<RhythmGamePage>
                               ),
                             ),
                           if (_phase == _GamePhase.countdown)
-                            _CountdownOverlay(value: _countdownValue),
+                            _CountdownOverlay(
+                              key: ValueKey(_countdownValue),
+                              value: _countdownValue,
+                            ),
                           if (_phase == _GamePhase.paused)
                             _PauseOverlay(
                               onResume: _togglePause,
@@ -813,7 +831,7 @@ class _StartScreen extends StatelessWidget {
 
 class _CountdownOverlay extends StatelessWidget {
   final int value;
-  const _CountdownOverlay({required this.value});
+  const _CountdownOverlay({super.key, required this.value});
 
   @override
   Widget build(BuildContext context) {

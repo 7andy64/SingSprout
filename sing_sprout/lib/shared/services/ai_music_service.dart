@@ -185,24 +185,24 @@ class AiMusicService {
   _StyleCfg _styleConfig(AiMusicStyle style) {
     return switch (style) {
       AiMusicStyle.happy => const _StyleCfg(
-          tempo: 120, noteInterval: 0.18, noteIntervalVariance: 0.15,
-          maxNoteDuration: 0.8, percussionGrid: 0.5, kickEvery: 1,
-          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.6,
+          tempo: 120, noteInterval: 0.45, noteIntervalVariance: 0.20,
+          maxNoteDuration: 0.6, percussionGrid: 1.0, kickEvery: 1,
+          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.35,
         ),
       AiMusicStyle.calm => const _StyleCfg(
-          tempo: 75, noteInterval: 0.55, noteIntervalVariance: 0.4,
+          tempo: 75, noteInterval: 0.65, noteIntervalVariance: 0.4,
           maxNoteDuration: 1.2, percussionGrid: 1.0, kickEvery: 2,
           snareOffset: 0, snareEvery: 4, hhProbability: 0.15,
         ),
       AiMusicStyle.energetic => const _StyleCfg(
-          tempo: 135, noteInterval: 0.12, noteIntervalVariance: 0.1,
-          maxNoteDuration: 0.5, percussionGrid: 0.25, kickEvery: 1,
-          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.85,
+          tempo: 135, noteInterval: 0.30, noteIntervalVariance: 0.15,
+          maxNoteDuration: 0.5, percussionGrid: 0.5, kickEvery: 1,
+          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.40,
         ),
       AiMusicStyle.electronic => const _StyleCfg(
-          tempo: 125, noteInterval: 0.15, noteIntervalVariance: 0.12,
+          tempo: 125, noteInterval: 0.35, noteIntervalVariance: 0.15,
           maxNoteDuration: 0.6, percussionGrid: 0.5, kickEvery: 1,
-          snareOffset: 0.25, snareEvery: 2, hhProbability: 0.7,
+          snareOffset: 0.25, snareEvery: 2, hhProbability: 0.40,
         ),
     };
   }
