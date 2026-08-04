@@ -75,11 +75,6 @@ class AppState extends ChangeNotifier {
   String? get avatarPath => _avatarPath;
   AnimalState get animalState => _animalState;
 
-  /// 是否有未读回信
-  bool get hasUnreadReply => _cards.any(
-    (c) => c.direction == VoiceCardDirection.received && c.readAt == null,
-  );
-
   // ── 初始化：从本地数据库加载所有数据 ──
 
   /// 从 SQLite 加载用户档案和所有本地数据。
@@ -153,22 +148,19 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    final sharedCards = _cards.where((c) => c.direction == VoiceCardDirection.sent).length;
-    final receivedReplies = _cards.where((c) => c.direction == VoiceCardDirection.received).length;
+    final sharedCards = _cards.length;
 
-    // 综合成长能量
     final workEnergy = (_works.length * 15).clamp(0, 55).toDouble();
     final streakEnergy = (streakDays * 5).clamp(0, 25).toDouble();
-    final cardEnergy = (sharedCards * 3).clamp(0, 10).toDouble();
-    final replyEnergy = (receivedReplies * 5).clamp(0, 10).toDouble();
-    final growthEnergy = (workEnergy + streakEnergy + cardEnergy + replyEnergy).clamp(0, 100).toDouble();
+    final cardEnergy = (sharedCards * 5).clamp(0, 20).toDouble();
+    final growthEnergy = (workEnergy + streakEnergy + cardEnergy).clamp(0, 100).toDouble();
 
     final data = MusicTreeData(
       totalWorks: _works.length,
       streakDays: streakDays,
       totalDays: totalDays,
       sharedCards: sharedCards,
-      receivedReplies: receivedReplies,
+      receivedReplies: 0,
       growthEnergy: growthEnergy,
       lastActiveDate: lastActive,
     );
@@ -342,16 +334,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> markCardAsRead(String id) async {
-    if (!kIsWeb) await _cardRepo.markAsRead(id);
-    final index = _cards.indexWhere((c) => c.id == id);
-    if (index != -1) {
-      _cards[index] = _cards[index].copyWith(readAt: DateTime.now());
-    }
-    _updateAnimalState();
-    notifyListeners();
-  }
-
   Future<void> deleteVoiceCard(String id) async {
     if (!kIsWeb) await _cardRepo.delete(id);
     _cards.removeWhere((c) => c.id == id);
@@ -404,7 +386,7 @@ class AppState extends ChangeNotifier {
     await prefs.setString(_lastLoginDateKey, today);
   }
 
-  /// 根据当前数据重新计算守护动物状态（优先级：happy > curious > expecting > miss > neutral）。
+  /// 根据当前数据重新计算守护动物状态（优先级：happy > curious > miss > neutral）。
   void _updateAnimalState() {
     final today = _todayString();
     final soundLastViewed = _lastSoundViewedAt != null
@@ -427,14 +409,7 @@ class AppState extends ChangeNotifier {
       return;
     }
 
-    // 3. expecting — 有未读回信
-    if (hasUnreadReply) {
-      _animalState = AnimalState.expecting;
-      _persistAnimalState();
-      return;
-    }
-
-    // 4. miss — 最后登录距今 ≥ 3 天
+    // 3. miss — 最后登录距今 ≥ 3 天
     if (_lastLoginDate != null) {
       final lastLogin = DateTime.tryParse(_lastLoginDate!);
       if (lastLogin != null &&

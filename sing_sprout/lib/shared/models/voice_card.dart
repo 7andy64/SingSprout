@@ -1,6 +1,6 @@
 import 'package:uuid/uuid.dart';
 
-/// 声音明信片模型
+/// 声音明信片模型（发件箱）
 class VoiceCard {
   final String id;
   final String workId;
@@ -9,12 +9,9 @@ class VoiceCard {
   final String? audioPath;
   final String? textContent;
   final String? coverUrl;
-  final String? replyToId;
-  final VoiceCardDirection direction;
   final String? greetingAudioPath;
   final String? greetingText;
   final DateTime createdAt;
-  final DateTime? readAt;
 
   const VoiceCard({
     required this.id,
@@ -24,12 +21,9 @@ class VoiceCard {
     this.audioPath,
     this.textContent,
     this.coverUrl,
-    this.replyToId,
-    required this.direction,
     this.greetingAudioPath,
     this.greetingText,
     required this.createdAt,
-    this.readAt,
   });
 
   factory VoiceCard.send({
@@ -39,7 +33,6 @@ class VoiceCard {
     String? audioPath,
     String? textContent,
     String? coverUrl,
-    String? replyToId,
     String? greetingAudioPath,
     String? greetingText,
   }) {
@@ -52,44 +45,9 @@ class VoiceCard {
       audioPath: audioPath,
       textContent: textContent,
       coverUrl: coverUrl,
-      replyToId: replyToId,
       greetingAudioPath: greetingAudioPath,
       greetingText: greetingText,
-      direction: VoiceCardDirection.sent,
       createdAt: now,
-    );
-  }
-
-  /// 是否未读（收到的卡片且未阅读）
-  bool get isUnread =>
-      direction == VoiceCardDirection.received && readAt == null;
-
-  /// 创建一张收到的回信
-  factory VoiceCard.received({
-    required String id,
-    required String senderId,
-    required String workId,
-    String? textContent,
-    String? audioPath,
-    String? coverUrl,
-    String? replyToId,
-    String? greetingAudioPath,
-    String? greetingText,
-    required DateTime createdAt,
-  }) {
-    return VoiceCard(
-      id: id,
-      workId: workId,
-      senderId: senderId,
-      textContent: textContent,
-      audioPath: audioPath,
-      coverUrl: coverUrl,
-      replyToId: replyToId,
-      greetingAudioPath: greetingAudioPath,
-      greetingText: greetingText,
-      direction: VoiceCardDirection.received,
-      createdAt: createdAt,
-      readAt: null,
     );
   }
 
@@ -101,12 +59,9 @@ class VoiceCard {
         'audio_path': audioPath,
         'text_content': textContent,
         'cover_url': coverUrl,
-        'reply_to_id': replyToId,
-        'direction': direction.name,
         'greeting_audio_path': greetingAudioPath,
         'greeting_text': greetingText,
         'created_at': createdAt.toIso8601String(),
-        'read_at': readAt?.toIso8601String(),
       };
 
   factory VoiceCard.fromJson(Map<String, dynamic> json) => VoiceCard(
@@ -117,17 +72,9 @@ class VoiceCard {
         audioPath: json['audio_path'] as String?,
         textContent: json['text_content'] as String?,
         coverUrl: json['cover_url'] as String?,
-        replyToId: json['reply_to_id'] as String?,
-        direction: VoiceCardDirection.values.firstWhere(
-          (e) => e.name == json['direction'],
-          orElse: () => VoiceCardDirection.sent,
-        ),
         greetingAudioPath: json['greeting_audio_path'] as String?,
         greetingText: json['greeting_text'] as String?,
         createdAt: DateTime.parse(json['created_at'] as String),
-        readAt: json['read_at'] != null
-            ? DateTime.parse(json['read_at'] as String)
-            : null,
       );
 
   VoiceCard copyWith({
@@ -138,12 +85,9 @@ class VoiceCard {
     String? audioPath,
     String? textContent,
     String? coverUrl,
-    String? replyToId,
-    VoiceCardDirection? direction,
     String? greetingAudioPath,
     String? greetingText,
     DateTime? createdAt,
-    DateTime? readAt,
   }) {
     return VoiceCard(
       id: id ?? this.id,
@@ -153,14 +97,9 @@ class VoiceCard {
       audioPath: audioPath ?? this.audioPath,
       textContent: textContent ?? this.textContent,
       coverUrl: coverUrl ?? this.coverUrl,
-      replyToId: replyToId ?? this.replyToId,
-      direction: direction ?? this.direction,
       greetingAudioPath: greetingAudioPath ?? this.greetingAudioPath,
       greetingText: greetingText ?? this.greetingText,
       createdAt: createdAt ?? this.createdAt,
-      readAt: readAt ?? this.readAt,
     );
   }
 }
-
-enum VoiceCardDirection { sent, received }

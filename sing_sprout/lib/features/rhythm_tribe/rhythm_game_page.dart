@@ -18,9 +18,7 @@ enum _Difficulty { easy, normal, hard }
 
 enum _GamePhase { idle, countdown, playing, paused, finished }
 
-enum _GameMode { classic, ai }
-
-enum _AiPhase { idle, selectingStyle, generating, ready }
+enum _StartPhase { idle, generating }
 
 enum _Grade { s, a, b, c, d }
 
@@ -88,27 +86,24 @@ class _HitParticle {
   });
 }
 
-/// 浮动文字反馈（Perfect! / Good / Miss）
 class _HitText {
   final String text;
   final Color color;
   Offset position;
-  double age = 0; // 0..1
+  double age = 0;
   _HitText({required this.text, required this.color, required this.position});
 }
 
-/// 判定线命中闪光
 class _HitFlash {
   final Offset position;
   final Color color;
-  double age = 0; // 0..1
+  double age = 0;
   _HitFlash({required this.position, required this.color});
 }
 
-/// 轨道震动（Miss 时水平抖动）
 class _TrackShake {
   final int track;
-  double intensity = 1.0; // 1..0 衰减
+  double intensity = 1.0;
   _TrackShake({required this.track});
 }
 
@@ -127,6 +122,7 @@ class _RhythmGamePageState extends State<RhythmGamePage>
     with SingleTickerProviderStateMixin {
   // ── 阶段 ──
   _GamePhase _phase = _GamePhase.idle;
+  _StartPhase _startPhase = _StartPhase.idle;
   _Difficulty _difficulty = _Difficulty.normal;
   late _DifficultyConfig _cfg;
 
@@ -134,12 +130,9 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   int _countdownValue = 0;
   Timer? _countdownTimer;
 
-  // ── AI Mode ──
-  _GameMode _gameMode = _GameMode.classic;
-  _AiPhase _aiPhase = _AiPhase.idle;
-  AiMusicStyle? _selectedStyle;
+  // ── AI 音乐 ──
+  AiMusicStyle _selectedStyle = AiMusicStyle.happy;
   AiMusicResult? _aiResult;
-  String? _aiError;
   final AudioPlayer _audioPlayer = AudioPlayer();
   double _effectiveBpm = 120;
 
@@ -162,10 +155,10 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   final Set<int> _hitNotes = {};
   final Set<int> _missedNotes = {};
   final List<_HitParticle> _particles = [];
-  final List<_HitText> _hitTexts = []; // 浮动文字 Perfect!/Good/Miss
-  double _screenFlash = 0; // 0=无, >0=Perfect金色闪白, <0=Miss红色闪
-  final List<_HitFlash> _hitFlashes = []; // 判定线命中闪光
-  final List<_TrackShake> _trackShakes = []; // 轨道震动
+  final List<_HitText> _hitTexts = [];
+  double _screenFlash = 0;
+  final List<_HitFlash> _hitFlashes = [];
+  final List<_TrackShake> _trackShakes = [];
 
   // ── 动画 ──
   late AnimationController _controller;
@@ -264,15 +257,11 @@ class _RhythmGamePageState extends State<RhythmGamePage>
         _missedNotes.add(i);
         _missCount++;
         _combo = 0;
-        // 震动反馈
         HapticFeedback.heavyImpact();
-        // 屏幕红色闪
         _screenFlash = -1.0;
-        // 浮动 Miss 文字
         final laneW = _lastScreenWidth / _cfg.trackCount;
         final cx = _notes[i].track * laneW + laneW / 2;
         _hitTexts.add(_HitText(text: 'Miss', color: AppTheme.error, position: Offset(cx, 120)));
-        // 轨道震动
         _trackShakes.add(_TrackShake(track: _notes[i].track));
       }
     }
@@ -289,22 +278,18 @@ class _RhythmGamePageState extends State<RhythmGamePage>
     }
     _particles.removeWhere((p) => p.age >= 1.0);
 
-    // 浮动文字衰减
     for (final t in _hitTexts) {
       t.age += dt / 0.8;
       t.position = Offset(t.position.dx, t.position.dy - 60 * dt);
     }
     _hitTexts.removeWhere((t) => t.age >= 1.0);
 
-    // 命中闪光衰减
     for (final f in _hitFlashes) { f.age += dt / 0.3; }
     _hitFlashes.removeWhere((f) => f.age >= 1.0);
 
-    // 屏幕闪白/闪红衰减
     if (_screenFlash > 0) _screenFlash = (_screenFlash - dt / 0.25).clamp(0.0, 1.0);
     if (_screenFlash < 0) _screenFlash = (_screenFlash + dt / 0.35).clamp(-1.0, 0.0);
 
-    // 轨道震动衰减
     for (final s in _trackShakes) { s.intensity -= dt / 0.3; }
     _trackShakes.removeWhere((s) => s.intensity <= 0);
   }
@@ -320,7 +305,8 @@ class _RhythmGamePageState extends State<RhythmGamePage>
         angle: rng.nextDouble() * 2 * pi,
         size: 3 + rng.nextDouble() * (isPerfect ? 8 : 4),
         isPerfect: isPerfect,
-      ));
+      ),
+    );
     }
   }
 
@@ -361,14 +347,12 @@ class _RhythmGamePageState extends State<RhythmGamePage>
       final cx = note.track * laneW + laneW / 2;
 
       if (isPerfect) {
-        // Perfect: 金色大爆炸 + 闪白 + 轻震动 + 浮动文字 + 判定线闪光
         HapticFeedback.lightImpact();
         _screenFlash = 1.0;
         _spawnParticles(Offset(cx, 200), const Color(0xFFFFD700), true);
         _hitTexts.add(_HitText(text: 'Perfect!', color: const Color(0xFFFFD700), position: Offset(cx, 100)));
         _hitFlashes.add(_HitFlash(position: Offset(cx, 200), color: const Color(0xFFFFD700)));
       } else {
-        // Good: 蓝色波纹 + 微震 + 浮动文字 + 判定线闪光
         HapticFeedback.selectionClick();
         _screenFlash = 0.5;
         _spawnParticles(Offset(cx, 200), const Color(0xFF4D96FF), false);
@@ -393,16 +377,44 @@ class _RhythmGamePageState extends State<RhythmGamePage>
       return;
     }
 
-    _cfg = _DifficultyConfig.of(_difficulty);
-
-    if (_gameMode == _GameMode.ai && _aiResult != null) {
+    if (_aiResult != null) {
+      // Reuse cached AI music for fast retry
       _startAiGame();
     } else {
+      _generateAndStart();
+    }
+  }
+
+  Future<void> _generateAndStart() async {
+    setState(() { _startPhase = _StartPhase.generating; });
+
+    final result = await AiMusicService().generateGameMusic(_selectedStyle);
+
+    if (!mounted) return;
+
+    if (result != null) {
+      _aiResult = result;
+      setState(() { _startPhase = _StartPhase.idle; });
+      _startAiGame();
+    } else {
+      setState(() {
+        _startPhase = _StartPhase.idle;
+        _aiResult = null;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('AI 暂时不可用，使用经典模式'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
       _startClassicGame();
     }
   }
 
   void _startClassicGame() {
+    _cfg = _DifficultyConfig.of(_difficulty);
     _effectiveBpm = _cfg.bpm;
     _generateBeatGrid();
     _generateNotes();
@@ -410,14 +422,13 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   }
 
   void _startAiGame() {
+    _cfg = _DifficultyConfig.of(_difficulty);
     _effectiveBpm = _aiResult!.tempo;
-    // Generate beat grid from AI tempo
     _beatTimes.clear();
     final beatInterval = 60.0 / _effectiveBpm;
     for (double t = 0; t <= gameDuration + 2; t += beatInterval) {
       _beatTimes.add(t);
     }
-    // Map AI notes to game notes
     _generateAiNotes();
     _beginCountdown();
   }
@@ -434,7 +445,6 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   }
 
   void _beginCountdown() {
-    // 清理上局状态
     _controller.reset();
     _countdownTimer?.cancel();
     _hitNotes.clear();
@@ -458,7 +468,6 @@ class _RhythmGamePageState extends State<RhythmGamePage>
       _coinReward = 0;
     });
 
-    // 启动倒计时
     _runCountdown();
   }
 
@@ -468,11 +477,9 @@ class _RhythmGamePageState extends State<RhythmGamePage>
       final next = _countdownValue - 1;
       if (next < 0) {
         timer.cancel();
-        // 倒计时结束，开始游戏
         setState(() { _phase = _GamePhase.playing; });
         _controller.forward();
-        // Start background music for AI mode
-        if (_gameMode == _GameMode.ai && _aiResult != null) {
+        if (_aiResult != null) {
           _playAiMusic();
         }
       } else {
@@ -496,53 +503,6 @@ class _RhythmGamePageState extends State<RhythmGamePage>
     } catch (_) {}
   }
 
-  /// Start AI generation flow — show style picker.
-  void _enterAiMode() {
-    setState(() {
-      _gameMode = _GameMode.ai;
-      _aiPhase = _AiPhase.selectingStyle;
-      _aiError = null;
-    });
-  }
-
-  /// User selected a style — start generation.
-  Future<void> _selectStyle(AiMusicStyle style) async {
-    setState(() {
-      _selectedStyle = style;
-      _aiPhase = _AiPhase.generating;
-    });
-
-    final result = await AiMusicService().generateGameMusic(style);
-
-    if (!mounted) return;
-
-    if (result != null) {
-      setState(() {
-        _aiResult = result;
-        _aiPhase = _AiPhase.ready;
-      });
-      // Auto-start the game
-      _startGame();
-    } else {
-      setState(() {
-        _aiError = 'AI 音乐家正在休息，先试试经典模式吧 🌱';
-        _aiPhase = _AiPhase.idle;
-      });
-    }
-  }
-
-  /// Go back to mode selection.
-  void _backToModeSelect() {
-    _stopAiMusic();
-    setState(() {
-      _gameMode = _GameMode.classic;
-      _aiPhase = _AiPhase.idle;
-      _aiResult = null;
-      _selectedStyle = null;
-      _aiError = null;
-    });
-  }
-
   void _togglePause() {
     if (_phase != _GamePhase.playing && _phase != _GamePhase.paused) return;
 
@@ -561,11 +521,7 @@ class _RhythmGamePageState extends State<RhythmGamePage>
     _stopAiMusic();
     setState(() {
       _phase = _GamePhase.idle;
-      _gameMode = _GameMode.classic;
-      _aiPhase = _AiPhase.idle;
       _aiResult = null;
-      _selectedStyle = null;
-      _aiError = null;
     });
   }
 
@@ -629,38 +585,21 @@ class _RhythmGamePageState extends State<RhythmGamePage>
         );
 
       case _GamePhase.idle:
-        if (_aiPhase == _AiPhase.selectingStyle) {
+        if (_startPhase == _StartPhase.generating) {
           return Scaffold(
-            body: _AiStylePicker(
-              onSelected: _selectStyle,
-              onBack: _backToModeSelect,
-            ),
+            body: _AiGeneratingScreen(style: _selectedStyle),
           );
-        }
-        if (_aiPhase == _AiPhase.generating) {
-          return Scaffold(
-            body: _AiGeneratingScreen(style: _selectedStyle!),
-          );
-        }
-        if (_aiPhase == _AiPhase.idle && _aiError != null) {
-          // Show error then return to start screen
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_aiError!),
-                duration: const Duration(seconds: 3),
-              ),
-            );
-            setState(() { _aiError = null; });
-          });
         }
         return Scaffold(
           body: _StartScreen(
             selectedDifficulty: _difficulty,
+            selectedStyle: _selectedStyle,
             onDifficultyChanged: (d) => setState(() { _difficulty = d; }),
+            onStyleChanged: (s) => setState(() {
+              _selectedStyle = s;
+              _aiResult = null; // style changed, regenerate
+            }),
             onStart: _startGame,
-            onAiMode: _enterAiMode,
           ),
         );
 
@@ -693,7 +632,6 @@ class _RhythmGamePageState extends State<RhythmGamePage>
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          // 游戏画布
                           CustomPaint(
                             size: Size(constraints.maxWidth, constraints.maxHeight),
                             painter: _GamePainter(
@@ -713,7 +651,6 @@ class _RhythmGamePageState extends State<RhythmGamePage>
                               difficulty: _difficulty,
                             ),
                           ),
-                          // 屏幕闪光反馈
                           if (_screenFlash != 0)
                             IgnorePointer(
                               child: AnimatedOpacity(
@@ -726,10 +663,8 @@ class _RhythmGamePageState extends State<RhythmGamePage>
                                 ),
                               ),
                             ),
-                          // 倒计时层（在游戏画布上方）
                           if (_phase == _GamePhase.countdown)
                             _CountdownOverlay(value: _countdownValue),
-                          // 暂停层
                           if (_phase == _GamePhase.paused)
                             _PauseOverlay(
                               onResume: _togglePause,
@@ -753,20 +688,22 @@ class _RhythmGamePageState extends State<RhythmGamePage>
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 开始界面（含难度选择）
+// 开始界面（含难度选择 + 风格选择）
 // ═══════════════════════════════════════════════════════════════
 
 class _StartScreen extends StatelessWidget {
   final _Difficulty selectedDifficulty;
+  final AiMusicStyle selectedStyle;
   final ValueChanged<_Difficulty> onDifficultyChanged;
+  final ValueChanged<AiMusicStyle> onStyleChanged;
   final VoidCallback onStart;
-  final VoidCallback onAiMode;
 
   const _StartScreen({
     required this.selectedDifficulty,
+    required this.selectedStyle,
     required this.onDifficultyChanged,
+    required this.onStyleChanged,
     required this.onStart,
-    required this.onAiMode,
   });
 
   @override
@@ -780,16 +717,23 @@ class _StartScreen extends StatelessWidget {
             children: [
               const Text('🥁', style: TextStyle(fontSize: 72)),
               const SizedBox(height: 16),
-              const Text('节奏游戏',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+              const Text(
+                '节奏游戏',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+              ),
               const SizedBox(height: 8),
-              const Text('音符会从上方落下，到达底部时点击对应轨道\n越精准，得分越高！',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppTheme.textSecondary, height: 1.5)),
+              const Text(
+                'AI 为你创作音乐，音符会从上方落下\n到达底部时点击对应轨道，越精准得分越高！',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.textSecondary, height: 1.5),
+              ),
               const SizedBox(height: 28),
+
               // 难度选择
-              const Text('选择难度',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+              const Text(
+                '选择难度',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+              ),
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -834,9 +778,13 @@ class _StartScreen extends StatelessWidget {
                                 fontSize: 14,
                                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                                 color: selected ? AppTheme.primaryGreen : AppTheme.textPrimary,
-                              )),
-                              const SizedBox(height: 2),
-                              Text(sub, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                              Text(
+                                sub,
+                                style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                              ),
                             ],
                           ),
                         ),
@@ -845,22 +793,63 @@ class _StartScreen extends StatelessWidget {
                   );
                 }).toList(),
               ),
+
+              const SizedBox(height: 24),
+
+              // 风格选择
+              const Text(
+                '选择风格',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: AiMusicStyle.values.map((style) {
+                  final selected = style == selectedStyle;
+                  return GestureDetector(
+                    onTap: () => onStyleChanged(style),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: selected ? AppTheme.primaryGreen.withValues(alpha: 0.12) : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selected ? AppTheme.primaryGreen : AppTheme.divider,
+                          width: selected ? 2 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(style.emoji, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 6),
+                          Text(
+                            style.label,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                              color: selected ? AppTheme.primaryGreen : AppTheme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: onStart,
                 style: FilledButton.styleFrom(minimumSize: const Size(200, 52)),
                 child: const Text('开始游戏'),
               ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onAiMode,
-                icon: const Text('🤖', style: TextStyle(fontSize: 20)),
-                label: const Text('AI 创作音乐'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(200, 48),
-                  foregroundColor: AppTheme.primaryGreen,
-                  side: const BorderSide(color: AppTheme.primaryGreen),
-                ),
+              const SizedBox(height: 8),
+              const Text(
+                'AI 将根据风格为你生成专属音乐',
+                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
               ),
             ],
           ),
@@ -871,7 +860,7 @@ class _StartScreen extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 3-2-1-GO 倒计时（在游戏画面之上的半透明层）
+// 3-2-1-GO 倒计时
 // ═══════════════════════════════════════════════════════════════
 
 class _CountdownOverlay extends StatelessWidget {
@@ -938,8 +927,10 @@ class _PauseOverlay extends StatelessWidget {
             children: [
               const Text('⏸️', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 12),
-              const Text('游戏暂停',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+              const Text(
+                '游戏暂停',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+              ),
               const SizedBox(height: 32),
               SizedBox(
                 width: 200,
@@ -1009,8 +1000,10 @@ class _GameHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('分数', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-                    Text('$score',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                    Text(
+                      '$score',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                    ),
                   ],
                 ),
                 const Spacer(),
@@ -1026,8 +1019,10 @@ class _GameHeader extends StatelessWidget {
                       children: [
                         const Text('🔥', style: TextStyle(fontSize: 16)),
                         const SizedBox(width: 4),
-                        Text('$combo',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.orange)),
+                        Text(
+                          '$combo',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.orange),
+                        ),
                       ],
                     ),
                   ),
@@ -1171,7 +1166,6 @@ class _GamePainter extends CustomPainter {
       ..strokeWidth = 2.5;
     canvas.drawLine(Offset(0, hitLineY), Offset(size.width, hitLineY), hitLine);
 
-    // 命中区域
     for (int i = 0; i < trackCount; i++) {
       final cx = i * laneW + laneW / 2;
       final fill = Paint()
@@ -1195,7 +1189,6 @@ class _GamePainter extends CustomPainter {
       if (noteY < -40 || noteY > size.height + 40) continue;
 
       double cx = note.track * laneW + laneW / 2;
-      // 轨道震动偏移（Miss 时该轨道水平抖动）
       for (final s in trackShakes) {
         if (s.track == note.track) {
           cx += sin(s.intensity * 10) * s.intensity * 14;
@@ -1272,7 +1265,7 @@ class _TrackIndicator extends StatelessWidget {
     const emojis = ['🔴', '🔵', '🟢', '🟣'];
     return Container(
       height: 80,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: AppTheme.divider)),
       ),
@@ -1284,7 +1277,7 @@ class _TrackIndicator extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   border: i < trackCount - 1
-                      ? Border(right: BorderSide(color: AppTheme.divider))
+                      ? const Border(right: BorderSide(color: AppTheme.divider))
                       : null,
                 ),
                 child: Center(
@@ -1350,31 +1343,43 @@ class _ResultScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 评级徽章
                 Container(
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: RadialGradient(colors: [
-                      data.$4.withValues(alpha: 0.2),
-                      data.$4.withValues(alpha: 0.05),
-                    ]),
-                    border: Border.all(color: data.$4.withValues(alpha: 0.4), width: 3),
+                    gradient: RadialGradient(
+                      colors: [
+                        data.$4.withValues(alpha: 0.2),
+                        data.$4.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: data.$4.withValues(alpha: 0.4),
+                      width: 3,
+                    ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(data.$1, style: const TextStyle(fontSize: 40)),
                       const SizedBox(height: 2),
-                      Text(grade.name.toUpperCase(),
-                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: data.$4)),
+                      Text(
+                        grade.name.toUpperCase(),
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: data.$4),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(data.$2, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                Text(data.$3, style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                Text(
+                  data.$2,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                ),
+                Text(
+                  data.$3,
+                  style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                ),
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -1382,8 +1387,10 @@ class _ResultScreen extends StatelessWidget {
                     color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(difficultyLabel,
-                      style: const TextStyle(fontSize: 13, color: AppTheme.primaryGreen, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    difficultyLabel,
+                    style: const TextStyle(fontSize: 13, color: AppTheme.primaryGreen, fontWeight: FontWeight.w600),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Container(
@@ -1435,124 +1442,6 @@ class _ResultScreen extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// AI 风格选择界面
-// ═══════════════════════════════════════════════════════════════
-
-class _AiStylePicker extends StatelessWidget {
-  final Function(AiMusicStyle) onSelected;
-  final VoidCallback onBack;
-
-  const _AiStylePicker({required this.onSelected, required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🤖🎵', style: TextStyle(fontSize: 64)),
-              const SizedBox(height: 12),
-              const Text(
-                'AI 为你创作音乐',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                '选一种风格，AI 会为你生成\n独一无二的音乐和节奏',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.textSecondary, height: 1.5),
-              ),
-              const SizedBox(height: 24),
-              ...AiMusicStyle.values.map(
-                (style) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _StyleCard(
-                    style: style,
-                    onTap: () => onSelected(style),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: onBack,
-                child: const Text('返回经典模式'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StyleCard extends StatelessWidget {
-  final AiMusicStyle style;
-  final VoidCallback onTap;
-
-  const _StyleCard({required this.style, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final description = switch (style) {
-      AiMusicStyle.happy => '明亮活泼 · 大调旋律 · 跳跃节奏',
-      AiMusicStyle.calm => '温柔宁静 · 摇篮曲风 · 舒缓心情',
-      AiMusicStyle.energetic => '强烈动感 · 电子舞曲 · 附点节奏',
-      AiMusicStyle.electronic => '现代合成 · 琶音上行 · 电子音色',
-    };
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.divider),
-        ),
-        child: Row(
-          children: [
-            Text(style.emoji, style: const TextStyle(fontSize: 36)),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    style.label,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
 // AI 生成中加载界面
 // ═══════════════════════════════════════════════════════════════
 
@@ -1582,7 +1471,6 @@ class _AiGeneratingScreenState extends State<_AiGeneratingScreen>
       duration: const Duration(seconds: 2),
     )..repeat();
 
-    // Cycle through messages
     Timer.periodic(const Duration(seconds: 2), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -1652,11 +1540,14 @@ class _StatRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-          Text(value, style: TextStyle(
-            fontSize: highlight ? 20 : 16,
-            fontWeight: FontWeight.w600,
-            color: color ?? AppTheme.textPrimary,
-          )),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: highlight ? 20 : 16,
+              fontWeight: FontWeight.w600,
+              color: color ?? AppTheme.textPrimary,
+            ),
+          ),
         ],
       ),
     );
