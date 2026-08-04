@@ -42,6 +42,11 @@ class GuardianSceneBubble extends StatelessWidget {
   }
 
   (String, IconData) _resolveTip() {
+    // 优先展示守护动物的祝贺/鼓励消息
+    final greeting = appState.pendingAnimalGreeting;
+    if (greeting != null) {
+      return (greeting, Icons.chat_bubble_rounded);
+    }
     if (appState.totalSounds == 0) {
       return ('去采集一个声音吧！', Icons.mic_external_on_rounded);
     }

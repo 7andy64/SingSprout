@@ -195,6 +195,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
 
     if (work == null || !mounted) return;
     await context.read<AppState>().addWork(work);
+    _onWorkCreated();
 
     if (mounted) {
       await TreeGrowAnimation.show(context, state: TreeState.sprouting);
@@ -209,6 +210,37 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       );
       context.pop();
     }
+  }
+
+  /// 创作完成后触发守护动物祝贺/鼓励消息。
+  void _onWorkCreated() {
+    final appState = context.read<AppState>();
+    final count = appState.totalWorks;
+    final animal =
+        appState.userProfile?.guardianAnimal ?? GuardianAnimal.panda;
+    final name = animal.shortName;
+
+    String greeting;
+    if (count == 1) {
+      greeting = '$name说：🎉 恭喜你创作了第一首歌！这是你音乐之旅的开始！';
+    } else if (count == 5) {
+      greeting = '$name说：🌟 你已经创作了 5 首歌了！越来越棒了！';
+    } else if (count == 10) {
+      greeting = '$name说：🏆 10 首歌达成！你是个真正的小创作家！';
+    } else if (count == 20) {
+      greeting = '$name说：👑 20 首歌！你太厉害了，继续加油！';
+    } else {
+      // 非里程碑：随机选择一句鼓励语
+      final encouragements = [
+        '$name说：太棒了！你又创作了一首歌！',
+        '$name说：真好听！继续加油哦～',
+        '$name说：哇！这首歌真有感觉！',
+        '$name说：你又进步了！我为你骄傲！',
+      ];
+      greeting = encouragements[count % encouragements.length];
+    }
+
+    appState.setPendingAnimalGreeting(greeting);
   }
 
   // ── Build ──

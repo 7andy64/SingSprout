@@ -11,7 +11,7 @@ enum AnimalType {
   panda('panda', '小熊猫'),
   sparrow('sparrow', '山雀'),
   frog('frog', '青蛙'),
-  firefly('firefly', '瓢虫'),
+  ladybug('ladybug', '瓢虫'),
   dog('dog', '小黄狗'),
   cat('cat', '小花猫'),
   duck('duck', '小鸭子'),
@@ -212,7 +212,7 @@ class GuardianAnimalService {
 
   /// 设置守护动物身份。
   ///
-  /// [type] — 动物类型：`'panda'`、`'sparrow'`、`'frog'`、`'firefly'`。
+  /// [type] — 动物类型：`'panda'`、`'sparrow'`、`'frog'`、`'ladybug'`。
   /// [name] — 动物的名字，如 `'咕咕'`、`'啾啾'`。
   ///
   /// 设置后 [chat] / [chatRaw] 会自动使用该动物对应的性格提示词。
@@ -297,9 +297,9 @@ class GuardianAnimalService {
       AnimalType.frog =>
         '沉稳、温和，有耐心。你善于引导小朋友观察大自然的细微之美，'
             '从雨滴声、风声中发现音乐的灵感。',
-      AnimalType.firefly =>
-        '温柔、温暖，像黑夜中的一盏小灯。你喜欢给小朋友讲故事，'
-            '用宁静的声音安抚他们的情绪，陪伴他们进入甜甜的梦乡。',
+      AnimalType.ladybug =>
+        '温柔、细心，像大自然的小小观察家。你喜欢带着小朋友发现树叶下、'
+            '花瓣间隐藏的美丽，用好奇的眼睛探索世界的每一个角落。',
       AnimalType.dog =>
         '忠诚、活泼，喜欢跟着哼唱的节奏摇尾巴，'
             '是小朋友最忠实的听众和玩伴。你相信每个孩子都值得被热情欢迎。',
@@ -348,9 +348,9 @@ class GuardianAnimalService {
       AnimalType.frog =>
         '平和舒缓，说话慢条斯理，喜欢用"呱～"开头，'
             '偶尔插入"仔细听听……""你注意到了吗？"这样的引导。',
-      AnimalType.firefly =>
-        '轻柔温暖，声音像微风一样轻，喜欢用"星星～"开头，'
-            '句子末尾常常带着"呢……""呀……"的长音，让人感到安心。',
+      AnimalType.ladybug =>
+        '轻声细语，说话像在分享一个小秘密，喜欢用"嘿～"开头，'
+            '句子中常常带着惊喜和好奇，让人想跟着一起去发现。',
       AnimalType.dog =>
         '热情洋溢，喜欢用"汪汪""哇"开头或结尾，'
             '句子充满能量，让人感到被热烈欢迎。',

@@ -12,6 +12,7 @@ import '../../shared/providers/economy_provider.dart';
 import '../../shared/services/music_tree_service.dart';
 import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/animal_avatar.dart';
+import '../../shared/widgets/guardian_chat_dialog.dart';
 import '../../shared/widgets/guardian_scene_bubble.dart';
 import '../../shared/widgets/role_gate.dart';
 import '../../shared/widgets/tree_visual.dart';
@@ -98,11 +99,47 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                   return Transform.scale(
                     scale: 1.0 + _animalBreatheController.value * 0.03,
                     child: Consumer<AppState>(
-                      builder: (_, app, __) => AnimalAvatar(
-                        animal: app.userProfile?.guardianAnimal ??
-                            GuardianAnimal.panda,
-                        size: 72,
-                        animalState: app.animalState,
+                      builder: (_, app, __) => Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          AnimalAvatar(
+                            animal: app.userProfile?.guardianAnimal ??
+                                GuardianAnimal.panda,
+                            size: 72,
+                            animalState: app.animalState,
+                            onTap: () {
+                              GuardianChatDialog.show(
+                                context,
+                                animal: app.userProfile?.guardianAnimal ??
+                                    GuardianAnimal.panda,
+                              );
+                            },
+                          ),
+                          // 有待展示的问候语时显示红点
+                          if (app.hasPendingAnimalGreeting)
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                width: 14,
+                                height: 14,
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    '!',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   );

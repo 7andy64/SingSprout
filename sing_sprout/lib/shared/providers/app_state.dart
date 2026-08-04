@@ -46,6 +46,9 @@ class AppState extends ChangeNotifier {
   String? _lastLoginDate;
   String? _lastSoundViewedAt;
 
+  // 守护动物待展示的祝贺/鼓励消息（创作完成后设置，聊天窗打开后清除）
+  String? _pendingAnimalGreeting;
+
   static const _avatarPathKey = 'avatar_path';
   static const _animalStateKey = 'animal_state';
   static const _lastLoginDateKey = 'last_login_date';
@@ -74,6 +77,8 @@ class AppState extends ChangeNotifier {
   int get totalCards => _cards.length;
   String? get avatarPath => _avatarPath;
   AnimalState get animalState => _animalState;
+  bool get hasPendingAnimalGreeting => _pendingAnimalGreeting != null;
+  String? get pendingAnimalGreeting => _pendingAnimalGreeting;
 
   // ── 初始化：从本地数据库加载所有数据 ──
 
@@ -423,6 +428,22 @@ class AppState extends ChangeNotifier {
     // 5. neutral — 兜底
     _animalState = AnimalState.neutral;
     _persistAnimalState();
+  }
+
+  /// 设置守护动物的待展示问候语（创作完成后调用）。
+  /// 同时将动物状态设为 expecting，触发头像角标 + 场景气泡。
+  void setPendingAnimalGreeting(String message) {
+    _pendingAnimalGreeting = message;
+    _animalState = AnimalState.expecting;
+    _persistAnimalState();
+    notifyListeners();
+  }
+
+  /// 用户打开聊天窗查看问候后清除，重置动物状态。
+  void clearPendingAnimalGreeting() {
+    _pendingAnimalGreeting = null;
+    _updateAnimalState();
+    notifyListeners();
   }
 
   /// 用户查看声音库后调用，重置 curious 状态。
