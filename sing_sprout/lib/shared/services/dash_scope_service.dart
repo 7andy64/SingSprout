@@ -41,7 +41,12 @@ class DashScopeService {
   Future<bool> get isConfigured async {
     if (_cachedKey != null) return true;
     if (_keyChecked) return false;
-    _cachedKey = await _storage.read(key: _keyStorageKey);
+    try {
+      _cachedKey = await _storage.read(key: _keyStorageKey);
+    } catch (e) {
+      debugPrint('[DashScope] Failed to read API key from storage: $e');
+      _cachedKey = null;
+    }
     _keyChecked = true;
     return _cachedKey != null && _cachedKey!.isNotEmpty;
   }
@@ -63,7 +68,12 @@ class DashScopeService {
   /// Get the stored key (or null).
   Future<String?> _getKey() async {
     if (_cachedKey != null) return _cachedKey;
-    _cachedKey = await _storage.read(key: _keyStorageKey);
+    try {
+      _cachedKey = await _storage.read(key: _keyStorageKey);
+    } catch (e) {
+      debugPrint('[DashScope] Failed to read API key from storage: $e');
+      _cachedKey = null;
+    }
     _keyChecked = true;
     return _cachedKey;
   }

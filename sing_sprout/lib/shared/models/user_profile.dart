@@ -1,9 +1,10 @@
 /// 守护动物类型
 enum GuardianAnimal {
   panda('小熊猫咕咕', '🐼'),
-  tit('山雀啾啾', '🐦'),
-  frog('青蛙呱呱', '🐸'),
-  firefly('萤火虫闪闪', '✨');
+  deer('小鹿斑斑', '🦌'),
+  tit('蓝羽山雀', '🐦'),
+  frog('翠蛙呱呱', '🐸'),
+  ladybug('七星瓢虫', '🐞');
 
   const GuardianAnimal(this.displayName, this.emoji);
   final String displayName;
