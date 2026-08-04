@@ -8,7 +8,6 @@ import '../../features/humming_garden/editor_page.dart';
 import '../../shared/models/music_work.dart';
 import '../../features/voice_post_office/post_office_page.dart';
 import '../../features/voice_post_office/compose_page.dart';
-import '../../features/voice_post_office/card_detail_page.dart';
 import '../../features/mood_radio/mood_radio_page.dart';
 import '../../features/music_tree/music_tree_page.dart';
 import '../../features/field_sound_lab/field_sound_lab_page.dart';
@@ -27,8 +26,6 @@ import '../../features/profile/ledger_page.dart';
 import '../../features/profile/observation_page.dart';
 import '../../features/profile/storage_page.dart';
 import '../../features/onboarding/onboarding_page.dart';
-import '../../shared/widgets/notification_badge.dart';
-import '../../shared/providers/notification_provider.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/services/role_permissions.dart';
@@ -202,16 +199,7 @@ class AppRouter {
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final workId = state.uri.queryParameters['workId'];
-          final replyToId = state.uri.queryParameters['replyToId'];
-          return ComposePage(initialWorkId: workId, replyToId: replyToId);
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.cardDetail,
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) {
-          final cardId = state.uri.queryParameters['id'] ?? '';
-          return CardDetailPage(cardId: cardId);
+          return ComposePage(initialWorkId: workId);
         },
       ),
       GoRoute(
@@ -359,17 +347,6 @@ class _BottomNavBar extends StatelessWidget {
                 ),
               );
 
-              // 邮局 tab（index 3）加红点
-              if (i == 3) {
-                return Consumer<NotificationProvider>(
-                  builder: (context, notif, _) {
-                    return NotificationBadge(
-                      count: notif.unreadCount,
-                      child: tabWidget,
-                    );
-                  },
-                );
-              }
               return tabWidget;
             }),
           ),
@@ -395,10 +372,6 @@ class _BottomNavBar extends StatelessWidget {
       AppRoutes.postOffice,
       AppRoutes.profile,
     ];
-    // 点击邮局时刷新通知计数
-    if (index == 3) {
-      context.read<NotificationProvider>().refresh();
-    }
     GoRouter.of(context).go(routes[index]);
   }
 }

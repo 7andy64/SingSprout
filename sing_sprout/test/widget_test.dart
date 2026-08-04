@@ -5,8 +5,6 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sing_sprout/app.dart';
 import 'package:sing_sprout/shared/providers/app_state.dart';
 import 'package:sing_sprout/shared/providers/audio_provider.dart';
-import 'package:sing_sprout/shared/providers/notification_provider.dart';
-
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     sqfliteFfiInit();
@@ -17,7 +15,6 @@ void main() {
         providers: [
           ChangeNotifierProvider(create: (_) => AppState()),
           ChangeNotifierProvider(create: (_) => AudioProvider()),
-          ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ],
         child: const SingSproutApp(),
       ),

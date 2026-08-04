@@ -7,12 +7,15 @@ import '../../shared/models/voice_card.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/services/social_share_service.dart';
 
-/// 声音邮局 — 亲子音乐明信片收发
+/// 声音邮局 — 发件箱
 class PostOfficePage extends StatelessWidget {
   const PostOfficePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final cards = appState.cards;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('声音邮局'),
@@ -23,7 +26,6 @@ class PostOfficePage extends StatelessWidget {
           children: [
             const SizedBox(height: 16),
 
-            // 写新明信片入口
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SizedBox(
@@ -43,33 +45,18 @@ class PostOfficePage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Tab 切换：发件箱 / 收件箱
-            const DefaultTabController(
-              length: 2,
-              child: Expanded(
-                child: Column(
-                  children: [
-                    TabBar(
-                      labelColor: AppTheme.primaryGreen,
-                      unselectedLabelColor: AppTheme.textSecondary,
-                      indicatorColor: AppTheme.primaryGreen,
-                      tabs: [
-                        Tab(text: '发件箱'),
-                        Tab(text: '收件箱'),
-                      ],
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        children: [
-                          _CardList(direction: VoiceCardDirection.sent),
-                          _CardList(direction: VoiceCardDirection.received),
-                        ],
-                      ),
-                    ),
-                  ],
+            if (cards.isEmpty)
+              _EmptyState()
+            else
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: cards.length,
+                  itemBuilder: (context, index) {
+                    return _CardItem(card: cards[index]);
+                  },
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -77,40 +64,6 @@ class PostOfficePage extends StatelessWidget {
   }
 }
 
-/// 明信片列表
-class _CardList extends StatelessWidget {
-  final VoiceCardDirection direction;
-  const _CardList({required this.direction});
-
-  @override
-  Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
-    final cards = appState.cards
-        .where((c) => c.direction == direction)
-        .toList();
-
-    if (cards.isEmpty) {
-      return _EmptyState(
-        icon: direction == VoiceCardDirection.sent
-            ? '📤'
-            : '📬',
-        message: direction == VoiceCardDirection.sent
-            ? '还没有发送过明信片\n创作一首歌然后发给爸妈'
-            : '还没有收到回信\n试试给爸妈发第一张明信片吧',
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: cards.length,
-      itemBuilder: (context, index) {
-        return _CardItem(card: cards[index]);
-      },
-    );
-  }
-}
-
-/// 单张明信片
 class _CardItem extends StatelessWidget {
   final VoiceCard card;
   const _CardItem({required this.card});
@@ -121,7 +74,6 @@ class _CardItem extends StatelessWidget {
     final work = appState.works
         .where((w) => w.id == card.workId)
         .firstOrNull;
-    final isReceived = card.direction == VoiceCardDirection.received;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -135,26 +87,9 @@ class _CardItem extends StatelessWidget {
             style: const TextStyle(fontSize: 20),
           ),
         ),
-        title: Row(
-          children: [
-            if (isReceived && card.isUnread) ...[
-              Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(right: 8),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-            Expanded(
-              child: Text(
-                work?.title ?? '未知作品',
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-              ),
-            ),
-          ],
+        title: Text(
+          work?.title ?? '未知作品',
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,26 +118,47 @@ class _CardItem extends StatelessWidget {
             ),
           ],
         ),
-        trailing: isReceived
-            ? const Icon(Icons.chevron_right, color: AppTheme.textSecondary)
-            : IconButton(
-                icon: const Text('📤', style: TextStyle(fontSize: 20)),
-                onPressed: () => _reshareCard(context),
-                tooltip: '再次分享',
-              ),
-        onTap: () {
-          if (isReceived) {
-            _openDetail(context);
-          } else {
-            _reshareCard(context);
-          }
-        },
+        trailing: PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, color: AppTheme.textSecondary),
+          onSelected: (value) {
+            if (value == 'share') {
+              _reshareCard(context);
+            } else if (value == 'delete') {
+              _confirmDelete(context);
+            }
+          },
+          itemBuilder: (_) => [
+            const PopupMenuItem(value: 'share', child: Text('📤 分享')),
+            const PopupMenuItem(value: 'delete', child: Text('🗑️ 删除')),
+          ],
+        ),
+        onTap: () => _reshareCard(context),
       ),
     );
   }
 
-  void _openDetail(BuildContext context) {
-    context.push('${AppRoutes.cardDetail}?id=${card.id}');
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除明信片'),
+        content: const Text('确定要删除这张明信片吗？删除后无法恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<AppState>().deleteVoiceCard(card.id);
+              Navigator.of(ctx).pop();
+            },
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _reshareCard(BuildContext context) {
@@ -231,21 +187,17 @@ class _CardItem extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  final String icon;
-  final String message;
-  const _EmptyState({required this.icon, required this.message});
-
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 48),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          Text(icon, style: TextStyle(fontSize: 56, color: AppTheme.textSecondary.withValues(alpha: 0.3))),
-          const SizedBox(height: 16),
+          Text('📤', style: TextStyle(fontSize: 56, color: AppTheme.textSecondary)),
+          SizedBox(height: 16),
           Text(
-            message,
-            style: const TextStyle(color: AppTheme.textSecondary),
+            '还没有发送过明信片\n创作一首歌然后发给爸妈',
+            style: TextStyle(color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],

@@ -606,7 +606,6 @@ void main() {
 
     VoiceCard makeCard({
       String workId = 'work_001',
-      VoiceCardDirection direction = VoiceCardDirection.sent,
     }) {
       cardCounter++;
       return VoiceCard(
@@ -616,7 +615,6 @@ void main() {
         recipientId: 'recipient_001',
         audioPath: '/cards/test.m4a',
         textContent: '这是一张明信片',
-        direction: direction,
         createdAt: DateTime.now(),
       );
     }
@@ -629,16 +627,7 @@ void main() {
       expect(all.length, 2);
     });
 
-    test('getSent / getReceived 按方向筛选', () async {
-      await repo.insert(makeCard(workId: 'sent1', direction: VoiceCardDirection.sent));
-      await repo.insert(makeCard(workId: 'sent2', direction: VoiceCardDirection.sent));
-      await repo.insert(makeCard(workId: 'recv1', direction: VoiceCardDirection.received));
-
-      expect((await repo.getSent()).length, 2);
-      expect((await repo.getReceived()).length, 1);
-    });
-
-    test('getById 按 ID 查询 (新方法)', () async {
+    test('getById 按 ID 查询', () async {
       final card = makeCard(workId: 'w_target');
       await repo.insert(card);
 
@@ -654,31 +643,6 @@ void main() {
 
       final cards = await repo.getByWorkId('song_A');
       expect(cards.length, 2);
-    });
-
-    test('getUnread 返回未读明信片 (新方法)', () async {
-      final card1 = makeCard(workId: 'unread1');
-      final card2 = makeCard(workId: 'unread2');
-      await repo.insert(card1);
-      await repo.insert(card2);
-
-      // 标记 card1 为已读
-      await repo.markAsRead(card1.id);
-
-      final unread = await repo.getUnread();
-      expect(unread.length, 1);
-      expect(unread.first.workId, 'unread2');
-    });
-
-    test('markAsRead 设置 read_at', () async {
-      final card = makeCard();
-      await repo.insert(card);
-
-      await repo.markAsRead(card.id);
-
-      // 再次查询验证 read_at 已设置（通过 getUnread 间接验证）
-      final unread = await repo.getUnread();
-      expect(unread.where((c) => c.id == card.id), isEmpty);
     });
 
     test('delete 删除明信片', () async {
@@ -788,7 +752,6 @@ void main() {
         workId: work.id,
         senderId: 'user_1',
         textContent: '分享给你！',
-        direction: VoiceCardDirection.sent,
         createdAt: DateTime.now(),
       );
       await VoiceCardRepository().insert(card);

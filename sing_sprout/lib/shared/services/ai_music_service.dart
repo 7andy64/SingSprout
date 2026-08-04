@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -21,49 +22,158 @@ class AiMusicService {
 
   /// Generate a complete music track for the rhythm game.
   ///
-  /// Returns null if AI is unavailable, API key missing, or generation fails.
+  /// Retries up to [_maxRetries] times on failure. Falls back to procedural
+  /// note generation if all AI attempts fail. Returns a valid result in most
+  /// cases — null only when WAV synthesis itself fails with no recovery.
   Future<AiMusicResult?> generateGameMusic(AiMusicStyle style) async {
     final dashScope = DashScopeService();
     final isConfigured = await dashScope.isConfigured;
     if (!isConfigured) {
-      debugPrint('[AiMusicService] DashScope not configured');
-      return null;
+      debugPrint('[AiMusicService] DashScope not configured, using procedural fallback');
+      return _proceduralMusic(style);
     }
 
-    // 1. Call AI to generate music data
-    final rawJson = await dashScope.chatCompletion(
-      systemPrompt: _systemPrompt(style),
-      userMessage:
-          '请为节奏游戏创作一段$_durationSeconds秒的${style.label}风格音乐。',
-      temperature: 0.85,
-      maxTokens: 3000,
-    );
+    // Try AI generation with retries
+    for (var attempt = 0; attempt < _maxRetries; attempt++) {
+      if (attempt > 0) {
+        debugPrint('[AiMusicService] Retry attempt ${attempt + 1}/$_maxRetries');
+        await Future.delayed(Duration(seconds: attempt * 2));
+      }
 
-    if (rawJson == null) {
-      debugPrint('[AiMusicService] AI returned null');
-      return null;
+      final rawJson = await dashScope.chatCompletion(
+        systemPrompt: _systemPrompt(style),
+        userMessage:
+            '请为节奏游戏创作一段$_durationSeconds秒的${style.label}风格音乐。直接返回JSON，不要解释。',
+        temperature: 0.9,
+        maxTokens: 4096,
+      );
+
+      if (rawJson == null) {
+        debugPrint('[AiMusicService] Attempt $attempt: AI returned null');
+        continue;
+      }
+
+      final parsed = _parseMusicJson(rawJson, style);
+      if (parsed == null) {
+        debugPrint('[AiMusicService] Attempt $attempt: failed to parse');
+        continue;
+      }
+
+      final melodyNotes = parsed['melody'] as List<AiGameNote>;
+      final percussionNotes = parsed['percussion'] as List<AiGameNote>;
+      final tempo = parsed['tempo'] as double;
+      final mood = parsed['mood'] as String;
+
+      if (melodyNotes.length < 20 || percussionNotes.length < 10) {
+        debugPrint('[AiMusicService] Attempt $attempt: too few notes (m=${melodyNotes.length} p=${percussionNotes.length})');
+        continue;
+      }
+
+      final wavPath = await _synthesizeWav(melodyNotes, percussionNotes, tempo);
+      if (wavPath == null) {
+        debugPrint('[AiMusicService] Attempt $attempt: WAV synthesis failed');
+        continue;
+      }
+
+      final allNotes = [...melodyNotes, ...percussionNotes]
+        ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+      debugPrint('[AiMusicService] AI generation succeeded on attempt ${attempt + 1}');
+      return AiMusicResult(
+        wavPath: wavPath,
+        notes: allNotes,
+        tempo: tempo,
+        mood: mood,
+      );
     }
 
-    // 2. Parse JSON
-    final parsed = _parseMusicJson(rawJson, style);
-    if (parsed == null) {
-      debugPrint('[AiMusicService] Failed to parse AI response');
-      return null;
+    // All AI attempts exhausted — use procedural fallback
+    debugPrint('[AiMusicService] All AI attempts failed, using procedural music');
+    return _proceduralMusic(style);
+  }
+
+  static const _maxRetries = 3;
+
+  /// Procedural music generation — used as fallback when AI is unavailable.
+  ///
+  /// Generates pentatonic melody + style-appropriate percussion patterns
+  /// without any network calls. Always succeeds.
+  Future<AiMusicResult?> _proceduralMusic(AiMusicStyle style) async {
+    final rng = Random(DateTime.now().millisecondsSinceEpoch);
+    final cfg = _styleConfig(style);
+    final tempo = cfg.tempo;
+    final beatsPerSecond = tempo / 60;
+    final totalBeats = _durationSeconds * beatsPerSecond;
+
+    // Generate melody notes (pentatonic scale in G3-C6 range)
+    const pentatonic = [55, 57, 60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84];
+    final melodyNotes = <AiGameNote>[];
+    var time = 0.0;
+    while (time < _durationSeconds - 0.3) {
+      final pitch = pentatonic[rng.nextInt(pentatonic.length)];
+      final dur = (0.15 + rng.nextDouble() * cfg.maxNoteDuration)
+          .clamp(0.12, 1.2);
+      melodyNotes.add(
+        AiGameNote(
+          pitch: pitch,
+          startTime: time,
+          duration: dur,
+          isPercussion: false,
+        ),
+      );
+      time += cfg.noteInterval + rng.nextDouble() * cfg.noteIntervalVariance;
     }
 
-    final melodyNotes = parsed['melody'] as List<AiGameNote>;
-    final percussionNotes = parsed['percussion'] as List<AiGameNote>;
-    final tempo = parsed['tempo'] as double;
-    final mood = parsed['mood'] as String;
+    // Generate percussion
+    final percussionNotes = <AiGameNote>[];
+    for (var beat = 0.0; beat < totalBeats; beat += cfg.percussionGrid) {
+      final t = beat / beatsPerSecond;
+      if (t >= _durationSeconds) break;
 
-    // 3. Synthesize WAV
+      // Kick pattern
+      if (beat.floor() % cfg.kickEvery == 0) {
+        percussionNotes.add(
+          AiGameNote(
+            pitch: 36,
+            startTime: t,
+            duration: 0.1,
+            isPercussion: true,
+            percussionType: 'kick',
+          ),
+        );
+      }
+      // Snare pattern
+      if ((beat + cfg.snareOffset).floor() % cfg.snareEvery == 0) {
+        percussionNotes.add(
+          AiGameNote(
+            pitch: 38,
+            startTime: t,
+            duration: 0.1,
+            isPercussion: true,
+            percussionType: 'snare',
+          ),
+        );
+      }
+      // Hi-hat fill
+      if (rng.nextDouble() < cfg.hhProbability) {
+        percussionNotes.add(
+          AiGameNote(
+            pitch: 42,
+            startTime: t,
+            duration: 0.1,
+            isPercussion: true,
+            percussionType: 'hh',
+          ),
+        );
+      }
+    }
+
     final wavPath = await _synthesizeWav(melodyNotes, percussionNotes, tempo);
     if (wavPath == null) {
-      debugPrint('[AiMusicService] WAV synthesis failed');
+      debugPrint('[AiMusicService] Procedural WAV synthesis failed');
       return null;
     }
 
-    // 4. Merge notes for the game (melody + percussion, sorted by time)
     final allNotes = [...melodyNotes, ...percussionNotes]
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
@@ -71,8 +181,34 @@ class AiMusicService {
       wavPath: wavPath,
       notes: allNotes,
       tempo: tempo,
-      mood: mood,
+      mood: style.label,
     );
+  }
+
+  /// Per-style configuration for procedural generation.
+  _StyleCfg _styleConfig(AiMusicStyle style) {
+    return switch (style) {
+      AiMusicStyle.happy => const _StyleCfg(
+          tempo: 120, noteInterval: 0.18, noteIntervalVariance: 0.15,
+          maxNoteDuration: 0.8, percussionGrid: 0.5, kickEvery: 1,
+          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.6,
+        ),
+      AiMusicStyle.calm => const _StyleCfg(
+          tempo: 75, noteInterval: 0.55, noteIntervalVariance: 0.4,
+          maxNoteDuration: 1.2, percussionGrid: 1.0, kickEvery: 2,
+          snareOffset: 0, snareEvery: 4, hhProbability: 0.15,
+        ),
+      AiMusicStyle.energetic => const _StyleCfg(
+          tempo: 135, noteInterval: 0.12, noteIntervalVariance: 0.1,
+          maxNoteDuration: 0.5, percussionGrid: 0.25, kickEvery: 1,
+          snareOffset: 0.5, snareEvery: 2, hhProbability: 0.85,
+        ),
+      AiMusicStyle.electronic => const _StyleCfg(
+          tempo: 125, noteInterval: 0.15, noteIntervalVariance: 0.12,
+          maxNoteDuration: 0.6, percussionGrid: 0.5, kickEvery: 1,
+          snareOffset: 0.25, snareEvery: 2, hhProbability: 0.7,
+        ),
+    };
   }
 
   /// Build the system prompt for the AI based on style.
@@ -126,7 +262,7 @@ $styleGuide
 - 旋律密度：每秒1-4个音符（根据风格调整）
 - 打击乐：按BPM节奏严格排列，每拍都有kick或snare之一
 - 旋律音符的duration至少0.15秒，最多1.5秒
-- 输出至少80个旋律音符和60个打击乐音符
+- 确保输出20个以上旋律音符和15个以上打击乐音符
 ''';
   }
 
@@ -134,9 +270,18 @@ $styleGuide
   Map<String, dynamic>? _parseMusicJson(String raw, AiMusicStyle style) {
     try {
       var jsonStr = raw.trim();
+      // Strip markdown code fences
       if (jsonStr.startsWith('```')) {
         jsonStr = jsonStr.replaceFirst(RegExp(r'```\w*\n?'), '');
         jsonStr = jsonStr.replaceFirst(RegExp(r'\n?```$'), '');
+      }
+      // If the string doesn't look like JSON, try to extract the JSON portion
+      if (!jsonStr.startsWith('{')) {
+        final firstBrace = jsonStr.indexOf('{');
+        final lastBrace = jsonStr.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+        }
       }
       final obj = jsonDecode(jsonStr) as Map<String, dynamic>;
 
@@ -332,4 +477,29 @@ $styleGuide
     final rangePerTrack = (84 - 55) / trackCount;
     return ((pitch - 55) / rangePerTrack).floor().clamp(0, trackCount - 1);
   }
+}
+
+/// Procedural generation style parameters.
+class _StyleCfg {
+  final double tempo;
+  final double noteInterval;
+  final double noteIntervalVariance;
+  final double maxNoteDuration;
+  final double percussionGrid;
+  final int kickEvery;
+  final double snareOffset;
+  final int snareEvery;
+  final double hhProbability;
+
+  const _StyleCfg({
+    required this.tempo,
+    required this.noteInterval,
+    required this.noteIntervalVariance,
+    required this.maxNoteDuration,
+    required this.percussionGrid,
+    required this.kickEvery,
+    required this.snareOffset,
+    required this.snareEvery,
+    required this.hhProbability,
+  });
 }

@@ -98,9 +98,7 @@ class ExportService {
         'sender_id': card.senderId,
         'recipient_id': card.recipientId,
         'text_content': card.textContent,
-        'direction': card.direction.name,
         'created_at': card.createdAt.toIso8601String(),
-        'read_at': card.readAt?.toIso8601String(),
       };
 
   static Map<String, dynamic> _profileToJson(UserProfile p) => {
