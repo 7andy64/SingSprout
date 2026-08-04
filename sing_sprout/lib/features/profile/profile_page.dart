@@ -308,26 +308,37 @@ class _ProfilePageState extends State<ProfilePage> {
   void _showAnimalPicker(UserProfile? profile) {
     showModalBottomSheet<GuardianAnimal>(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  '选择你的守护动物',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ...GuardianAnimal.values.map((animal) {
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.75,
+            minChildSize: 0.5,
+            maxChildSize: 0.9,
+            expand: false,
+            builder: (_, scrollController) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Column(
+                  children: [
+                    const Text(
+                      '选择你的守护动物',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        itemCount: GuardianAnimal.values.length,
+                        itemBuilder: (_, i) {
+                          final animal = GuardianAnimal.values[i];
                   final isSelected = profile?.guardianAnimal == animal;
                   final economy = context.read<EconomyProvider>();
                   final owned = economy.isAnimalOwned(animal.name);
@@ -374,9 +385,13 @@ class _ProfilePageState extends State<ProfilePage> {
                             },
                     ),
                   );
-                }),
-              ],
-            ),
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         );
       },
