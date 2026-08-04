@@ -5,9 +5,11 @@ tags:
 - dart
 - children-music
 - ai-composition
+- ai-chat
 - dashscope
 - music-game
 - audio-processing
+- guardian-animal
 license: Apache License 2.0
 language: zh
 task: music-generation
@@ -18,9 +20,12 @@ pipeline_tag: text-to-audio
 
 > 为乡村儿童打造的音乐创作与自然探索应用
 
-声芽是一株生长在童年记忆里的音乐小苗。孩子们在这里录音哼唱，AI 帮忙编曲配器，再把创作的音乐装进明信片寄给远方的家人——也可以走进田野录制鸟鸣水声，在节奏游戏中快乐律动。
+声芽是一株生长在童年记忆里的音乐小苗。孩子们在这里录音哼唱，AI 帮忙编曲配器，再把创作的音乐装进明信片寄给远方的家人——也可以走进田野录制鸟鸣水声，在节奏游戏中快乐律动。15 只可爱的守护动物会陪伴孩子聊天、唱歌，用温暖的对话守护每一次创作灵感。
 
 ## 核心功能
+
+### 守护动物 AI 聊天 Guardian Chat
+15 只性格各异的守护动物（小熊猫咕咕、山雀啾啾、青蛙呱呱、瓢虫星星、小黄狗旺财……）通过百炼 DashScope 模型与小朋友自由对话。每只动物有独特的性格和说话风格，配有安全护栏确保内容适合 4-10 岁儿童。
 
 ### 音乐树 Music Tree
 录下你的哼唱旋律，AI 自动检测音高并生成完整伴奏（和弦、贝斯、鼓组），让简单的哼唱变成丰富的乐曲。
@@ -47,8 +52,11 @@ pipeline_tag: text-to-audio
 | 状态管理 | Provider |
 | 路由 | GoRouter (ShellRoute 底部导航) |
 | 本地存储 | SQLite (sqflite) |
-| AI 引擎 | 阿里云百炼 DashScope (qwen-plus) |
-| 音频处理 | YIN 音高检测 / WAV 合成 / just_audio |
+| AI 作曲 | 阿里云百炼 DashScope (qwen-plus) |
+| AI 聊天 | 阿里云百炼 DashScope (qwen-flash) |
+| 语音识别 | DashScope ASR (paraformer/sensevoice) |
+| 语音合成 | DashScope CosyVoice TTS |
+| 音频处理 | YIN / Basic Pitch 音高检测 / WAV 合成 / just_audio |
 | 安全存储 | flutter_secure_storage |
 | 平台 | iOS / Android |
 
@@ -66,15 +74,17 @@ lib/
 │   ├── humming_garden/         # 嗡嗡花园
 │   ├── mood_radio/             # 情绪电台
 │   ├── music_tree/             # 音乐树（录音+编辑）
-│   ├── profile/                # 个人中心/账本/观察
+│   ├── onboarding/             # 新用户引导（选守护动物）
+│   ├── profile/                # 个人中心/账本/观察/动物切换
 │   ├── rhythm_tribe/           # 节奏游戏+旋律挑战+田野实验室
+│   ├── shop/                   # 森林集市（金松果兑换）
 │   └── voice_post_office/      # 声音邮局（发件+写卡片）
 └── shared/
     ├── models/                 # 数据模型
     ├── providers/              # 状态管理
     ├── repositories/           # 数据库仓库
     ├── services/               # AI 服务/音频处理/导出
-    └── widgets/                # 共享组件
+    └── widgets/                # 共享组件（守护动物头像/聊天/混音器）
 ```
 
 ## 快速开始
@@ -99,6 +109,6 @@ flutter build ios   # iOS
 - Flutter SDK >= 3.7.0
 - Dart >= 3.0.0
 - Android Studio / Xcode
-- 阿里云百炼 API Key（用于 AI 编曲和语音功能）
+- 阿里云百炼 API Key（用于 AI 编曲、语音和守护动物聊天功能）
 
 > 在应用内"设置 → API 配置"中填入你的 DashScope API Key。
