@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/animal_avatar.dart';
 import '../../../shared/widgets/avatar_crop_page.dart';
+import '../../../shared/widgets/guardian_chat_dialog.dart';
 import '../../../shared/widgets/guardian_scene_bubble.dart';
 import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
@@ -120,6 +121,12 @@ class ProfileHeader extends StatelessWidget {
             animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
             size: 64,
             animalState: appState.animalState,
+            onTap: () {
+              GuardianChatDialog.show(
+                context,
+                animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
+              );
+            },
           ),
 
           const SizedBox(height: 10),

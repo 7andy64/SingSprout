@@ -9,12 +9,14 @@ class AnimalAvatar extends StatefulWidget {
   final GuardianAnimal animal;
   final double size;
   final AnimalState animalState;
+  final VoidCallback? onTap;
 
   const AnimalAvatar({
     super.key,
     this.animal = GuardianAnimal.panda,
     this.size = 72,
     this.animalState = AnimalState.neutral,
+    this.onTap,
   });
 
   @override
@@ -88,6 +90,13 @@ class _AnimalAvatarState extends State<AnimalAvatar>
     _showGreeting = false;
     _bounceCtrl.reset();
     _bounceCtrl.forward();
+    // 弹跳动画结束后触发外部回调
+    if (widget.onTap != null) {
+      Future.delayed(_bounceCtrl.duration! + const Duration(milliseconds: 200),
+          () {
+        if (mounted) widget.onTap!.call();
+      });
+    }
   }
 
   @override
