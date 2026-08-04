@@ -400,7 +400,7 @@ class _RhythmGamePageState extends State<RhythmGamePage>
 
     setState(() {
       _phase = _GamePhase.countdown;
-      _countdownValue = 2;
+      _countdownValue = 3;
       _elapsed = 0;
       _score = 0;
       _perfectCount = 0;
@@ -1403,72 +1403,269 @@ class _AiGeneratingScreen extends StatefulWidget {
 
 class _AiGeneratingScreenState extends State<_AiGeneratingScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _animCtrl;
-  final List<String> _messages = const [
-    'AI 正在构思旋律...',
-    '正在编排节奏...',
-    '即将完成...',
+  late final AnimationController _pulseCtrl;
+  late final AnimationController _progressCtrl;
+  final List<_FloatingNote> _notes = [];
+  int _step = 0;
+
+  static const _steps = [
+    _StepInfo('构思旋律走向…', '🎼'),
+    _StepInfo('编排节奏织体…', '🥁'),
+    _StepInfo('合成音乐片段…', '🎧'),
+    _StepInfo('即将完成…', '✨'),
   ];
-  int _msgIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _animCtrl = AnimationController(
+    _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
 
-    Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
+    _progressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3600),
+    )..forward();
+
+    // Seed floating notes with staggered start times.
+    final rng = Random(DateTime.now().millisecondsSinceEpoch);
+    for (var i = 0; i < 8; i++) {
+      _notes.add(_FloatingNote(
+        emoji: ['♪', '♫', '♩', '🎵'][rng.nextInt(4)],
+        startDelay: rng.nextDouble() * 2.0,
+        driftX: (rng.nextDouble() - 0.5) * 40,
+        duration: 1.5 + rng.nextDouble() * 2.0,
+        size: 14.0 + rng.nextDouble() * 14,
+      ));
+    }
+
+    // Cycle through composition steps.
+    Timer.periodic(const Duration(milliseconds: 900), (timer) {
+      if (!mounted) { timer.cancel(); return; }
       setState(() {
-        _msgIndex = (_msgIndex + 1) % _messages.length;
+        _step = (_step + 1).clamp(0, _steps.length - 1);
       });
     });
   }
 
   @override
   void dispose() {
-    _animCtrl.dispose();
+    _pulseCtrl.dispose();
+    _progressCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(widget.style.emoji, style: const TextStyle(fontSize: 72)),
-            const SizedBox(height: 24),
-            AnimatedBuilder(
-              animation: _animCtrl,
-              builder: (context, child) {
-                return Transform.rotate(
-                  angle: _animCtrl.value * 2 * 3.14159,
-                  child: const Text('🎵', style: TextStyle(fontSize: 40)),
-                );
-              },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Floating notes background
+          ..._notes.map((n) => _FloatingNoteWidget(note: n)),
+
+          // Main content
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Pulsing style emoji
+                AnimatedBuilder(
+                  animation: _pulseCtrl,
+                  builder: (_, __) {
+                    final scale = 1.0 + _pulseCtrl.value * 0.12;
+                    return Transform.scale(
+                      scale: scale,
+                      child: Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.primaryGreen
+                              .withValues(alpha: 0.08 + _pulseCtrl.value * 0.06),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryGreen
+                                  .withValues(alpha: 0.12 + _pulseCtrl.value * 0.1),
+                              blurRadius: 24 + _pulseCtrl.value * 16,
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            widget.style.emoji,
+                            style: const TextStyle(fontSize: 52),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
+
+                // Step indicator with icon
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 350),
+                  child: Column(
+                    key: ValueKey(_step),
+                    children: [
+                      Text(
+                        _steps[_step].icon,
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _steps[_step].text,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Progress bar
+                SizedBox(
+                  width: 180,
+                  child: AnimatedBuilder(
+                    animation: _progressCtrl,
+                    builder: (_, __) {
+                      return Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: LinearProgressIndicator(
+                              value: _progressCtrl.value,
+                              minHeight: 4,
+                              backgroundColor:
+                                  AppTheme.primaryGreen.withValues(alpha: 0.12),
+                              color: AppTheme.primaryGreen,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            '${(_progressCtrl.value * 100).toInt()}%',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '${widget.style.label}风格 · 30秒音乐',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            Text(
-              _messages[_msgIndex],
-              style:
-                  const TextStyle(fontSize: 16, color: AppTheme.textSecondary),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${widget.style.label}风格 · 30秒音乐',
-              style:
-                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _StepInfo {
+  final String text;
+  final String icon;
+  const _StepInfo(this.text, this.icon);
+}
+
+/// A single floating music note that drifts upward with wobble.
+class _FloatingNote {
+  final String emoji;
+  final double startDelay;
+  final double driftX;
+  final double duration;
+  final double size;
+  const _FloatingNote({
+    required this.emoji,
+    required this.startDelay,
+    required this.driftX,
+    required this.duration,
+    required this.size,
+  });
+}
+
+class _FloatingNoteWidget extends StatefulWidget {
+  final _FloatingNote note;
+  const _FloatingNoteWidget({required this.note});
+
+  @override
+  State<_FloatingNoteWidget> createState() => _FloatingNoteWidgetState();
+}
+
+class _FloatingNoteWidgetState extends State<_FloatingNoteWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: (widget.note.duration * 1000).round()),
+    );
+    Future.delayed(
+      Duration(milliseconds: (widget.note.startDelay * 1000).round()),
+      () {
+        if (mounted) _ctrl.repeat();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        final t = _ctrl.value;
+        final screenH = MediaQuery.of(context).size.height;
+        final screenW = MediaQuery.of(context).size.width;
+        final baseX = screenW / 2 + widget.note.driftX;
+        final x = baseX + sin(t * 3.14 * 2 + widget.note.startDelay) * 18;
+        final y = screenH * 0.65 - t * screenH * 0.5;
+        final opacity = t < 0.15
+            ? t / 0.15
+            : t > 0.7
+                ? (1.0 - t) / 0.3
+                : 1.0;
+
+        return Positioned(
+          left: x,
+          top: y,
+          child: Opacity(
+            opacity: opacity.clamp(0.0, 0.5),
+            child: Transform.rotate(
+              angle: t * 0.6,
+              child: Text(
+                widget.note.emoji,
+                style: TextStyle(
+                  fontSize: widget.note.size,
+                  color: AppTheme.primaryGreen,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
