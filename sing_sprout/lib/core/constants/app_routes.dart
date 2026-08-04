@@ -20,7 +20,6 @@ class AppRoutes {
   static const String recording = '/recording';
   static const String editor = '/editor';
   static const String composeCard = '/compose-card';
-  static const String cardDetail = '/card-detail';
   static const String storage = '/storage';
   static const String privacySettings = '/privacy-settings';
   static const String fieldSoundLab = '/field-sound-lab';

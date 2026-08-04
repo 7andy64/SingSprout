@@ -14,8 +14,7 @@ import '../../shared/utils/postcard_generator.dart';
 /// 撰写音乐明信片 — 选择作品 + 写一句话 + 语音祝福 → 生成卡片 → 分享
 class ComposePage extends StatefulWidget {
   final String? initialWorkId;
-  final String? replyToId;
-  const ComposePage({super.key, this.initialWorkId, this.replyToId});
+  const ComposePage({super.key, this.initialWorkId});
 
   @override
   State<ComposePage> createState() => _ComposePageState();
@@ -44,8 +43,6 @@ class _ComposePageState extends State<ComposePage> {
     final appState = context.read<AppState>();
     return appState.works;
   }
-
-  bool get _isReply => widget.replyToId != null && widget.replyToId!.isNotEmpty;
 
   @override
   void initState() {
@@ -139,7 +136,6 @@ class _ComposePageState extends State<ComposePage> {
         audioPath: _selectedWork!.audioPath,
         textContent: _messageController.text.trim(),
         coverUrl: imagePath,
-        replyToId: widget.replyToId,
         greetingAudioPath: _greetingAudioPath,
         greetingText: _greetingText,
       );
@@ -184,7 +180,7 @@ class _ComposePageState extends State<ComposePage> {
           icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
           onPressed: () => context.pop(),
         ),
-        title: Text(_isReply ? '回复明信片' : '写音乐明信片'),
+        title: const Text('写音乐明信片'),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -193,30 +189,6 @@ class _ComposePageState extends State<ComposePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 回复提示
-              if (_isReply)
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryWarm.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Row(
-                    children: [
-                      Text('💌', style: TextStyle(fontSize: 20)),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          '正在回复对方发来的明信片',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
               // 选择音乐作品
               const Text('选择一首作品', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
               const SizedBox(height: 12),

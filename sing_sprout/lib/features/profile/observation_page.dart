@@ -4,7 +4,6 @@ import '../../core/constants/enums.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_work.dart';
 import '../../shared/models/user_profile.dart';
-import '../../shared/models/voice_card.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/utils/formatters.dart';
 
@@ -27,10 +26,7 @@ class ObservationPage extends StatelessWidget {
           (sum, w) => sum + w.duration,
         );
         final favCount = works.where((w) => w.isFavorite).length;
-        final sentCards =
-            cards.where((c) => c.direction == VoiceCardDirection.sent).length;
-        final receivedCards =
-            cards.where((c) => c.direction == VoiceCardDirection.received).length;
+        final sentCards = cards.length;
 
         // 活跃天数
         final activeDates =
@@ -180,35 +176,7 @@ class ObservationPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            const Icon(Icons.mail,
-                                color: AppTheme.moodBlue, size: 28),
-                            const SizedBox(height: 8),
-                            Text(
-                              '$receivedCards',
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.moodBlue,
-                              ),
-                            ),
-                            const Text(
-                              '收到回信',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  const Expanded(child: SizedBox.shrink()),
                 ],
               ),
               const SizedBox(height: 20),
