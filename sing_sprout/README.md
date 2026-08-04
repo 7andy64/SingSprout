@@ -1,3 +1,19 @@
+---
+domain: audio
+tags:
+- flutter
+- dart
+- children-music
+- ai-composition
+- dashscope
+- music-game
+- audio-processing
+license: Apache License 2.0
+language: zh
+task: music-generation
+pipeline_tag: text-to-audio
+---
+
 # 声芽 SingSprout
 
 > 为乡村儿童打造的音乐创作与自然探索应用
