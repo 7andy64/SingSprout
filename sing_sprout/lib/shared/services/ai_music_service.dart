@@ -30,15 +30,11 @@ class AiMusicService {
     final isConfigured = await dashScope.isConfigured;
     if (!isConfigured) {
       debugPrint('[AiMusicService] DashScope not configured, using procedural fallback');
-      return _proceduralMusic(style);
+      return proceduralMusic(style);
     }
 
-    // Try AI generation with retries
+    // Try AI generation (single attempt for speed)
     for (var attempt = 0; attempt < _maxRetries; attempt++) {
-      if (attempt > 0) {
-        debugPrint('[AiMusicService] Retry attempt ${attempt + 1}/$_maxRetries');
-        await Future.delayed(Duration(seconds: attempt * 2));
-      }
 
       final rawJson = await dashScope.chatCompletion(
         systemPrompt: _systemPrompt(style),
@@ -89,16 +85,17 @@ class AiMusicService {
 
     // All AI attempts exhausted — use procedural fallback
     debugPrint('[AiMusicService] All AI attempts failed, using procedural music');
-    return _proceduralMusic(style);
+    return proceduralMusic(style);
   }
 
-  static const _maxRetries = 3;
+  static const _maxRetries = 1;
 
-  /// Procedural music generation — used as fallback when AI is unavailable.
+  /// Procedural music generation — always fast, no network.
   ///
   /// Generates pentatonic melody + style-appropriate percussion patterns
-  /// without any network calls. Always succeeds.
-  Future<AiMusicResult?> _proceduralMusic(AiMusicStyle style) async {
+  /// without any network calls. Used as fast-path first play, and fallback
+  /// when AI is unavailable.
+  Future<AiMusicResult> proceduralMusic(AiMusicStyle style) async {
     final rng = Random(DateTime.now().millisecondsSinceEpoch);
     final cfg = _styleConfig(style);
     final tempo = cfg.tempo;
@@ -170,8 +167,7 @@ class AiMusicService {
 
     final wavPath = await _synthesizeWav(melodyNotes, percussionNotes, tempo);
     if (wavPath == null) {
-      debugPrint('[AiMusicService] Procedural WAV synthesis failed');
-      return null;
+      throw Exception('[AiMusicService] Procedural WAV synthesis failed');
     }
 
     final allNotes = [...melodyNotes, ...percussionNotes]

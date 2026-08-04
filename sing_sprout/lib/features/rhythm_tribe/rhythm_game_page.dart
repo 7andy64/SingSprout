@@ -200,46 +200,6 @@ class _RhythmGamePageState extends State<RhythmGamePage>
     }
   }
 
-  void _generateNotes() {
-    _notes.clear();
-    final rng = Random();
-    final beatInterval = 60.0 / _cfg.bpm;
-    int prevTrack = -1;
-
-    for (int bi = 4; bi < _beatTimes.length - 2; bi++) {
-      final beatTime = _beatTimes[bi];
-      if (beatTime > gameDuration - 1.0) break;
-
-      final density = switch (_difficulty) {
-        _Difficulty.easy => 0.55,
-        _Difficulty.normal => 0.7,
-        _Difficulty.hard => 0.85,
-      };
-
-      if (rng.nextDouble() < density) {
-        int track;
-        do {
-          track = rng.nextInt(_cfg.trackCount);
-        } while (track == prevTrack && _cfg.trackCount > 1 && rng.nextDouble() < 0.3);
-        _notes.add(_Note(time: beatTime, track: track));
-        prevTrack = track;
-      }
-
-      if (_difficulty == _Difficulty.hard && rng.nextDouble() < 0.4) {
-        final offBeat = beatTime + beatInterval / 2;
-        if (offBeat <= gameDuration - 1.0) {
-          int track;
-          do {
-            track = rng.nextInt(_cfg.trackCount);
-          } while (track == prevTrack && _cfg.trackCount > 1);
-          _notes.add(_Note(time: offBeat, track: track));
-          prevTrack = track;
-        }
-      }
-    }
-    _notes.sort((a, b) => a.time.compareTo(b.time));
-  }
-
   // ── 游戏 Tick ──
   void _onTick() {
     if (_phase != _GamePhase.playing) return;
@@ -388,37 +348,20 @@ class _RhythmGamePageState extends State<RhythmGamePage>
   Future<void> _generateAndStart() async {
     setState(() { _startPhase = _StartPhase.generating; });
 
-    final result = await AiMusicService().generateGameMusic(_selectedStyle);
-
+    // Fast path: procedural runs first so the player never waits long.
+    final procedural = await AiMusicService().proceduralMusic(_selectedStyle);
     if (!mounted) return;
 
-    if (result != null) {
-      _aiResult = result;
-      setState(() { _startPhase = _StartPhase.idle; });
-      _startAiGame();
-    } else {
-      setState(() {
-        _startPhase = _StartPhase.idle;
-        _aiResult = null;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('AI 暂时不可用，使用经典模式'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-      _startClassicGame();
-    }
-  }
+    _aiResult = procedural;
+    setState(() { _startPhase = _StartPhase.idle; });
+    _startAiGame();
 
-  void _startClassicGame() {
-    _cfg = _DifficultyConfig.of(_difficulty);
-    _effectiveBpm = _cfg.bpm;
-    _generateBeatGrid();
-    _generateNotes();
-    _beginCountdown();
+    // Background: try AI generation for a better replay experience.
+    AiMusicService().generateGameMusic(_selectedStyle).then((ai) {
+      if (ai != null && mounted) {
+        _aiResult = ai;
+      }
+    });
   }
 
   void _startAiGame() {
@@ -457,7 +400,7 @@ class _RhythmGamePageState extends State<RhythmGamePage>
 
     setState(() {
       _phase = _GamePhase.countdown;
-      _countdownValue = 3;
+      _countdownValue = 2;
       _elapsed = 0;
       _score = 0;
       _perfectCount = 0;
@@ -467,6 +410,11 @@ class _RhythmGamePageState extends State<RhythmGamePage>
       _maxCombo = 0;
       _coinReward = 0;
     });
+
+    // Preload audio during countdown so playback is instant at GO.
+    if (_aiResult != null) {
+      _audioPlayer.setFilePath(_aiResult!.wavPath);
+    }
 
     _runCountdown();
   }
@@ -490,7 +438,7 @@ class _RhythmGamePageState extends State<RhythmGamePage>
 
   Future<void> _playAiMusic() async {
     try {
-      await _audioPlayer.setFilePath(_aiResult!.wavPath);
+      // Already loaded during countdown — just play.
       await _audioPlayer.play();
     } catch (e) {
       debugPrint('[RhythmGame] Audio playback failed: $e');
