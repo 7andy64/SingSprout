@@ -39,7 +39,17 @@ class GuardianChatDialog extends StatefulWidget {
   }) {
     // 异步解析 key，拿到后弹出
     _resolveApiKey(apiKey).then((key) {
-      if (key == null || !context.mounted) return;
+      if (!context.mounted) return;
+      if (key == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('还没有设置 AI 魔法钥匙，请联系大人帮忙配置哦～'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -60,7 +70,10 @@ class GuardianChatDialog extends StatefulWidget {
   static Future<String?> _resolveApiKey(String? provided) async {
     if (provided != null && provided.trim().isNotEmpty) return provided.trim();
     const storage = FlutterSecureStorage();
-    return await storage.read(key: _keyStorageKey);
+    // 先读守护动物专用 Key，再回退读 DashScope 通用 Key
+    final key = await storage.read(key: _keyStorageKey);
+    if (key != null && key.isNotEmpty) return key;
+    return await storage.read(key: 'dashscope_api_key');
   }
 
   @override
@@ -82,7 +95,27 @@ class _GuardianChatDialogState extends State<GuardianChatDialog> {
     _service = GuardianAnimalService(
       apiKey: widget.apiKey,
       model: widget.model ?? 'qwen-flash',
+      animalType: _mapAnimalType(widget.animal),
+      animalName: _mapAnimalName(widget.animal),
     );
+  }
+
+  static String _mapAnimalType(GuardianAnimal animal) {
+    return switch (animal) {
+      GuardianAnimal.panda => 'panda',
+      GuardianAnimal.tit => 'sparrow',
+      GuardianAnimal.frog => 'frog',
+      GuardianAnimal.firefly => 'firefly',
+    };
+  }
+
+  static String _mapAnimalName(GuardianAnimal animal) {
+    return switch (animal) {
+      GuardianAnimal.panda => '咕咕',
+      GuardianAnimal.tit => '啾啾',
+      GuardianAnimal.frog => '呱呱',
+      GuardianAnimal.firefly => '闪闪',
+    };
   }
 
   @override
