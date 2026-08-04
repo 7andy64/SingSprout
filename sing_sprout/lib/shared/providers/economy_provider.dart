@@ -70,26 +70,16 @@ class EconomyProvider extends ChangeNotifier {
         .firstOrNull;
   }
 
-  /// 检查守护动物是否已拥有（或为默认熊猫）。
+  /// 检查守护动物是否已拥有（小熊猫默认拥有）。
   bool isAnimalOwned(String guardianAnimalName) {
-    // 默认熊猫始终拥有
+    // 默认动物始终拥有
     if (guardianAnimalName == 'panda') return true;
     // 映射：GuardianAnimal.name → shop item id
     final shopId = switch (guardianAnimalName) {
+      'deer' => 'pet_deer',
       'tit' => 'pet_blue_tit',
       'frog' => 'pet_rainbow_frog',
-      'firefly' => 'pet_golden_firefly',
-      'dog' => 'pet_golden_dog',
-      'cat' => 'pet_silver_cat',
-      'duck' => 'pet_yellow_duck',
-      'goat' => 'pet_white_goat',
-      'elf' => 'pet_magic_elf',
-      'elephant' => 'pet_wise_elephant',
-      'fox' => 'pet_cunning_fox',
-      'hedgehog' => 'pet_gentle_hedgehog',
-      'deer' => 'pet_graceful_deer',
-      'squirrel' => 'pet_lively_squirrel',
-      'rabbit' => 'pet_soft_rabbit',
+      'ladybug' => 'pet_ladybug',
       _ => null,
     };
     if (shopId == null) return false;
