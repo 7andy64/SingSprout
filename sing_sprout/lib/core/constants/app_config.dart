@@ -6,6 +6,10 @@ class AppConfig {
   static const String appNameEn = 'SingSprout';
   static const String version = '1.0.0';
 
+  /// 当前版本 APK 的 SHA-256，用作 Release 未提供 hash 时的回退校验
+  static const String apkSha256 =
+      'cd995d88a8ec956975da6b589e732015a9006fae659215ec25ba2a56da246846';
+
   // 功能开关（MVP 最小闭环已包含：录音编曲 + 守护动物聊天 + 节奏游戏 + 金松果经济）
   static const bool enableGuardianChat = true;    // P0: 守护动物 AI 聊天
   static const bool enableMoodRadio = true;       // P1: 心情收音机
