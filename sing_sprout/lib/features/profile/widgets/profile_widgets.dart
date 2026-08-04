@@ -86,18 +86,16 @@ class ProfileHeader extends StatelessWidget {
           const SizedBox(height: 14),
 
           // ── 陪伴动物 ──
-          GestureDetector(
+          AnimalAvatar(
+            animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
+            size: 64,
+            animalState: appState.animalState,
             onTap: () {
               GuardianChatDialog.show(
                 context,
                 animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
               );
             },
-            child: AnimalAvatar(
-              animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
-              size: 64,
-              animalState: appState.animalState,
-            ),
           ),
 
           const SizedBox(height: 10),
