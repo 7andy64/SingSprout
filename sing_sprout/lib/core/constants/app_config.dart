@@ -1,14 +1,22 @@
+import 'package:package_info_plus/package_info_plus.dart';
+
 /// 应用环境配置
 class AppConfig {
   AppConfig._();
 
+  static PackageInfo? _packageInfo;
+
   static const String appName = '声芽';
   static const String appNameEn = 'SingSprout';
-  static const String version = '1.0.0';
 
-  /// 当前版本 APK 的 SHA-256，用作 Release 未提供 hash 时的回退校验
-  static const String apkSha256 =
-      'cd995d88a8ec956975da6b589e732015a9006fae659215ec25ba2a56da246846';
+  /// 运行时版本号（从 APK 元数据读取，自动与 pubspec.yaml 同步，不会出现不一致）
+  static String get version => _packageInfo?.version ?? '1.0.0';
+  static String get buildNumber => _packageInfo?.buildNumber ?? '10';
+
+  /// 初始化：读取包信息（main.dart 中调用一次）
+  static Future<void> init() async {
+    _packageInfo = await PackageInfo.fromPlatform();
+  }
 
   // 功能开关（MVP 最小闭环已包含：录音编曲 + 守护动物聊天 + 节奏游戏 + 金松果经济）
   static const bool enableGuardianChat = true;    // P0: 守护动物 AI 聊天

@@ -231,7 +231,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           MenuItem(
                             icon: Icons.info_outline_rounded,
                             label: '关于声芽',
-                            trailing: const Text(
+                            trailing: Text(
                               'V${AppConfig.version}',
                               style: TextStyle(
                                 fontSize: 13,
