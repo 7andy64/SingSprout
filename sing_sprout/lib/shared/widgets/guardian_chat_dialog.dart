@@ -106,6 +106,17 @@ class _GuardianChatDialogState extends State<GuardianChatDialog> {
       GuardianAnimal.tit => 'sparrow',
       GuardianAnimal.frog => 'frog',
       GuardianAnimal.firefly => 'firefly',
+      GuardianAnimal.dog => 'dog',
+      GuardianAnimal.cat => 'cat',
+      GuardianAnimal.duck => 'duck',
+      GuardianAnimal.goat => 'goat',
+      GuardianAnimal.elf => 'elf',
+      GuardianAnimal.elephant => 'elephant',
+      GuardianAnimal.fox => 'fox',
+      GuardianAnimal.hedgehog => 'hedgehog',
+      GuardianAnimal.deer => 'deer',
+      GuardianAnimal.squirrel => 'squirrel',
+      GuardianAnimal.rabbit => 'rabbit',
     };
   }
 
@@ -114,7 +125,18 @@ class _GuardianChatDialogState extends State<GuardianChatDialog> {
       GuardianAnimal.panda => '咕咕',
       GuardianAnimal.tit => '啾啾',
       GuardianAnimal.frog => '呱呱',
-      GuardianAnimal.firefly => '闪闪',
+      GuardianAnimal.firefly => '星星',
+      GuardianAnimal.dog => '旺财',
+      GuardianAnimal.cat => '咪咪',
+      GuardianAnimal.duck => '嘎嘎',
+      GuardianAnimal.goat => '咩咩',
+      GuardianAnimal.elf => '阿贝贝',
+      GuardianAnimal.elephant => '乐乐',
+      GuardianAnimal.fox => '小狸',
+      GuardianAnimal.hedgehog => '团团',
+      GuardianAnimal.deer => '斑比',
+      GuardianAnimal.squirrel => '松松',
+      GuardianAnimal.rabbit => '跳跳',
     };
   }
 
