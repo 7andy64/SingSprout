@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../models/user_profile.dart';
+import '../providers/app_state.dart';
 import '../services/guardian_animal_service.dart';
 
 /// 守护动物聊天对话框。
@@ -20,23 +22,36 @@ class GuardianChatDialog extends StatefulWidget {
   final GuardianAnimal animal;
   final String apiKey;
   final String? model;
+  final String? initialMessage;
 
   const GuardianChatDialog({
     super.key,
     required this.animal,
     required this.apiKey,
     this.model,
+    this.initialMessage,
   });
 
   /// 弹出守护动物聊天对话框。
   ///
   /// [apiKey] 可选 — 不传则自动从安全存储中读取。
+  /// 自动读取 [AppState] 中的待展示问候语作为首条消息。
   static void show(
     BuildContext context, {
     required GuardianAnimal animal,
     String? apiKey,
     String? model,
   }) {
+    // 读取待展示的守护动物问候语，读取后立即清除
+    String? initialMessage;
+    try {
+      final appState = context.read<AppState>();
+      initialMessage = appState.pendingAnimalGreeting;
+      if (initialMessage != null) {
+        appState.clearPendingAnimalGreeting();
+      }
+    } catch (_) {}
+
     // 异步解析 key，拿到后弹出
     _resolveApiKey(apiKey).then((key) {
       if (!context.mounted) return;
@@ -60,6 +75,7 @@ class GuardianChatDialog extends StatefulWidget {
           animal: animal,
           apiKey: key,
           model: model,
+          initialMessage: initialMessage,
         ),
       );
     });
@@ -98,6 +114,11 @@ class _GuardianChatDialogState extends State<GuardianChatDialog> {
       animalType: _mapAnimalType(widget.animal),
       animalName: _mapAnimalName(widget.animal),
     );
+
+    // 如果有待展示的问候语（创作完成后的祝贺），作为首条 AI 消息展示
+    if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
+      _messages.add(_ChatMessage(text: widget.initialMessage!, isUser: false));
+    }
   }
 
   static String _mapAnimalType(GuardianAnimal animal) {
@@ -354,7 +375,7 @@ class _GuardianChatDialogState extends State<GuardianChatDialog> {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // AI 头像
           if (!isUser) ...[
@@ -433,7 +454,7 @@ class _GuardianChatDialogState extends State<GuardianChatDialog> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 28,
