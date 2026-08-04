@@ -16,9 +16,10 @@ enum GuardianAnimal {
   squirrel('小松鼠松松', '🐿️'),
   rabbit('小兔子跳跳', '🐰');
 
-  const GuardianAnimal(this.displayName, this.emoji);
+  const GuardianAnimal(this.displayName, this.emoji, this.shortName);
   final String displayName;
   final String emoji;
+  final String shortName;
 }
 
 /// 用户身份
