@@ -4,7 +4,7 @@ class AppConfig {
 
   static const String appName = '声芽';
   static const String appNameEn = 'SingSprout';
-  static const String version = '0.9.9';
+  static const String version = '1.0.0';
 
   // 功能开关（MVP 最小闭环已包含：录音编曲 + 守护动物聊天 + 节奏游戏 + 金松果经济）
   static const bool enableGuardianChat = true;    // P0: 守护动物 AI 聊天
