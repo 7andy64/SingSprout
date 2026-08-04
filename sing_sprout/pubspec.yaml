@@ -1,6 +1,6 @@
 name: sing_sprout
 description: 声芽 SingSprout - AI音乐启蒙创作工具 · 金松果音乐游戏 · 虚拟物品兑换
-version: 0.9.9+9
+version: 1.0.0+10
 publish_to: none
 
 environment:

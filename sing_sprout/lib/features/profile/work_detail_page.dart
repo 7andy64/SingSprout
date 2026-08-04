@@ -237,15 +237,11 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
       final animalType = _guardianAnimalKey(animal);
       final animalName = animal.displayName;
 
-      final prompt = '小朋友刚刚创作了一首音乐作品，请听一听然后给一个简短的评价（不超过4句话）吧！\n'
-          '作品信息：\n'
-          '- 标题：${work.title}\n'
-          '- 风格：${work.styleSeed.icon} ${work.styleSeed.label}\n'
-          '- 心情：$moodStr\n'
-          '- 时长：${work.duration.inSeconds} 秒\n'
-          '- 创作故事：$noteStr\n'
-          '评价时要像朋友一样亲切，夸夸小朋友的创意，提到作品的具体特点。'
-          '不要打分，不要说教，不要比较。';
+      final prompt = '小朋友刚创作了一首音乐作品，请你用 2-3 句话点评一下，要温暖鼓励！\n'
+          '标题：${work.title} | 风格：${work.styleSeed.icon} ${work.styleSeed.label}'
+          ' | 心情：$moodStr | 时长：${work.duration.inSeconds}秒'
+          ' | 故事：$noteStr\n'
+          '规则：夸具体特点、不说教、不比较、不打分。';
 
       final service = GuardianAnimalService(
         animalType: animalType,
