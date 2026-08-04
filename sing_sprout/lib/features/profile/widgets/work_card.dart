@@ -262,6 +262,11 @@ class _WorkCardState extends State<WorkCard>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (widget.work.review != null && widget.work.review!.isNotEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 4),
+                            child: Text('💬', style: TextStyle(fontSize: 12)),
+                          ),
                         if (widget.work.isFavorite)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

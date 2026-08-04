@@ -262,6 +262,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 保存守护动物 AI 评价。
+  Future<void> updateWorkReview(String workId, String review) async {
+    final index = _works.indexWhere((w) => w.id == workId);
+    if (index == -1) return;
+    final updated = _works[index].copyWith(review: review);
+    if (!kIsWeb) await _workRepo.update(updated);
+    _works[index] = updated;
+    notifyListeners();
+  }
+
   /// 切换作品私密状态。
   Future<void> togglePrivate(String id) async {
     if (!kIsWeb) await _workRepo.togglePrivate(id);

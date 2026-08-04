@@ -12,7 +12,7 @@ class DatabaseService {
   DatabaseService._();
 
   static const _dbName = 'singsprout.db';
-  static const _dbVersion = 4;
+  static const _dbVersion = 5;
 
   Database? _db;
   Future<Database>? _dbFuture;
@@ -54,6 +54,7 @@ class DatabaseService {
           style_seed TEXT NOT NULL DEFAULT 'morningDew',
           mood_color TEXT,
           note TEXT,
+          review TEXT,
           duration_ms INTEGER NOT NULL DEFAULT 0,
           is_favorite INTEGER NOT NULL DEFAULT 0,
           is_encrypted INTEGER NOT NULL DEFAULT 1,
@@ -240,6 +241,16 @@ class DatabaseService {
       );
     }
     if (oldVersion < 4) {
+      await _migrateV3toV4(db);
+    }
+    if (oldVersion < 5) {
+      await db.execute(
+        'ALTER TABLE works ADD COLUMN review TEXT',
+      );
+    }
+  }
+
+  Future<void> _migrateV3toV4(Database db) async {
       // v3 → v4: 金松果经济系统
       await db.execute('''
         CREATE TABLE wallet (
@@ -323,7 +334,6 @@ class DatabaseService {
           daily_earnings INTEGER NOT NULL DEFAULT 0
         )
       ''');
-    }
   }
 
   // ── 工具方法 ──

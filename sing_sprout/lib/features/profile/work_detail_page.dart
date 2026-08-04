@@ -9,6 +9,7 @@ import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
 import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/role_gate.dart';
+import '../../shared/services/guardian_animal_service.dart';
 import '../../shared/utils/formatters.dart';
 
 /// 作品详情 / 播放页
@@ -33,6 +34,11 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
   bool _isEditing = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+
+  // 守护动物评价状态
+  bool _isReviewing = false;
+  String? _reviewError;
+  String? _savedReview;
 
   @override
   void initState() {
@@ -72,6 +78,7 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
 
     _titleController.text = _work!.title;
     _noteController.text = _work!.note ?? '';
+    _savedReview = _work!.review;
 
     // 初始化音频播放器
     final path = _work!.audioPath;
@@ -202,8 +209,91 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
 
   void _shareAsCard() {
     if (_work == null) return;
-    // 跳转到明信片编辑页，预填作品信息
     context.push('${AppRoutes.composeCard}?workId=${_work!.id}');
+  }
+
+  Future<void> _requestReview() async {
+    if (_work == null || _isReviewing) return;
+
+    final appState = context.read<AppState>();
+    final animal = appState.userProfile?.guardianAnimal;
+    if (animal == null) {
+      setState(() => _reviewError = '还没有守护动物，请先完成引导～');
+      return;
+    }
+
+    setState(() {
+      _isReviewing = true;
+      _reviewError = null;
+    });
+
+    try {
+      final work = _work!;
+      final moodStr = work.moodSticker != null
+          ? '${work.moodSticker!.emoji} ${work.moodSticker!.label}'
+          : '暂无';
+      final noteStr = (work.note ?? '').isNotEmpty ? work.note! : '暂无';
+
+      final animalType = _guardianAnimalKey(animal);
+      final animalName = animal.displayName;
+
+      final prompt = '小朋友刚刚创作了一首音乐作品，请听一听然后给一个简短的评价（不超过4句话）吧！\n'
+          '作品信息：\n'
+          '- 标题：${work.title}\n'
+          '- 风格：${work.styleSeed.icon} ${work.styleSeed.label}\n'
+          '- 心情：$moodStr\n'
+          '- 时长：${work.duration.inSeconds} 秒\n'
+          '- 创作故事：$noteStr\n'
+          '评价时要像朋友一样亲切，夸夸小朋友的创意，提到作品的具体特点。'
+          '不要打分，不要说教，不要比较。';
+
+      final service = GuardianAnimalService(
+        animalType: animalType,
+        animalName: animalName,
+      );
+      final result = await service.chat(prompt, temperature: 0.8);
+
+      if (mounted && result.isSuccess && result.reply != null) {
+        final review = result.reply!;
+        await appState.updateWorkReview(work.id, review);
+        setState(() {
+          _savedReview = review;
+          _isReviewing = false;
+        });
+      } else if (mounted) {
+        setState(() {
+          _isReviewing = false;
+          _reviewError = result.errorMessage ?? '评价失败，再试一次吧～';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isReviewing = false;
+          _reviewError = '网络好像不太好，等网络好了再试试吧～';
+        });
+      }
+    }
+  }
+
+  String _guardianAnimalKey(GuardianAnimal animal) {
+    return switch (animal) {
+      GuardianAnimal.panda => 'panda',
+      GuardianAnimal.deer => 'deer',
+      GuardianAnimal.tit => 'sparrow',
+      GuardianAnimal.frog => 'frog',
+      GuardianAnimal.ladybug => 'firefly',
+      GuardianAnimal.dog => 'dog',
+      GuardianAnimal.cat => 'cat',
+      GuardianAnimal.duck => 'duck',
+      GuardianAnimal.goat => 'goat',
+      GuardianAnimal.elf => 'elf',
+      GuardianAnimal.elephant => 'elephant',
+      GuardianAnimal.fox => 'fox',
+      GuardianAnimal.hedgehog => 'hedgehog',
+      GuardianAnimal.squirrel => 'squirrel',
+      GuardianAnimal.rabbit => 'rabbit',
+    };
   }
 
   // ── UI ──
@@ -264,6 +354,10 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
             // ── 元 数 据 卡 ──
             _buildMetadata(work),
             const SizedBox(height: 20),
+
+            // ── 守护动物评价 ──
+            const SizedBox(height: 12),
+            _buildReviewSection(work),
 
             // ── 备 注 ──
             if (_isEditing)
@@ -423,6 +517,185 @@ class _WorkDetailPageState extends State<WorkDetailPage> {
           label: Formatters.formatDuration(work.duration),
         ),
       ],
+    );
+  }
+
+  Widget _buildReviewSection(MusicWork work) {
+    final appState = context.read<AppState>();
+    final animal = appState.userProfile?.guardianAnimal;
+    final animalEmoji = animal?.emoji ?? '🦉';
+    final animalName = animal?.displayName ?? '守护动物';
+
+    // 已保存的评价
+    final review = _savedReview;
+    if (review != null && review.isNotEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFFFFF8E1),
+              const Color(0xFFFFF3CD).withValues(alpha: 0.5),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFFB300).withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(animalEmoji, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 8),
+                Text(
+                  '$animalName 的评价',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFE65100),
+                  ),
+                ),
+                const Spacer(),
+                // 重新评价按钮
+                GestureDetector(
+                  onTap: _isReviewing ? null : _requestReview,
+                  child: Text(
+                    _isReviewing ? '评价中...' : '重新评价',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.primaryGreen.withValues(alpha: _isReviewing ? 0.4 : 1.0),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              review,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textPrimary,
+                height: 1.6,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 错误状态
+    if (_reviewError != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Text('⚠️', style: TextStyle(fontSize: 16)),
+                SizedBox(width: 6),
+                Text(
+                  '评价出了点问题',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFE65100)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _reviewError!,
+              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 34,
+              child: OutlinedButton(
+                onPressed: _requestReview,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryGreen,
+                  side: const BorderSide(color: AppTheme.primaryGreen),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('再试一次', style: TextStyle(fontSize: 12)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 加载中
+    if (_isReviewing) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.15)),
+        ),
+        child: Column(
+          children: [
+            Text(animalEmoji, style: const TextStyle(fontSize: 32)),
+            const SizedBox(height: 10),
+            Text(
+              '$animalName 正在认真听你的作品...',
+              style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 未评价：显示邀请按钮
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        children: [
+          Text(animalEmoji, style: const TextStyle(fontSize: 28)),
+          const SizedBox(height: 6),
+          const Text(
+            '想让守护动物听听你的作品吗？',
+            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 38,
+            child: FilledButton.icon(
+              onPressed: _requestReview,
+              icon: const Text('✨', style: TextStyle(fontSize: 16)),
+              label: const Text('请守护动物评价', style: TextStyle(fontSize: 13)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFFFB300),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
