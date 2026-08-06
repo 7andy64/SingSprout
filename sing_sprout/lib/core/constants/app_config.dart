@@ -1,15 +1,28 @@
+import 'package:package_info_plus/package_info_plus.dart';
+
 /// 应用环境配置
 class AppConfig {
   AppConfig._();
 
+  static PackageInfo? _packageInfo;
+
   static const String appName = '声芽';
   static const String appNameEn = 'SingSprout';
-  static const String version = '0.9.0';
 
-  // 功能开关（MVP 阶段仅开启 P0 功能）
-  static const bool enableMoodRadio = true;      // P1: 完整心情收音机
+  /// 运行时版本号（从 APK 元数据读取，自动与 pubspec.yaml 同步，不会出现不一致）
+  static String get version => _packageInfo?.version ?? '1.0.0';
+  static String get buildNumber => _packageInfo?.buildNumber ?? '10';
+
+  /// 初始化：读取包信息（main.dart 中调用一次）
+  static Future<void> init() async {
+    _packageInfo = await PackageInfo.fromPlatform();
+  }
+
+  // 功能开关（MVP 最小闭环已包含：录音编曲 + 守护动物聊天 + 节奏游戏 + 金松果经济）
+  static const bool enableGuardianChat = true;    // P0: 守护动物 AI 聊天
+  static const bool enableMoodRadio = true;       // P1: 心情收音机
   static const bool enableFieldSoundLab = true;   // P1: 田野声音实验室
-  static const bool enableRhythmTribe = false;    // P2: 节奏部落
+  static const bool enableRhythmTribe = true;     // P0: 节奏部落
 
   // 隐私与安全
   static const bool localEncryptionEnabled = true;

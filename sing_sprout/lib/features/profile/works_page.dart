@@ -5,7 +5,10 @@ import '../../core/constants/app_routes.dart';
 import '../../core/constants/enums.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_work.dart';
+import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/services/role_permissions.dart';
+import '../../shared/widgets/role_gate.dart';
 import 'widgets/work_card.dart';
 
 /// 排序方式
@@ -41,7 +44,7 @@ class _WorksPageState extends State<WorksPage> {
         break;
       case WorkFilter.byModule:
         if (_filterModule != null) {
-          result = result.where((w) => w.sourceModule == _filterModule).toList();
+          result = result.where((w) => w.styleSeed.name == _filterModule).toList();
         }
         break;
     }
@@ -118,6 +121,46 @@ class _WorksPageState extends State<WorksPage> {
     _exitSelectMode();
   }
 
+  List<Widget> _buildAppBarActions(AppState appState, List<MusicWork> works) {
+    final role = appState.userProfile?.role ?? UserRole.student;
+    final canDelete = RoleGate.isAllowed(Feature.deleteWork, role);
+
+    if (_selectMode) {
+      return [
+        if (canDelete)
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: _selectedIds.isNotEmpty ? _batchDelete : null,
+            tooltip: '删除选中',
+          ),
+        _MenuAnchor(
+          icon: Icons.more_vert,
+          items: [
+            _MenuEntry(
+              label: '全选',
+              onTap: () => setState(() {
+                _selectedIds.addAll(works.map((w) => w.id));
+              }),
+            ),
+            _MenuEntry(
+              label: '取消全选',
+              onTap: () => setState(() => _selectedIds.clear()),
+            ),
+          ],
+        ),
+      ];
+    }
+    return [
+      _MenuAnchor(
+        icon: Icons.sort_rounded,
+        items: [
+          _MenuEntry(label: '排序', onTap: _showSortSheet),
+          _MenuEntry(label: '筛选', onTap: _showFilterSheet),
+        ],
+      ),
+    ];
+  }
+
   void _showSortSheet() {
     showModalBottomSheet(
       context: context,
@@ -182,10 +225,10 @@ class _WorksPageState extends State<WorksPage> {
             ),
             ...StyleSeed.values.map((seed) => ListTile(
               leading: Icon(
-                _filter == WorkFilter.byModule && _filterModule == 'humming_garden'
+                _filter == WorkFilter.byModule && _filterModule == seed.name
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
-                color: _filter == WorkFilter.byModule && _filterModule == 'humming_garden'
+                color: _filter == WorkFilter.byModule && _filterModule == seed.name
                     ? AppTheme.primaryGreen
                     : AppTheme.textSecondary,
               ),
@@ -193,7 +236,7 @@ class _WorksPageState extends State<WorksPage> {
               onTap: () {
                 setState(() {
                   _filter = WorkFilter.byModule;
-                  _filterModule = 'humming_garden';
+                  _filterModule = seed.name;
                 });
                 Navigator.pop(ctx);
               },
@@ -228,6 +271,7 @@ class _WorksPageState extends State<WorksPage> {
       builder: (context, appState, _) {
         final allWorks = appState.works;
         final works = _applySortAndFilter(allWorks);
+        final role = appState.userProfile?.role ?? UserRole.student;
 
         return Scaffold(
           appBar: AppBar(
@@ -239,38 +283,7 @@ class _WorksPageState extends State<WorksPage> {
                     onPressed: _exitSelectMode,
                   )
                 : null,
-            actions: _selectMode
-                ? [
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: _selectedIds.isNotEmpty ? _batchDelete : null,
-                      tooltip: '删除选中',
-                    ),
-                    _MenuAnchor(
-                      icon: Icons.more_vert,
-                      items: [
-                        _MenuEntry(
-                          label: '全选',
-                          onTap: () => setState(() {
-                            _selectedIds.addAll(works.map((w) => w.id));
-                          }),
-                        ),
-                        _MenuEntry(
-                          label: '取消全选',
-                          onTap: () => setState(() => _selectedIds.clear()),
-                        ),
-                      ],
-                    ),
-                  ]
-                : [
-                    _MenuAnchor(
-                      icon: Icons.sort_rounded,
-                      items: [
-                        _MenuEntry(label: '排序', onTap: _showSortSheet),
-                        _MenuEntry(label: '筛选', onTap: _showFilterSheet),
-                      ],
-                    ),
-                  ],
+            actions: _buildAppBarActions(appState, works),
           ),
           body: Column(
             children: [
@@ -319,12 +332,14 @@ class _WorksPageState extends State<WorksPage> {
                         itemBuilder: (_, i) {
                           final w = works[i];
                           final selected = _selectedIds.contains(w.id);
+                          final canDelete = RoleGate.isAllowed(Feature.deleteWork, role);
                           return WorkCard(
                             work: w,
                             selected: selected,
                             selectMode: _selectMode,
                             onFavorite: () => appState.toggleFavorite(w.id),
-                            onDelete: () => _confirmDelete(context, w),
+                            onDelete: canDelete ? () => _confirmDelete(context, w) : null,
+                            onRename: () => _showRenameDialog(context, w),
                             onTap: () {
                               if (_selectMode) {
                                 _toggleSelect(w.id);
@@ -366,6 +381,45 @@ class _WorksPageState extends State<WorksPage> {
           Text(
             _filter != WorkFilter.all ? '试试调整筛选条件' : '去哼唱花园录制你的第一首歌吧',
             style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, MusicWork work) {
+    final controller = TextEditingController(text: work.title);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('重命名作品'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: '作品名称',
+            hintText: '输入新名称',
+          ),
+          maxLength: 20,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              controller.dispose();
+              Navigator.pop(ctx);
+            },
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newTitle = controller.text.trim();
+              controller.dispose();
+              if (newTitle.isNotEmpty && newTitle != work.title) {
+                await context.read<AppState>().updateWork(work.copyWith(title: newTitle));
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('确定'),
           ),
         ],
       ),

@@ -10,6 +10,7 @@ class MusicWork {
   final StyleSeed styleSeed;
   final MoodColor? moodSticker;
   final String? note;
+  final String? review; // 守护动物 AI 评价
   final Duration duration;
   final bool isFavorite;
   final bool isEncrypted;
@@ -26,6 +27,7 @@ class MusicWork {
     required this.styleSeed,
     this.moodSticker,
     this.note,
+    this.review,
     required this.duration,
     this.isFavorite = false,
     this.isEncrypted = true,
@@ -41,6 +43,7 @@ class MusicWork {
     StyleSeed styleSeed = StyleSeed.morningDew,
     MoodColor? moodSticker,
     String? note,
+    String? review,
     required Duration duration,
     String sourceModule = 'humming_garden',
   }) {
@@ -70,6 +73,7 @@ class MusicWork {
         'style_seed': styleSeed.name,
         'mood_color': moodSticker?.name,
         'note': note,
+        'review': review,
         'duration_ms': duration.inMilliseconds,
         'is_favorite': isFavorite ? 1 : 0,
         'is_encrypted': isEncrypted ? 1 : 0,
@@ -88,6 +92,7 @@ class MusicWork {
         moodSticker:
             json['mood_color'] != null ? _parseEnum(MoodColor.values, json['mood_color'] as String?) : null,
         note: json['note'] as String?,
+        review: json['review'] as String?,
         duration: Duration(milliseconds: json['duration_ms'] as int? ?? 0),
         isFavorite: (json['is_favorite'] as int? ?? 0) == 1,
         isEncrypted: (json['is_encrypted'] as int? ?? 1) == 1,
@@ -104,6 +109,7 @@ class MusicWork {
     StyleSeed? styleSeed,
     MoodColor? moodSticker,
     String? note,
+    String? review,
     Duration? duration,
     bool? isFavorite,
     bool? isEncrypted,
@@ -118,6 +124,7 @@ class MusicWork {
       styleSeed: styleSeed ?? this.styleSeed,
       moodSticker: moodSticker ?? this.moodSticker,
       note: note ?? this.note,
+      review: review ?? this.review,
       duration: duration ?? this.duration,
       isFavorite: isFavorite ?? this.isFavorite,
       isEncrypted: isEncrypted ?? this.isEncrypted,

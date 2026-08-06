@@ -131,5 +131,6 @@ class _WavePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _WavePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _WavePainter old) =>
+      isRecording != old.isRecording || animationValue != old.animationValue;
 }

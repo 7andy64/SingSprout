@@ -23,24 +23,25 @@ class RecordingControls extends StatelessWidget {
           child: Column(
             children: [
               // ── 录音中 HUD / 空闲提示 ──
-              if (vm.isRecording)
-                _RecordingHUD(vm: vm)
+              if (vm.isRecording || vm.isStartingRecording)
+                vm.isRecording ? _RecordingHUD(vm: vm) : _StartingIndicator()
               else if (vm.hasRecording)
                 _PlaybackBar(vm: vm)
               else
                 _IdleHint(vm: vm),
 
-              const SizedBox(height: 20),
-
-              // ── 录音按钮（录制中变大 + 红色光晕）──
-              _RecordButton(vm: vm, onPermissionDenied: onPermissionDenied),
+              // ── 录音按钮（录完后隐藏）──
+              if (!vm.hasRecording) ...[
+                const SizedBox(height: 20),
+                _RecordButton(vm: vm, onPermissionDenied: onPermissionDenied),
+              ],
 
               const SizedBox(height: 8),
 
               // ── 操作提示文字 ──
               if (vm.isRecording)
                 const Text(
-                  '松开停止录音',
+                  '点击完成录音',
                   style: TextStyle(
                     fontSize: 13,
                     color: Color(0xFFEF5350),
@@ -51,7 +52,7 @@ class RecordingControls extends StatelessWidget {
                 Column(
                   children: [
                     Text(
-                      vm.hasPermission ? '长按按钮开始采集' : '点击按钮开启麦克风权限',
+                      vm.hasPermission ? '轻点开始采集' : '点击按钮开启麦克风权限',
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF666666),
@@ -84,57 +85,46 @@ class _RecordButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPressStart: (_) async {
-        if (!vm.isRecording && !vm.hasRecording) {
+      onTap: () async {
+        if (vm.isRecording) {
+          vm.stopRecording();
+        } else {
           final error = await vm.startRecording();
           if (error == 'permission_denied') {
             onPermissionDenied?.call();
           }
         }
       },
-      onLongPressEnd: (_) {
-        if (vm.isRecording) vm.stopRecording();
-      },
-      onLongPressCancel: () {
-        if (vm.isRecording) vm.stopRecording();
-      },
-      onTap: vm.hasRecording
-          ? null // 有录音时，长按被禁用，只能用回放区的按钮
-          : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: vm.isRecording ? 110 : 96,
         height: vm.isRecording ? 110 : 96,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: vm.isRecording
               ? const Color(0xFFEF5350)
-              : vm.hasRecording
-                  ? const Color(0xFF42A5F5)
-                  : vm.hasPermission
-                      ? const Color(0xFF7CB342)
-                      : const Color(0xFFBDBDBD),
+              : vm.hasPermission
+                  ? const Color(0xFF7CB342)
+                  : const Color(0xFFBDBDBD),
           boxShadow: [
             BoxShadow(
               color: (vm.isRecording
                       ? const Color(0xFFEF5350)
-                      : vm.hasRecording
-                          ? const Color(0xFF42A5F5)
-                          : const Color(0xFF7CB342))
+                      : const Color(0xFF7CB342))
                   .withValues(alpha: 0.4),
               blurRadius: vm.isRecording ? 28 : 16,
               spreadRadius: vm.isRecording ? 4 : 0,
             ),
           ],
         ),
-        child: Icon(
-          vm.isRecording
-              ? Icons.mic
-              : vm.hasRecording
-                  ? Icons.check_circle
-                  : Icons.mic_none,
-          color: Colors.white,
-          size: 44,
+        child: const Text(
+          '🎤',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 44,
+          ),
         ),
       ),
     );
@@ -163,7 +153,7 @@ class _IdleHint extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          vm.hasPermission ? '长按按钮开始采集' : '点击按钮开启麦克风权限',
+          vm.hasPermission ? '轻点开始采集' : '点击按钮开启麦克风权限',
           style: const TextStyle(fontSize: 13, color: Color(0xFF999999)),
         ),
       ],
@@ -343,17 +333,33 @@ class _PlaybackBar extends StatelessWidget {
 
               const SizedBox(width: 12),
 
-              // Re-record
+              // 重录按钮
               GestureDetector(
-                onTap: () => vm.startRecording(),
+                onTap: () => _confirmRerecord(context, vm),
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF9800).withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFFFF9800).withValues(alpha: 0.3),
+                    ),
                   ),
-                  child: const Icon(Icons.refresh,
-                      size: 20, color: Color(0xFFFF9800)),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('🔄', style: TextStyle(fontSize: 16)),
+                      SizedBox(width: 4),
+                      Text(
+                        '重录',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFFF9800),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -367,5 +373,55 @@ class _PlaybackBar extends StatelessWidget {
     final min = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final sec = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$min:$sec';
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  重录过渡指示器（异步间隙防闪烁）
+// ═══════════════════════════════════════════════
+
+/// 重录前确认对话框 — 防止误触丢失当前录音。
+Future<void> _confirmRerecord(BuildContext context, FieldSoundLabViewModel vm) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('重新录制'),
+      content: const Text('确定要重新录制吗？\n当前录音将被覆盖。'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF9800)),
+          child: const Text('确定重录'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) {
+    vm.startRecording();
+  }
+}
+
+class _StartingIndicator extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        SizedBox(height: 16),
+        SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        SizedBox(height: 10),
+        Text(
+          '准备录音...',
+          style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+        ),
+      ],
+    );
   }
 }

@@ -8,8 +8,13 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/models/music_tree_data.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+
 import '../../shared/services/music_tree_service.dart';
+import '../../shared/services/role_permissions.dart';
 import '../../shared/widgets/animal_avatar.dart';
+import '../../shared/widgets/guardian_chat_dialog.dart';
+import '../../shared/widgets/guardian_scene_bubble.dart';
+import '../../shared/widgets/role_gate.dart';
 import '../../shared/widgets/tree_visual.dart';
 import 'widgets/garden_widgets.dart';
 
@@ -80,7 +85,13 @@ class _HummingGardenPageState extends State<HummingGardenPage>
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(children: [
-              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Consumer<AppState>(
+                  builder: (_, app, __) => GuardianSceneBubble(appState: app),
+                ),
+              ),
+              const SizedBox(height: 8),
               // ── Mascot greeting ──
               AnimatedBuilder(
                 animation: _animalBreatheController,
@@ -88,12 +99,48 @@ class _HummingGardenPageState extends State<HummingGardenPage>
                   return Transform.scale(
                     scale: 1.0 + _animalBreatheController.value * 0.03,
                     child: Consumer<AppState>(
-                      builder: (_, app, __) => AnimalAvatar(
-                          animal: app.userProfile?.guardianAnimal ??
-                              GuardianAnimal.panda,
-                          size: 72,
-                          speechBubble:
-                              '嘿！今天想哼点什么？\n试试用音乐种一棵树吧～'),
+                      builder: (_, app, __) => Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          AnimalAvatar(
+                            animal: app.userProfile?.guardianAnimal ??
+                                GuardianAnimal.panda,
+                            size: 72,
+                            animalState: app.animalState,
+                            onTap: () {
+                              GuardianChatDialog.show(
+                                context,
+                                animal: app.userProfile?.guardianAnimal ??
+                                    GuardianAnimal.panda,
+                              );
+                            },
+                          ),
+                          // 有待展示的问候语时显示红点
+                          if (app.hasPendingAnimalGreeting)
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                width: 14,
+                                height: 14,
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    '!',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -140,37 +187,60 @@ class _HummingGardenPageState extends State<HummingGardenPage>
               ],
               const SizedBox(height: 16),
               // ── Record button ──
-              GestureDetector(
-                onTap: _startCreativeFlow,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            AppTheme.primaryGreen.withValues(alpha: 0.35),
-                        blurRadius: 16,
-                        spreadRadius: 2,
+              Consumer<AppState>(
+                builder: (context, app, _) {
+                  final role = app.userProfile?.role ?? UserRole.student;
+                  return RoleGate(
+                    feature: Feature.createMusic,
+                    role: role,
+                    fallback: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        '当前身份不支持创作功能',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text('🎤',
-                      style: TextStyle(fontSize: 36)),
-                ),
+                    ),
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          onTap: _startCreativeFlow,
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF6BAF4B), Color(0xFF4A8A3B)],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      AppTheme.primaryGreen.withValues(alpha: 0.35),
+                                  blurRadius: 16,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text('🎤',
+                                style: TextStyle(fontSize: 36)),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('点击开始创作',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 4),
-              const Text('点击开始创作',
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.textSecondary)),
               const SizedBox(height: 20),
               // ── Quick actions ──
               Padding(

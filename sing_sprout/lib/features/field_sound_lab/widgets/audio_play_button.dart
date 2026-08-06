@@ -91,10 +91,12 @@ class _AudioPlayButtonState extends State<AudioPlayButton>
                     ),
 
                     // 图标 — 与背景同色系全不透明
-                    Icon(
-                      playing ? Icons.pause : Icons.play_arrow_rounded,
-                      size: playing ? 26 : 32,
-                      color: bgColor,
+                    Text(
+                      playing ? '⏸' : '▶',
+                      style: TextStyle(
+                        fontSize: playing ? 26 : 32,
+                        color: bgColor,
+                      ),
                     ),
                   ],
                 );

@@ -12,7 +12,7 @@ class DatabaseService {
   DatabaseService._();
 
   static const _dbName = 'singsprout.db';
-  static const _dbVersion = 2;
+  static const _dbVersion = 5;
 
   Database? _db;
   Future<Database>? _dbFuture;
@@ -54,6 +54,7 @@ class DatabaseService {
           style_seed TEXT NOT NULL DEFAULT 'morningDew',
           mood_color TEXT,
           note TEXT,
+          review TEXT,
           duration_ms INTEGER NOT NULL DEFAULT 0,
           is_favorite INTEGER NOT NULL DEFAULT 0,
           is_encrypted INTEGER NOT NULL DEFAULT 1,
@@ -90,6 +91,8 @@ class DatabaseService {
           cover_url TEXT,
           reply_to_id TEXT,
           direction TEXT NOT NULL DEFAULT 'sent',
+          greeting_audio_path TEXT,
+          greeting_text TEXT,
           created_at TEXT NOT NULL,
           read_at TEXT
         )
@@ -132,6 +135,91 @@ class DatabaseService {
       await txn.execute(
         'CREATE INDEX idx_voice_cards_direction ON voice_cards(direction)',
       );
+
+      // v4 金松果经济系统
+      await txn.execute('''
+        CREATE TABLE wallet (
+          id INTEGER PRIMARY KEY DEFAULT 1,
+          balance INTEGER NOT NULL DEFAULT 0,
+          total_earned INTEGER NOT NULL DEFAULT 0,
+          today_earned INTEGER NOT NULL DEFAULT 0,
+          last_reset_date TEXT NOT NULL DEFAULT ''
+        )
+      ''');
+      await txn.execute('''
+        CREATE TABLE transactions (
+          id TEXT PRIMARY KEY,
+          type TEXT NOT NULL,
+          amount INTEGER NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          ref_id TEXT,
+          timestamp TEXT NOT NULL
+        )
+      ''');
+      await txn.execute(
+        'CREATE INDEX idx_transactions_timestamp ON transactions(timestamp DESC)',
+      );
+
+      await txn.execute('''
+        CREATE TABLE shop_items (
+          id TEXT PRIMARY KEY,
+          category TEXT NOT NULL,
+          name TEXT NOT NULL,
+          emoji TEXT NOT NULL DEFAULT '🎁',
+          price INTEGER NOT NULL,
+          asset_path TEXT,
+          unlock_tree_level INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      // 插入内置商品
+      for (final item in [
+        {'id': 'frame_spring', 'category': 'avatar_frame', 'name': '春花框', 'emoji': '🌸', 'price': 20, 'unlock_tree_level': 0},
+        {'id': 'frame_star', 'category': 'avatar_frame', 'name': '星星框', 'emoji': '⭐', 'price': 30, 'unlock_tree_level': 0},
+        {'id': 'frame_rainbow', 'category': 'avatar_frame', 'name': '彩虹框', 'emoji': '🌈', 'price': 50, 'unlock_tree_level': 3},
+        {'id': 'frame_moon', 'category': 'avatar_frame', 'name': '月亮框', 'emoji': '🌙', 'price': 40, 'unlock_tree_level': 0},
+        {'id': 'pet_deer', 'category': 'pet_skin', 'name': '小鹿斑斑', 'emoji': '🦌', 'price': 20, 'unlock_tree_level': 0},
+        {'id': 'pet_blue_tit', 'category': 'pet_skin', 'name': '蓝羽山雀', 'emoji': '🐦', 'price': 40, 'unlock_tree_level': 0},
+        {'id': 'pet_rainbow_frog', 'category': 'pet_skin', 'name': '翠蛙', 'emoji': '🐸', 'price': 50, 'unlock_tree_level': 0},
+        {'id': 'pet_ladybug', 'category': 'pet_skin', 'name': '七星瓢虫', 'emoji': '🐞', 'price': 70, 'unlock_tree_level': 4},
+        {'id': 'deco_bell', 'category': 'tree_deco', 'name': '风铃', 'emoji': '🎐', 'price': 15, 'unlock_tree_level': 0},
+        {'id': 'deco_star', 'category': 'tree_deco', 'name': '小星星', 'emoji': '🌟', 'price': 20, 'unlock_tree_level': 0},
+        {'id': 'deco_fruit', 'category': 'tree_deco', 'name': '红果实', 'emoji': '🍎', 'price': 25, 'unlock_tree_level': 0},
+        {'id': 'deco_lantern', 'category': 'tree_deco', 'name': '小灯笼', 'emoji': '🏮', 'price': 30, 'unlock_tree_level': 2},
+        {'id': 'deco_heart', 'category': 'tree_deco', 'name': '爱心果', 'emoji': '💝', 'price': 35, 'unlock_tree_level': 3},
+        {'id': 'card_forest', 'category': 'postcard_bg', 'name': '森林信纸', 'emoji': '🌿', 'price': 15, 'unlock_tree_level': 0},
+        {'id': 'card_ocean', 'category': 'postcard_bg', 'name': '海洋信纸', 'emoji': '🌊', 'price': 20, 'unlock_tree_level': 0},
+        {'id': 'card_sunset', 'category': 'postcard_bg', 'name': '晚霞信纸', 'emoji': '🌅', 'price': 25, 'unlock_tree_level': 0},
+        {'id': 'card_night', 'category': 'postcard_bg', 'name': '星空信纸', 'emoji': '🌌', 'price': 30, 'unlock_tree_level': 2},
+        {'id': 'inst_flute', 'category': 'instrument', 'name': '笛子音色', 'emoji': '🪈', 'price': 80, 'unlock_tree_level': 3},
+        {'id': 'inst_harp', 'category': 'instrument', 'name': '竖琴音色', 'emoji': '🎵', 'price': 100, 'unlock_tree_level': 4},
+        {'id': 'inst_bell', 'category': 'instrument', 'name': '钟琴音色', 'emoji': '🔔', 'price': 90, 'unlock_tree_level': 3},
+      ]) {
+        await txn.insert('shop_items', {
+          'id': item['id'],
+          'category': item['category'],
+          'name': item['name'],
+          'emoji': item['emoji'],
+          'price': item['price'],
+          'asset_path': null,
+          'unlock_tree_level': item['unlock_tree_level'],
+        });
+      }
+
+      await txn.execute('''
+        CREATE TABLE inventory (
+          item_id TEXT PRIMARY KEY,
+          quantity INTEGER NOT NULL DEFAULT 1,
+          is_equipped INTEGER NOT NULL DEFAULT 0,
+          acquired_time TEXT NOT NULL
+        )
+      ''');
+      await txn.execute('''
+        CREATE TABLE daily_progress (
+          date TEXT PRIMARY KEY,
+          daily_challenge_completed INTEGER NOT NULL DEFAULT 0,
+          daily_earnings INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
     });
   }
 
@@ -143,6 +231,109 @@ class DatabaseService {
         'ALTER TABLE works ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0',
       );
     }
+    if (oldVersion < 3) {
+      // v2 → v3: 明信片语音祝福
+      await db.execute(
+        'ALTER TABLE voice_cards ADD COLUMN greeting_audio_path TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE voice_cards ADD COLUMN greeting_text TEXT',
+      );
+    }
+    if (oldVersion < 4) {
+      await _migrateV3toV4(db);
+    }
+    if (oldVersion < 5) {
+      await db.execute(
+        'ALTER TABLE works ADD COLUMN review TEXT',
+      );
+    }
+  }
+
+  Future<void> _migrateV3toV4(Database db) async {
+      // v3 → v4: 金松果经济系统
+      await db.execute('''
+        CREATE TABLE wallet (
+          id INTEGER PRIMARY KEY DEFAULT 1,
+          balance INTEGER NOT NULL DEFAULT 0,
+          total_earned INTEGER NOT NULL DEFAULT 0,
+          today_earned INTEGER NOT NULL DEFAULT 0,
+          last_reset_date TEXT NOT NULL DEFAULT ''
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE transactions (
+          id TEXT PRIMARY KEY,
+          type TEXT NOT NULL,
+          amount INTEGER NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          ref_id TEXT,
+          timestamp TEXT NOT NULL
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX idx_transactions_timestamp ON transactions(timestamp DESC)',
+      );
+      await db.execute('''
+        CREATE TABLE shop_items (
+          id TEXT PRIMARY KEY,
+          category TEXT NOT NULL,
+          name TEXT NOT NULL,
+          emoji TEXT NOT NULL DEFAULT '🎁',
+          price INTEGER NOT NULL,
+          asset_path TEXT,
+          unlock_tree_level INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      // 插入内置商品
+      final items = [
+        {'id': 'frame_spring', 'category': 'avatar_frame', 'name': '春花框', 'emoji': '🌸', 'price': 20, 'unlock_tree_level': 0},
+        {'id': 'frame_star', 'category': 'avatar_frame', 'name': '星星框', 'emoji': '⭐', 'price': 30, 'unlock_tree_level': 0},
+        {'id': 'frame_rainbow', 'category': 'avatar_frame', 'name': '彩虹框', 'emoji': '🌈', 'price': 50, 'unlock_tree_level': 3},
+        {'id': 'frame_moon', 'category': 'avatar_frame', 'name': '月亮框', 'emoji': '🌙', 'price': 40, 'unlock_tree_level': 0},
+        {'id': 'pet_deer', 'category': 'pet_skin', 'name': '小鹿斑斑', 'emoji': '🦌', 'price': 20, 'unlock_tree_level': 0},
+        {'id': 'pet_blue_tit', 'category': 'pet_skin', 'name': '蓝羽山雀', 'emoji': '🐦', 'price': 40, 'unlock_tree_level': 0},
+        {'id': 'pet_rainbow_frog', 'category': 'pet_skin', 'name': '翠蛙', 'emoji': '🐸', 'price': 50, 'unlock_tree_level': 0},
+        {'id': 'pet_ladybug', 'category': 'pet_skin', 'name': '七星瓢虫', 'emoji': '🐞', 'price': 70, 'unlock_tree_level': 4},
+        {'id': 'deco_bell', 'category': 'tree_deco', 'name': '风铃', 'emoji': '🎐', 'price': 15, 'unlock_tree_level': 0},
+        {'id': 'deco_star', 'category': 'tree_deco', 'name': '小星星', 'emoji': '🌟', 'price': 20, 'unlock_tree_level': 0},
+        {'id': 'deco_fruit', 'category': 'tree_deco', 'name': '红果实', 'emoji': '🍎', 'price': 25, 'unlock_tree_level': 0},
+        {'id': 'deco_lantern', 'category': 'tree_deco', 'name': '小灯笼', 'emoji': '🏮', 'price': 30, 'unlock_tree_level': 2},
+        {'id': 'deco_heart', 'category': 'tree_deco', 'name': '爱心果', 'emoji': '💝', 'price': 35, 'unlock_tree_level': 3},
+        {'id': 'card_forest', 'category': 'postcard_bg', 'name': '森林信纸', 'emoji': '🌿', 'price': 15, 'unlock_tree_level': 0},
+        {'id': 'card_ocean', 'category': 'postcard_bg', 'name': '海洋信纸', 'emoji': '🌊', 'price': 20, 'unlock_tree_level': 0},
+        {'id': 'card_sunset', 'category': 'postcard_bg', 'name': '晚霞信纸', 'emoji': '🌅', 'price': 25, 'unlock_tree_level': 0},
+        {'id': 'card_night', 'category': 'postcard_bg', 'name': '星空信纸', 'emoji': '🌌', 'price': 30, 'unlock_tree_level': 2},
+        {'id': 'inst_flute', 'category': 'instrument', 'name': '笛子音色', 'emoji': '🪈', 'price': 80, 'unlock_tree_level': 3},
+        {'id': 'inst_harp', 'category': 'instrument', 'name': '竖琴音色', 'emoji': '🎵', 'price': 100, 'unlock_tree_level': 4},
+        {'id': 'inst_bell', 'category': 'instrument', 'name': '钟琴音色', 'emoji': '🔔', 'price': 90, 'unlock_tree_level': 3},
+      ];
+      for (final item in items) {
+        await db.insert('shop_items', {
+          'id': item['id'],
+          'category': item['category'],
+          'name': item['name'],
+          'emoji': item['emoji'],
+          'price': item['price'],
+          'asset_path': null,
+          'unlock_tree_level': item['unlock_tree_level'],
+        });
+      }
+      await db.execute('''
+        CREATE TABLE inventory (
+          item_id TEXT PRIMARY KEY,
+          quantity INTEGER NOT NULL DEFAULT 1,
+          is_equipped INTEGER NOT NULL DEFAULT 0,
+          acquired_time TEXT NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE daily_progress (
+          date TEXT PRIMARY KEY,
+          daily_challenge_completed INTEGER NOT NULL DEFAULT 0,
+          daily_earnings INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
   }
 
   // ── 工具方法 ──

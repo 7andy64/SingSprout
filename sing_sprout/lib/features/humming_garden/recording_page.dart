@@ -158,12 +158,12 @@ class _RecordingPageState extends State<RecordingPage> {
                   Switch(
                     value: _speechMode,
                     onChanged: (v) => setState(() => _speechMode = v),
-                    activeThumbColor: AppTheme.primaryGreen,
+                    activeTrackColor: AppTheme.primaryGreen,
                   ),
                   const Text('说话', style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
                   if (_speechText != null && _speechText!.isNotEmpty) ...[
                     const SizedBox(width: 8),
-                    const Icon(Icons.check_circle, size: 16, color: AppTheme.primaryGreen),
+                    const Text('✅', style: TextStyle(fontSize: 16)),
                   ],
                 ],
               ),
@@ -416,9 +416,9 @@ class _RecoveryBanner extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.phone_callback, size: 20, color: AppTheme.primaryGreen),
-              SizedBox(width: 8),
-              Expanded(
+              const Text('📞', style: TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              const Expanded(
                 child: Text(
                   '检测到上次录制被来电中断，已自动保存录音片段',
                   style: TextStyle(fontSize: 13, color: AppTheme.primaryGreen, height: 1.4),

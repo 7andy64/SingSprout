@@ -9,6 +9,10 @@ import '../../shared/providers/app_state.dart';
 import '../../shared/widgets/temperature_dial.dart';
 import '../../shared/widgets/speed_race_track.dart';
 import '../../shared/widgets/instrument_mixer.dart';
+import '../../shared/widgets/role_gate.dart';
+import '../../shared/services/role_permissions.dart';
+import '../../shared/models/user_profile.dart';
+import '../../shared/providers/economy_provider.dart';
 import 'widgets/save_work_dialog.dart';
 
 /// 作品编辑器 — 播放预览 + 具象化微调 + 保存/分享
@@ -99,6 +103,7 @@ class _EditorPageState extends State<EditorPage> {
         note: work.note != null ? '${work.note}\n$params' : params,
       );
       await context.read<AppState>().addWork(saved);
+      _onWorkCreated();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('作品已保存到本地')),
@@ -112,6 +117,36 @@ class _EditorPageState extends State<EditorPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// 创作完成后触发守护动物祝贺/鼓励消息。
+  void _onWorkCreated() {
+    final appState = context.read<AppState>();
+    final count = appState.totalWorks;
+    final animal =
+        appState.userProfile?.guardianAnimal ?? GuardianAnimal.panda;
+    final name = animal.shortName;
+
+    String greeting;
+    if (count == 1) {
+      greeting = '$name说：🎉 恭喜你创作了第一首歌！这是你音乐之旅的开始！';
+    } else if (count == 5) {
+      greeting = '$name说：🌟 你已经创作了 5 首歌了！越来越棒了！';
+    } else if (count == 10) {
+      greeting = '$name说：🏆 10 首歌达成！你是个真正的小创作家！';
+    } else if (count == 20) {
+      greeting = '$name说：👑 20 首歌！你太厉害了，继续加油！';
+    } else {
+      final encouragements = [
+        '$name说：太棒了！你又创作了一首歌！',
+        '$name说：真好听！继续加油哦～',
+        '$name说：哇！这首歌真有感觉！',
+        '$name说：你又进步了！我为你骄傲！',
+      ];
+      greeting = encouragements[count % encouragements.length];
+    }
+
+    appState.setPendingAnimalGreeting(greeting);
   }
 
   String _formatDuration(Duration d) {
@@ -130,6 +165,18 @@ class _EditorPageState extends State<EditorPage> {
         ),
         title: const Text('编辑作品'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('✅', style: TextStyle(fontSize: 24)),
+            onPressed: _saving ? null : _saveWork,
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -148,10 +195,12 @@ class _EditorPageState extends State<EditorPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
-                      icon: Icon(
-                        _isPlaying ? Icons.pause_circle : Icons.play_circle,
-                        size: 56,
-                        color: AppTheme.primaryGreen,
+                      icon: Text(
+                        _isPlaying ? '⏸' : '▶',
+                        style: const TextStyle(
+                          fontSize: 56,
+                          color: AppTheme.primaryGreen,
+                        ),
                       ),
                       onPressed: _togglePlayPause,
                     ),
@@ -185,37 +234,53 @@ class _EditorPageState extends State<EditorPage> {
               InstrumentMixer(
                 value: _instrumentMix,
                 onChanged: (v) => setState(() => _instrumentMix = v),
+                ownedInstrumentIds:
+                    context.watch<EconomyProvider>().ownedItemIds,
               ),
 
               const SizedBox(height: 44),
 
               // 操作按钮
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _saving ? null : _saveWork,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 52),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-                        side: const BorderSide(color: AppTheme.primaryGreen),
+              Consumer<AppState>(
+                builder: (context, app, _) {
+                  final role = app.userProfile?.role ?? UserRole.student;
+                  if (!RoleGate.isAllowed(Feature.editWork, role)) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        '当前身份不支持编辑作品',
+                        style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
                       ),
-                      child: const Text('保存'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // 带着当前作品 ID 跳转声音邮局
-                        context.push(
-                          '${AppRoutes.composeCard}?workId=${_work.id}',
-                        );
-                      },
-                      child: const Text('发给爸妈'),
-                    ),
-                  ),
-                ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _saving ? null : _saveWork,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 52),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                            side: const BorderSide(color: AppTheme.primaryGreen),
+                          ),
+                          child: const Text('保存'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // 带着当前作品 ID 跳转声音邮局
+                            context.push(
+                              '${AppRoutes.composeCard}?workId=${_work.id}',
+                            );
+                          },
+                          child: const Text('发给爸妈'),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
             ],

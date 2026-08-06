@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
+import '../../../shared/providers/economy_provider.dart';
 import '../../../shared/widgets/animal_avatar.dart';
+import '../../../shared/widgets/guardian_scene_bubble.dart';
 import '../view_models/creative_flow_view_model.dart';
 
-/// Idle stage — "tap to record" prompt with panda mascot.
+/// Idle stage — "tap to record" prompt with guardian mascot.
 class IdleStageWidget extends StatelessWidget {
   final CreativeFlowViewModel vm;
   final AnimationController breatheController;
@@ -81,7 +83,14 @@ class IdleStageWidget extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 35),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Consumer<AppState>(
+                builder: (_, app, __) => GuardianSceneBubble(appState: app),
+              ),
+            ),
+            const SizedBox(height: 16),
             Opacity(
               opacity: 1.0 - t * 0.4,
               child: Transform.translate(
@@ -94,10 +103,11 @@ class IdleStageWidget extends StatelessWidget {
                   ),
                   child: Consumer<AppState>(
                     builder: (_, app, __) => AnimalAvatar(
-                        animal: app.userProfile?.guardianAnimal ??
-                            GuardianAnimal.panda,
-                        size: 80,
-                        speechBubble: null,),
+                      animal: app.userProfile?.guardianAnimal ??
+                          GuardianAnimal.panda,
+                      size: 80,
+                      animalState: app.animalState,
+                    ),
                   ),
                 ),
               ),
@@ -106,7 +116,6 @@ class IdleStageWidget extends StatelessWidget {
             Transform.scale(
               scale: 1.0 + t * 0.3,
               child: GestureDetector(
-                onTap: () => onGoToRecording(),
                 onLongPressStart: (_) => onGoToRecording(),
                 onLongPressMoveUpdate: (details) {
                   final isInside = details.localPosition.dy > -60;

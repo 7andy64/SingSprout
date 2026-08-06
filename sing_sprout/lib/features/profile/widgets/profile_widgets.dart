@@ -1,10 +1,20 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/animal_avatar.dart';
+import '../../../shared/widgets/avatar_crop_page.dart';
+import '../../../shared/widgets/guardian_chat_dialog.dart';
+import '../../../shared/widgets/guardian_scene_bubble.dart';
 import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
+import '../../../shared/providers/economy_provider.dart';
 
-/// 用户信息头部 — 头像、昵称、角色、陪伴动物
+/// 用户信息头部 — 自定义头像、昵称、角色、陪伴动物
 class ProfileHeader extends StatelessWidget {
   final UserProfile? profile;
   final bool loading;
@@ -14,23 +24,118 @@ class ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasProfile = profile != null;
+    final appState = context.watch<AppState>();
+    final economy = context.watch<EconomyProvider>();
+    final frameEmoji = economy.equippedAvatarFrameEmoji;
+    final avatarPath = appState.avatarPath;
+    final nickname = profile?.nickname ?? '新朋友';
+    final initial = nickname.isNotEmpty ? nickname[0] : '🎵';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
       child: Column(
         children: [
+          // ── 守护动物场景气泡 ──
+          if (hasProfile) GuardianSceneBubble(appState: appState),
+
+          // ── 自定义头像（可点击更换）──
+          GestureDetector(
+            onTap: () => _showAvatarPicker(context, appState),
+            child: Stack(
+              children: [
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: frameEmoji != null
+                          ? AppTheme.primaryGreen.withValues(alpha: 0.6)
+                          : AppTheme.primaryGreen.withValues(alpha: 0.3),
+                      width: frameEmoji != null ? 4 : 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryGreen.withValues(alpha: 0.15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: _buildAvatarContent(avatarPath, nickname, initial),
+                ),
+                // 头像框装饰
+                if (frameEmoji != null)
+                  Positioned(
+                    top: -6,
+                    right: -6,
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          frameEmoji,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+                // 相机小图标
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGreen,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // ── 陪伴动物 ──
           AnimalAvatar(
             animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
-            size: 80,
-            speechBubble: hasProfile ? '嘿！今天想做什么？' : null,
+            size: 64,
+            animalState: appState.animalState,
+            onTap: () {
+              GuardianChatDialog.show(
+                context,
+                animal: profile?.guardianAnimal ?? GuardianAnimal.panda,
+              );
+            },
           ),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 10),
+
           if (loading)
             const Column(
               children: [
                 SizedBox(
-                  width: 120,
-                  height: 20,
+                  width: 120, height: 20,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: Color(0xFFF0F0F0),
@@ -40,8 +145,7 @@ class ProfileHeader extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 SizedBox(
-                  width: 80,
-                  height: 14,
+                  width: 80, height: 14,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: Color(0xFFF0F0F0),
@@ -53,7 +157,7 @@ class ProfileHeader extends StatelessWidget {
             )
           else ...[
             Text(
-              profile?.nickname ?? '新朋友',
+              nickname,
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -63,42 +167,14 @@ class ProfileHeader extends StatelessWidget {
             const SizedBox(height: 4),
           ],
           if (!loading && hasProfile) ...[
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${profile!.role.emoji} ${profile!.role.label}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.primaryGreen,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
             Text(
               '${profile!.guardianAnimal.displayName} 陪伴你',
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-              ),
+              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 2),
             Text(
               '${_formatDate(profile!.createdAt)} 加入',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
+              style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
             ),
           ] else if (!loading && !hasProfile) ...[
             Text(
@@ -109,6 +185,236 @@ class ProfileHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildAvatarContent(String? avatarPath, String nickname, String initial) {
+    // 有自定义头像
+    if (avatarPath != null && avatarPath.isNotEmpty && File(avatarPath).existsSync()) {
+      return ClipOval(
+        child: Image.file(
+          File(avatarPath),
+          width: 88,
+          height: 88,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _defaultAvatar(nickname, initial),
+        ),
+      );
+    }
+    return _defaultAvatar(nickname, initial);
+  }
+
+  Widget _defaultAvatar(String nickname, String initial) {
+    final color = _avatarColor(nickname);
+    return CircleAvatar(
+      radius: 44,
+      backgroundColor: color,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Color _avatarColor(String name) {
+    const colors = [
+      Color(0xFF5B9A4B), Color(0xFF4D96FF), Color(0xFFFF6B6B),
+      Color(0xFFFFB347), Color(0xFF7C4DFF), Color(0xFF26C6DA),
+      Color(0xFFEC407A), Color(0xFFFF7043),
+    ];
+    final hash = name.codeUnits.fold<int>(0, (p, c) => p + c);
+    return colors[hash % colors.length];
+  }
+
+  void _showAvatarPicker(BuildContext context, AppState appState) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppTheme.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text('更换头像', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined, color: AppTheme.primaryGreen),
+                title: const Text('拍照'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showCameraGuide(context, appState);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF4D96FF)),
+                title: const Text('从相册选择'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAvatar(context, appState, ImageSource.gallery);
+                },
+              ),
+              if (appState.avatarPath != null)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: AppTheme.error),
+                  title: const Text('移除头像', style: TextStyle(color: AppTheme.error)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    appState.clearAvatar();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCameraGuide(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Text('📸', style: TextStyle(fontSize: 32)),
+            SizedBox(width: 8),
+            Text('准备拍照', style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          '拍一张最精神的照片当头像吧！\n\n✨ 找个光线好的地方\n✨ 露出你最灿烂的笑容\n✨ 头像仅保存在本地，不会上传',
+          style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('算了'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _pickAvatar(context, appState, ImageSource.camera);
+            },
+            icon: const Icon(Icons.camera_alt, size: 18),
+            label: const Text('开始拍照'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAvatar(
+    BuildContext context,
+    AppState appState,
+    ImageSource source,
+  ) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 90,
+      );
+      if (picked == null) return; // 用户取消
+
+      // 跳转自定义裁剪页面（替代原生 image_cropper，解决右上角确认按钮不灵敏问题）
+      if (!context.mounted) return;
+      final cropResult = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          builder: (_) => AvatarCropPage(imageFile: File(picked.path)),
+        ),
+      );
+
+      // 用户取消裁剪
+      if (cropResult == null) return;
+
+      // 压缩到 200x200
+      final resized = await _resizeImage(cropResult, 200);
+
+      // 保存到 App documents
+      final dir = await getApplicationDocumentsDirectory();
+      final avatarDir = Directory('${dir.path}/avatars');
+      if (!avatarDir.existsSync()) avatarDir.createSync(recursive: true);
+
+      final avatarFile = File('${avatarDir.path}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await avatarFile.writeAsBytes(resized);
+
+      // 删除旧头像文件
+      final oldPath = appState.avatarPath;
+      if (oldPath != null) {
+        try { await File(oldPath).delete(); } catch (_) {}
+      }
+
+      await appState.setAvatarPath(avatarFile.path);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ 头像已更新'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('设置头像失败：$e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<Uint8List> _resizeImage(Uint8List bytes, int maxSize) async {
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    final srcW = image.width;
+    final srcH = image.height;
+    final scale = maxSize / (srcW > srcH ? srcW : srcH);
+    final targetW = (srcW * scale).round().clamp(1, maxSize);
+    final targetH = (srcH * scale).round().clamp(1, maxSize);
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, srcW.toDouble(), srcH.toDouble()),
+      Rect.fromLTWH(0, 0, targetW.toDouble(), targetH.toDouble()),
+      Paint(),
+    );
+    final picture = recorder.endRecording();
+    final resizedImage = await picture.toImage(targetW, targetH);
+    final pngBytes = await resizedImage.toByteData(format: ui.ImageByteFormat.png);
+
+    // 释放 Native 资源
+    image.dispose();
+    resizedImage.dispose();
+    picture.dispose();
+    codec.dispose();
+
+    // 兜底：如果转换失败返回原始 bytes
+    if (pngBytes == null) return bytes;
+    return pngBytes.buffer.asUint8List();
   }
 
   String _formatDate(DateTime date) {
@@ -204,7 +510,7 @@ class _StatCard extends StatelessWidget {
 /// 菜单分组
 class MenuSection extends StatelessWidget {
   final String title;
-  final List<MenuItem> items;
+  final List<Widget> items;
 
   const MenuSection({super.key, required this.title, required this.items});
 

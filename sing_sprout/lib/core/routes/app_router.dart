@@ -12,6 +12,11 @@ import '../../features/mood_radio/mood_radio_page.dart';
 import '../../features/music_tree/music_tree_page.dart';
 import '../../features/field_sound_lab/field_sound_lab_page.dart';
 import '../../features/rhythm_tribe/rhythm_tribe_page.dart';
+import '../../features/rhythm_tribe/rhythm_game_page.dart';
+import '../../features/rhythm_tribe/melody_challenge_page.dart';
+import '../../features/rhythm_tribe/sound_collection_page.dart';
+import '../../features/shop/shop_page.dart';
+import '../../features/shop/inventory_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/profile/privacy_settings_page.dart';
 import '../../features/profile/works_page.dart';
@@ -21,8 +26,9 @@ import '../../features/profile/ledger_page.dart';
 import '../../features/profile/observation_page.dart';
 import '../../features/profile/storage_page.dart';
 import '../../features/onboarding/onboarding_page.dart';
-import '../../shared/widgets/notification_badge.dart';
-import '../../shared/providers/notification_provider.dart';
+import '../../shared/models/user_profile.dart';
+import '../../shared/providers/app_state.dart';
+import '../../shared/services/role_permissions.dart';
 import '../constants/app_routes.dart';
 import '../theme/app_theme.dart';
 
@@ -33,9 +39,32 @@ class AppRouter {
   static final rootNavigatorKey = GlobalKey<NavigatorState>();
   static final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+  /// 路由 → 所需权限映射
+  static final _protectedRoutes = <String, Feature>{
+    AppRoutes.creativeFlow: Feature.createMusic,
+    AppRoutes.recording: Feature.createMusic,
+    AppRoutes.editor: Feature.editWork,
+    AppRoutes.observation: Feature.accessObservation,
+  };
+
+  static String? _guardRedirect(BuildContext context, GoRouterState state) {
+    final feature = _protectedRoutes[state.uri.path];
+    if (feature == null) return null; // 非保护路由，放行
+
+    final appState = context.read<AppState>();
+    final role = appState.userProfile?.role ?? UserRole.student;
+
+    if (!rolePermissions[feature]!.contains(role)) {
+      // 无权限 → 重定向到花园页
+      return AppRoutes.hummingGarden;
+    }
+    return null; // 允许访问
+  }
+
   static final router = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.hummingGarden,
+    redirect: _guardRedirect,
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('页面未找到')),
       body: Center(
@@ -179,7 +208,7 @@ class AppRouter {
         builder: (context, state) => const PrivacySettingsPage(),
       ),
       GoRoute(
-        path: AppRoutes.fieldSoundLab,
+        path: AppRoutes.fieldSoundLabRecord,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const FieldSoundLabPage(),
       ),
@@ -187,6 +216,31 @@ class AppRouter {
         path: AppRoutes.rhythmTribe,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const RhythmTribePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.rhythmGame,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const RhythmGamePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.melodyChallenge,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const MelodyChallengePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.soundCollection,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SoundCollectionPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.shop,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ShopPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.inventory,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const InventoryPage(),
       ),
     ],
   );
@@ -293,17 +347,6 @@ class _BottomNavBar extends StatelessWidget {
                 ),
               );
 
-              // 邮局 tab（index 3）加红点
-              if (i == 3) {
-                return Consumer<NotificationProvider>(
-                  builder: (context, notif, _) {
-                    return NotificationBadge(
-                      count: notif.unreadCount,
-                      child: tabWidget,
-                    );
-                  },
-                );
-              }
               return tabWidget;
             }),
           ),
@@ -329,10 +372,6 @@ class _BottomNavBar extends StatelessWidget {
       AppRoutes.postOffice,
       AppRoutes.profile,
     ];
-    // 点击邮局时刷新通知计数
-    if (index == 3) {
-      context.read<NotificationProvider>().refresh();
-    }
     GoRouter.of(context).go(routes[index]);
   }
 }

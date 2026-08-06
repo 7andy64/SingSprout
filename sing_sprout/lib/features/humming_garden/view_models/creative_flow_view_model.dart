@@ -48,7 +48,6 @@ class CreativeFlowViewModel extends ChangeNotifier {
   bool isReRendering = false;
 
   // ── Speech ──
-  bool speechMode = false;
   String? speechText;
 
   // ── Internal ──
@@ -94,10 +93,28 @@ class CreativeFlowViewModel extends ChangeNotifier {
   // ── Recording ──
 
   Future<void> startRecording() async {
+    _ampSub?.cancel();
+    try {
+      recordedFilePath = await AudioService().startWavRecording();
+      if (recordedFilePath == null) {
+        throw Exception('录音启动失败：未返回文件路径');
+      }
+      debugPrint('[CreativeFlow] start recording: $recordedFilePath');
+    } catch (e) {
+      debugPrint('[CreativeFlow] recording start failed: $e');
+      _ampSub?.cancel();
+      _ampSub = null;
+      recordedFilePath = null;
+      recordingStartTime = null;
+      currentAmplitude = 0.0;
+      smoothAmplitude = 0.0;
+      notifyListeners();
+      return;
+    }
+
     recordingStartTime = DateTime.now();
     lastSoundTime = DateTime.now();
     smoothAmplitude = 0.0;
-    _ampSub?.cancel();
     _ampSub = AudioService().amplitude.listen((amp) {
       final normAmp = (amp + 60) / 60;
       smoothAmplitude = smoothAmplitude * 0.75 + normAmp * 0.25;
@@ -107,13 +124,6 @@ class CreativeFlowViewModel extends ChangeNotifier {
       }
       notifyListeners();
     });
-    try {
-      recordedFilePath = await AudioService().startWavRecording();
-      debugPrint('[CreativeFlow] start recording: $recordedFilePath');
-    } catch (e) {
-      debugPrint('[CreativeFlow] recording start failed: $e');
-      _ampSub?.cancel();
-    }
   }
 
   Future<String?> stopRecording() async {
@@ -154,9 +164,7 @@ class CreativeFlowViewModel extends ChangeNotifier {
           speechText: speechText,
           onProgress: (p) {
             pipelineProgress = p;
-            if (p.fraction >= 1.0) {
-              completedStageIndex = 4;
-            } else if (p.fraction >= 0.90) {
+            if (p.fraction >= 0.90) {
               completedStageIndex = 4;
             } else if (p.fraction >= 0.70) {
               completedStageIndex = 3;
@@ -309,6 +317,8 @@ class CreativeFlowViewModel extends ChangeNotifier {
     audioPlayer.dispose();
     _ampSub?.cancel();
     _reRenderTimer?.cancel();
+    // 确保 AudioService 录音状态被正确清理，防止残留 _isRecording 导致二次录音失败
+    AudioService().cancelRecording();
     super.dispose();
   }
 }

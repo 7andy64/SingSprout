@@ -13,7 +13,8 @@ class WorkCard extends StatefulWidget {
   final bool selected;
   final bool selectMode;
   final VoidCallback onFavorite;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
+  final VoidCallback? onRename;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onToggleSelect;
@@ -24,7 +25,8 @@ class WorkCard extends StatefulWidget {
     required this.selected,
     required this.selectMode,
     required this.onFavorite,
-    required this.onDelete,
+    this.onDelete,
+    this.onRename,
     required this.onTap,
     required this.onLongPress,
     required this.onToggleSelect,
@@ -260,6 +262,11 @@ class _WorkCardState extends State<WorkCard>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (widget.work.review != null && widget.work.review!.isNotEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 4),
+                            child: Text('💬', style: TextStyle(fontSize: 12)),
+                          ),
                         if (widget.work.isFavorite)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -327,7 +334,8 @@ class _WorkCardState extends State<WorkCard>
                   padding: EdgeInsets.zero,
                   onSelected: (action) {
                     if (action == 'favorite') widget.onFavorite();
-                    if (action == 'delete') widget.onDelete();
+                    if (action == 'rename') widget.onRename?.call();
+                    if (action == 'delete') widget.onDelete?.call();
                   },
                   itemBuilder: (_) => [
                     PopupMenuItem(
@@ -346,16 +354,28 @@ class _WorkCardState extends State<WorkCard>
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_outline, size: 18, color: AppTheme.textSecondary),
-                          SizedBox(width: 8),
-                          Text('删除'),
-                        ],
+                    if (widget.onRename != null)
+                      const PopupMenuItem(
+                        value: 'rename',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18, color: AppTheme.textSecondary),
+                            SizedBox(width: 8),
+                            Text('重命名'),
+                          ],
+                        ),
                       ),
-                    ),
+                    if (widget.onDelete != null)
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline, size: 18, color: AppTheme.textSecondary),
+                            SizedBox(width: 8),
+                            Text('删除'),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ],

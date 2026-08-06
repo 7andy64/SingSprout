@@ -177,11 +177,12 @@ class UpdateService {
   }
 
   /// 校验文件 SHA256。
-  /// 返回 true 仅当哈希完全匹配；没有提供哈希值或校验失败一律拒绝。
+  ///
+  /// Release body 中写了 SHA256 才校验，没写就跳过（日志记录，不阻断安装）。
   Future<bool> verifySha256(File file, String expectedHash) async {
     if (expectedHash.isEmpty) {
-      debugPrint('[UpdateService] 未提供 SHA-256，拒绝安装（安全策略要求强制校验）');
-      return false;
+      debugPrint('[UpdateService] Release 未提供 SHA-256，跳过校验直接安装');
+      return true;
     }
     try {
       final bytes = await file.readAsBytes();

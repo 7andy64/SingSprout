@@ -25,12 +25,14 @@ class OSSUploadService {
   }
 
   /// Upload a file to OSS. Returns the OSS object key on success.
+  /// [deviceId] overrides the cached value; falls back to internal cache.
   Future<String?> upload({
     required String filePath,
     required String cardId,
+    String? deviceId,
   }) async {
-    final deviceId = _cachedDeviceId;
-    if (deviceId == null) {
+    final dId = deviceId ?? _cachedDeviceId;
+    if (dId == null) {
       debugPrint('[OSSUpload] deviceId not set');
       return null;
     }
@@ -39,7 +41,7 @@ class OSSUploadService {
       // 1. Request STS credentials from backend
       final stsResp = await _client
           .get(Uri.parse(
-              '${AppConfig.apiBaseUrl}/storage/sts?device_id=$deviceId',),)
+              '${AppConfig.apiBaseUrl}/storage/sts?device_id=$dId',),)
           .timeout(const Duration(seconds: AppConfig.apiTimeoutSeconds));
 
       if (stsResp.statusCode != 200) {
@@ -58,14 +60,14 @@ class OSSUploadService {
       // 2. Upload file to OSS
       final file = File(filePath);
       final fileBytes = await file.readAsBytes();
-      final ext = filePath.endsWith('.wav') ? 'wav' : 'm4a';
+      final ext = filePath.split('.').last;
       final objectKey = '$uploadPrefix${cardId}_${_nonce()}.$ext';
 
       final putResp = await _client
           .put(
             Uri.parse('https://$bucket.$endpoint/$objectKey'),
             headers: _ossHeaders(accessKeyId, accessKeySecret, securityToken,
-                bucket, endpoint, objectKey, ext,),
+                bucket, endpoint, objectKey,),
             body: fileBytes,
           )
           .timeout(const Duration(seconds: 60));
@@ -90,10 +92,9 @@ class OSSUploadService {
     String bucket,
     String endpoint,
     String objectKey,
-    String ext,
   ) {
     final date = _rfc1123Date();
-    final contentType = ext == 'wav' ? 'audio/wav' : 'audio/mp4';
+    final contentType = _contentTypeFor(objectKey);
 
     final stringToSign = [
       'PUT',
@@ -118,8 +119,40 @@ class OSSUploadService {
     _client.close();
   }
 
+  String _contentTypeFor(String path) {
+    final ext = path.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'wav':
+        return 'audio/wav';
+      case 'm4a':
+        return 'audio/mp4';
+      case 'mp3':
+        return 'audio/mpeg';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
   String _nonce() => (Random().nextInt(99999) + 10000).toString();
-  String _rfc1123Date() => DateTime.now().toUtc().toIso8601String();
+
+  String _rfc1123Date() {
+    final now = DateTime.now().toUtc();
+    const wd = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const mo = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final d = now.day.toString().padLeft(2, '0');
+    final h = now.hour.toString().padLeft(2, '0');
+    final m = now.minute.toString().padLeft(2, '0');
+    final s = now.second.toString().padLeft(2, '0');
+    return '${wd[now.weekday - 1]}, $d ${mo[now.month - 1]} ${now.year} $h:$m:$s GMT';
+  }
 }
 
 String _hmacSha1Base64(String key, String data) {

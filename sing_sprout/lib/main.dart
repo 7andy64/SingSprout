@@ -7,8 +7,10 @@ import 'app.dart';
 import 'shared/providers/app_state.dart';
 import 'shared/providers/audio_provider.dart';
 import 'shared/providers/connectivity_provider.dart';
-import 'shared/providers/notification_provider.dart';
+import 'shared/providers/theme_provider.dart';
+import 'shared/providers/economy_provider.dart';
 import 'core/routes/app_router.dart';
+import 'core/constants/app_config.dart';
 import 'shared/services/update_service.dart';
 import 'shared/services/encryption_service.dart';
 import 'shared/services/file_storage_service.dart';
@@ -38,6 +40,9 @@ void main() async {
       ),
     );
   }
+
+  // ── 读取 APK 版本号（从包元数据，自动与 pubspec.yaml 一致）──
+  await AppConfig.init();
 
   // ── 初始化本地存储服务 ──
   try {
@@ -86,7 +91,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AppState()),
         ChangeNotifierProvider(create: (_) => AudioProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => EconomyProvider()),
       ],
       child: const SingSproutApp(),
     ),

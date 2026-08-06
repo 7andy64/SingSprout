@@ -336,6 +336,6 @@ class WorkMenu extends StatelessWidget {
               child: const Text('确定'),),
         ],
       ),
-    );
+    ).then((_) => ctrl.dispose());
   }
 }

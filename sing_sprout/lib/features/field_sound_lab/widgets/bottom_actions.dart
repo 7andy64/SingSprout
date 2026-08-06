@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_routes.dart';
 import '../../../core/constants/enums.dart';
 import '../../../shared/models/sound_sample.dart';
+import '../../../shared/models/user_profile.dart';
 import '../../../shared/providers/app_state.dart';
 import '../view_models/field_sound_lab_view_model.dart';
 
@@ -42,7 +43,7 @@ class BottomActions extends StatelessWidget {
                   onPressed: vm.hasRecording
                       ? () => _saveToLibrary(context)
                       : null,
-                  icon: const Icon(Icons.save_alt_rounded, size: 22),
+                  icon: const Text('💾', style: TextStyle(fontSize: 22)),
                   label: const Text(
                     '保存到我的声音库',
                     style: TextStyle(
@@ -114,7 +115,7 @@ class BottomActions extends StatelessWidget {
                   decoration: const InputDecoration(
                     labelText: '给声音起个名字吧',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.edit, size: 20),
+                    prefixIcon: const Text('✏️', style: TextStyle(fontSize: 20)),
                   ),
                   autofocus: true,
                 ),
@@ -175,6 +176,7 @@ class BottomActions extends StatelessWidget {
       bpm: vm.detectedBpm,
     );
     await context.read<AppState>().addSound(sample);
+    _onSoundSaved(context);
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -186,25 +188,74 @@ class BottomActions extends StatelessWidget {
       );
     }
   }
+
+  /// 声音保存后触发守护动物祝贺/鼓励消息。
+  /// 语气侧重"发现"和"探索"，与作品创作的"表达"和"创造"区分。
+  void _onSoundSaved(BuildContext context) {
+    final appState = context.read<AppState>();
+    final count = appState.totalSounds;
+    final animal =
+        appState.userProfile?.guardianAnimal ?? GuardianAnimal.panda;
+    final name = animal.shortName;
+
+    String greeting;
+    if (count == 1) {
+      greeting = '$name说：🔍 恭喜你采集了第一个声音！你的耳朵真灵敏！';
+    } else if (count == 5) {
+      greeting = '$name说：🎧 你已经采集了 5 个声音了！像个小小探险家！';
+    } else if (count == 10) {
+      greeting = '$name说：🏆 10 个声音达成！你有一双发现美的耳朵！';
+    } else if (count == 20) {
+      greeting = '$name说：👑 20 个声音！你是个真正的声音收藏家！';
+    } else {
+      final encouragements = [
+        '$name说：哇！你又发现了一个新声音！让我听听！',
+        '$name说：这个声音好特别！你真会找！',
+        '$name说：自然的声音最美了，继续探索吧！',
+        '$name说：耳朵越来越灵了！又收集到一个！',
+      ];
+      greeting = encouragements[count % encouragements.length];
+    }
+
+    appState.setPendingAnimalGreeting(greeting);
+  }
 }
 
 // ═══════════════════════════════════════════════
 //  Weekly Task Tile — 基于真实数据
 // ═══════════════════════════════════════════════
 
-class _WeeklyTaskTile extends StatelessWidget {
+class _WeeklyTaskTile extends StatefulWidget {
   final FieldSoundLabViewModel vm;
   const _WeeklyTaskTile({required this.vm});
 
   @override
-  Widget build(BuildContext context) {
-    // 从 AppState 获取本周采集的声音类型
-    final sounds = context.watch<AppState>().sounds;
-    final typesThisWeek = _getWeeklyTypes(sounds);
-    vm.updateWeeklyProgress(typesThisWeek);
+  State<_WeeklyTaskTile> createState() => _WeeklyTaskTileState();
+}
 
-    final collected = vm.weeklyCollected;
-    final target = vm.weeklyTarget;
+class _WeeklyTaskTileState extends State<_WeeklyTaskTile> {
+  @override
+  void initState() {
+    super.initState();
+    _update();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _update();
+  }
+
+  void _update() {
+    final sounds = context.read<AppState>().sounds;
+    final typesThisWeek = _getWeeklyTypes(sounds);
+    widget.vm.updateWeeklyProgress(typesThisWeek);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final collected = widget.vm.weeklyCollected;
+    final target = widget.vm.weeklyTarget;
     final color = const Color(0xFFFF7043);
 
     return GestureDetector(

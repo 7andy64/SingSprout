@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/providers/economy_provider.dart';
 
 /// 首次使用引导流程
 ///
@@ -24,7 +25,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
   int _currentStep = 0;
 
   GuardianAnimal _selectedAnimal = GuardianAnimal.panda;
-  UserRole _selectedRole = UserRole.student;
 
   static const _totalSteps = 3;
 
@@ -76,7 +76,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       nickname: nickname,
       voiceBaselinePath: '', // 首次录音后填充
       guardianAnimal: _selectedAnimal,
-      role: _selectedRole,
+      role: UserRole.student,
     );
 
     // 持久化用户档案并标记引导完成
@@ -113,13 +113,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   ),
                   _StepTellAboutYou(
                     controller: _nicknameController,
-                    selectedRole: _selectedRole,
-                    onRoleChanged: (r) => setState(() => _selectedRole = r),
                   ),
                   _StepReady(
                     animal: _selectedAnimal,
                     nickname: _nicknameController.text.trim(),
-                    role: _selectedRole,
                   ),
                 ],
               ),
@@ -277,8 +274,10 @@ class _StepPickAnimal extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: GuardianAnimal.values.map((animal) {
               final isSelected = selected == animal;
+              final economy = context.read<EconomyProvider>();
+              final owned = economy.isAnimalOwned(animal.name);
               return GestureDetector(
-                onTap: () => onSelected(animal),
+                onTap: owned ? () => onSelected(animal) : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: 130,
@@ -286,26 +285,38 @@ class _StepPickAnimal extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppTheme.primaryGreen.withValues(alpha: 0.08)
-                        : Colors.white,
+                        : owned
+                            ? Colors.white
+                            : AppTheme.divider.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                     border: isSelected
                         ? Border.all(
                             color: AppTheme.primaryGreen.withValues(alpha: 0.4),
                             width: 2,
                           )
-                        : Border.all(color: AppTheme.divider),
+                        : Border.all(
+                            color: owned ? AppTheme.divider : AppTheme.divider,
+                          ),
                   ),
                   child: Column(
                     children: [
-                      Text(animal.emoji, style: const TextStyle(fontSize: 40)),
+                      Text(
+                        owned ? animal.emoji : '🔒',
+                        style: TextStyle(
+                          fontSize: owned ? 40 : 30,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
-                        animal.displayName,
+                        owned ? animal.displayName : '${animal.displayName}\n需购买',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: AppTheme.textPrimary,
+                          color: owned
+                              ? AppTheme.textPrimary
+                              : AppTheme.textSecondary,
                         ),
                       ),
                     ],
@@ -321,19 +332,13 @@ class _StepPickAnimal extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 步骤 2：身份 + 昵称
+// 步骤 2：昵称
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _StepTellAboutYou extends StatelessWidget {
   final TextEditingController controller;
-  final UserRole selectedRole;
-  final ValueChanged<UserRole> onRoleChanged;
 
-  const _StepTellAboutYou({
-    required this.controller,
-    required this.selectedRole,
-    required this.onRoleChanged,
-  });
+  const _StepTellAboutYou({required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -360,67 +365,6 @@ class _StepTellAboutYou extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-
-          // 身份选择
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '我是',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: UserRole.values.map((role) {
-              final isSelected = selectedRole == role;
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: role != UserRole.values.last ? 8 : 0,
-                  ),
-                  child: GestureDetector(
-                    onTap: () => onRoleChanged(role),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppTheme.primaryGreen.withValues(alpha: 0.08)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: isSelected
-                            ? Border.all(
-                                color: AppTheme.primaryGreen.withValues(alpha: 0.4),
-                                width: 2,
-                              )
-                            : Border.all(color: AppTheme.divider),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(role.emoji, style: const TextStyle(fontSize: 28)),
-                          const SizedBox(height: 4),
-                          Text(
-                            role.label,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight:
-                                  isSelected ? FontWeight.w600 : FontWeight.w400,
-                              color: AppTheme.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 24),
 
           // 昵称输入
           const Align(
@@ -458,12 +402,10 @@ class _StepTellAboutYou extends StatelessWidget {
 class _StepReady extends StatelessWidget {
   final GuardianAnimal animal;
   final String nickname;
-  final UserRole role;
 
   const _StepReady({
     required this.animal,
     required this.nickname,
-    required this.role,
   });
 
   @override
@@ -523,24 +465,6 @@ class _StepReady extends StatelessWidget {
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${role.emoji} ${role.label}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.primaryGreen,
-                          ),
                         ),
                       ),
                     ],

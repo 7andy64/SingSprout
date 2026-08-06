@@ -1,6 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
+import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/enums.dart';
 import '../../shared/models/sound_sample.dart';
@@ -16,31 +18,51 @@ class SoundsPage extends StatefulWidget {
   State<SoundsPage> createState() => _SoundsPageState();
 }
 
-class _SoundsPageState extends State<SoundsPage> {
+class _SoundsPageState extends State<SoundsPage>
+    with TickerProviderStateMixin {
   final _audioService = AudioService();
   String? _playingId;
   bool _isPlaying = false;
-  Duration _playPos = Duration.zero;
-  Duration _playDur = Duration.zero;
-  StreamSubscription<Duration>? _posSub;
-  StreamSubscription<Duration?>? _durSub;
+
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulseAnim;
+  late final AnimationController _waveCtrl;
+
+  SoundType? _filterType; // null = 全部
+  final Set<String> _deletingIds = {};
 
   @override
   void initState() {
     super.initState();
-    _posSub = _audioService.position.listen((pos) {
-      if (mounted) setState(() => _playPos = pos);
+
+    // 标记声音已查看，重置守护动物的 curious 状态
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppState>().markSoundsViewed();
     });
-    _durSub = _audioService.duration.listen((dur) {
-      if (mounted) setState(() => _playDur = dur ?? Duration.zero);
-    });
+
+    // 容器入场微动画 — 柔和呼吸感
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
+    _pulseAnim = Tween<double>(begin: 0.97, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+    _pulseCtrl.repeat(reverse: true);
+
+    // 波形跳动动画 — 连续循环
+    _waveCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    _waveCtrl.repeat();
   }
 
   @override
   void dispose() {
-    _posSub?.cancel();
-    _durSub?.cancel();
     _audioService.stopPlayback();
+    _pulseCtrl.dispose();
+    _waveCtrl.dispose();
     super.dispose();
   }
 
@@ -61,7 +83,6 @@ class _SoundsPageState extends State<SoundsPage> {
       setState(() {
         _playingId = sound.id;
         _isPlaying = true;
-        _playPos = Duration.zero;
       });
     }
   }
@@ -71,8 +92,90 @@ class _SoundsPageState extends State<SoundsPage> {
     setState(() {
       _playingId = null;
       _isPlaying = false;
-      _playPos = Duration.zero;
     });
+  }
+
+  List<SoundSample> _filteredSounds(List<SoundSample> all) {
+    if (_filterType == null) return all;
+    return all.where((s) => s.type == _filterType).toList();
+  }
+
+  Widget _buildTypeFilter() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _FilterChip(
+              label: '全部',
+              selected: _filterType == null,
+              onTap: () => setState(() => _filterType = null),
+            ),
+            ...SoundType.values.map(
+              (t) => _FilterChip(
+                label: t.label,
+                selected: _filterType == t,
+                onTap: () => setState(() =>
+                    _filterType = _filterType == t ? null : t),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSoundGrid(List<SoundSample> sounds) {
+    final filtered = _filteredSounds(sounds);
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _filterType == null ? '🎤' : '🔍',
+              style: const TextStyle(fontSize: 48),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _filterType == null ? '还没有采集声音' : '该分类下暂无声音',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return MasonryGridView.count(
+      crossAxisCount: 2,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      padding: const EdgeInsets.only(bottom: 24),
+      itemCount: filtered.length,
+      itemBuilder: (_, i) {
+        final s = filtered[i];
+        final isDeleting = _deletingIds.contains(s.id);
+        return _DeletingCardWrapper(
+          isDeleting: isDeleting,
+          child: _SoundCard(
+            sound: s,
+            isPlaying: _playingId == s.id && _isPlaying,
+            isActive: _playingId == s.id,
+            waveCtrl: _waveCtrl,
+            onPlay: () => _togglePlay(s),
+            onShare: () => _onShare(s),
+            onDelete: () => _showDeleteDialog(s),
+            onRename: () => _showRenameDialog(s),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -88,17 +191,20 @@ class _SoundsPageState extends State<SoundsPage> {
           ),
           body: sounds.isEmpty
               ? _buildEmptyState()
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                  itemCount: sounds.length,
-                  itemBuilder: (_, i) => _SoundCard(
-                    sound: sounds[i],
-                    isPlaying: _playingId == sounds[i].id && _isPlaying,
-                    isActive: _playingId == sounds[i].id,
-                    playPos: _playingId == sounds[i].id ? _playPos : Duration.zero,
-                    playDur: _playingId == sounds[i].id ? _playDur : Duration.zero,
-                    onPlay: () => _togglePlay(sounds[i]),
-                    onDelete: () => _confirmDelete(context, sounds[i]),
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 4),
+                      _SoundStatsHeader(
+                        total: sounds.length,
+                        pulseAnim: _pulseAnim,
+                      ),
+                      _buildTypeFilter(),
+                      Expanded(
+                        child: _buildSoundGrid(sounds),
+                      ),
+                    ],
                   ),
                 ),
         );
@@ -131,216 +237,502 @@ class _SoundsPageState extends State<SoundsPage> {
     );
   }
 
-  void _confirmDelete(BuildContext context, SoundSample sound) {
+  void _onShare(SoundSample sound) {
+    final file = File(sound.audioPath);
+    if (!file.existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('音频文件不存在，无法分享'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    SharePlus.instance.share(
+      ShareParams(
+        text: '来听听我在「声芽」里采集的声音：${sound.name} 🎵',
+        subject: sound.name,
+        files: [XFile(file.path)],
+      ),
+    );
+  }
+
+  void _showRenameDialog(SoundSample sound) {
+    final controller = TextEditingController(text: sound.name);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除声音'),
-        content: Text('确定要删除「${sound.name}」吗？'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('重命名声音', style: TextStyle(fontSize: 18)),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: '声音名称',
+            hintText: '输入新名称',
+          ),
+          maxLength: 20,
+          autofocus: true,
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () { controller.dispose(); Navigator.pop(ctx); },
             child: const Text('取消'),
           ),
           TextButton(
             onPressed: () async {
-              if (_playingId == sound.id) await _stopPlayback();
-              await context.read<AppState>().deleteSound(sound.id);
+              final newName = controller.text.trim();
+              controller.dispose();
+              if (newName.isNotEmpty && newName != sound.name) {
+                await context.read<AppState>().updateSound(sound.copyWith(name: newName));
+              }
               Navigator.pop(ctx);
             },
-            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
-            child: const Text('删除'),
+            child: const Text('确定'),
           ),
         ],
       ),
     );
   }
+
+  void _showDeleteDialog(SoundSample sound) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Text('🗑️', style: TextStyle(fontSize: 28)),
+            SizedBox(width: 8),
+            Text('删除声音', style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          '你确定要删除这个声音吗？删除后就找不回来了哦。',
+          style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('❌ 取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleDeleteConfirmed(sound);
+            },
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('✅ 确定删除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleDeleteConfirmed(SoundSample sound) {
+    if (_playingId == sound.id) _stopPlayback();
+
+    setState(() => _deletingIds.add(sound.id));
+
+    // 等删除动画播完后再真正删除 + 提示
+    Future.delayed(const Duration(milliseconds: 320), () {
+      if (!mounted) return;
+      context.read<AppState>().deleteSound(sound.id);
+      setState(() => _deletingIds.remove(sound.id));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Text('✅', style: TextStyle(fontSize: 16)),
+              SizedBox(width: 8),
+              Text(
+                '已删除',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    });
+  }
 }
 
-/// 声音样本卡片 — 支持点击播放/暂停
-class _SoundCard extends StatelessWidget {
-  final SoundSample sound;
-  final bool isPlaying;
-  final bool isActive;
-  final Duration playPos;
-  final Duration playDur;
-  final VoidCallback onPlay;
-  final VoidCallback onDelete;
+/// 声音库顶部统计卡片 — 圆角容器 + 数字微动画
+class _SoundStatsHeader extends StatelessWidget {
+  final int total;
+  final Animation<double> pulseAnim;
 
-  const _SoundCard({
-    required this.sound,
-    required this.isPlaying,
-    required this.isActive,
-    required this.playPos,
-    required this.playDur,
-    required this.onPlay,
-    required this.onDelete,
+  const _SoundStatsHeader({required this.total, required this.pulseAnim});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: pulseAnim,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: pulseAnim.value,
+          child: child,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFF5B9A4B),
+              Color(0xFF7ABD6A),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryGreen.withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // 左侧：数字计数
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '声音总数',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _AnimatedCount(target: total),
+                  const SizedBox(height: 2),
+                  Text(
+                    total == 0 ? '去田野采集第一个声音吧 🌿' : '个声音',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.white60,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 右侧：装饰图标
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Center(
+                child: Text('🎵', style: TextStyle(fontSize: 26)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 数字递增动画 — 使用 TweenAnimationBuilder 实现流畅跳动
+class _AnimatedCount extends StatelessWidget {
+  final int target;
+
+  const _AnimatedCount({required this.target});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<int>(
+      tween: IntTween(begin: 0, end: target),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, _) {
+        return Text(
+          value.toString(),
+          style: const TextStyle(
+            fontSize: 36,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            height: 1.1,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 分类筛选芯片
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final progress = playDur.inMilliseconds > 0
-        ? playPos.inMilliseconds / playDur.inMilliseconds
-        : 0.0;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: onPlay,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  // 左侧类型图标 + 播放状态
-                  GestureDetector(
-                    onTap: onPlay,
-                    child: Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: _typeColor(sound.type).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: isPlaying
-                            ? const Icon(Icons.pause,
-                                size: 28, color: AppTheme.primaryGreen)
-                            : isActive
-                                ? const Icon(Icons.play_arrow,
-                                    size: 28, color: AppTheme.primaryGreen)
-                                : Text(
-                                    _typeEmoji(sound.type),
-                                    style: const TextStyle(fontSize: 26),
-                                  ),
-                      ),
-                    ),
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppTheme.primaryGreen
+                : AppTheme.primaryGreen.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(20),
+            border: selected
+                ? null
+                : Border.all(
+                    color: AppTheme.divider,
                   ),
-                  const SizedBox(width: 12),
-
-                  // 信息区
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          sound.name,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _typeColor(sound.type)
-                                    .withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                sound.type.label,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: _typeColor(sound.type),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            if (sound.bpm != null) ...[
-                              const SizedBox(width: 8),
-                              Text(
-                                'BPM ${sound.bpm!.round()}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          Formatters.formatDateShort(sound.createdAt),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 删除按钮
-                  IconButton(
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    color: AppTheme.textSecondary,
-                    padding: EdgeInsets.zero,
-                    constraints:
-                        const BoxConstraints(minWidth: 32, minHeight: 32),
-                  ),
-                ],
-              ),
-
-              // 播放进度条（仅在播放或暂停时显示）
-              if (isActive)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Row(
-                    children: [
-                      Text(
-                        _fmtDuration(playPos),
-                        style: const TextStyle(
-                            fontSize: 10, color: AppTheme.textSecondary),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor:
-                                AppTheme.primaryGreen.withValues(alpha: 0.1),
-                            valueColor: AlwaysStoppedAnimation(
-                              isPlaying
-                                  ? AppTheme.primaryGreen
-                                  : AppTheme.textSecondary,
-                            ),
-                            minHeight: 3,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _fmtDuration(playDur),
-                        style: const TextStyle(
-                            fontSize: 10, color: AppTheme.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              color: selected ? Colors.white : AppTheme.textSecondary,
+            ),
           ),
         ),
       ),
     );
   }
+}
 
-  String _fmtDuration(Duration d) {
-    final min = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final sec = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$min:$sec';
+/// 删除动画包裹器 — 卡片缩小淡出
+class _DeletingCardWrapper extends StatefulWidget {
+  final bool isDeleting;
+  final Widget child;
+
+  const _DeletingCardWrapper({
+    required this.isDeleting,
+    required this.child,
+  });
+
+  @override
+  State<_DeletingCardWrapper> createState() => _DeletingCardWrapperState();
+}
+
+class _DeletingCardWrapperState extends State<_DeletingCardWrapper>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInBack),
+    );
+    _opacity = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeIn),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _DeletingCardWrapper old) {
+    super.didUpdateWidget(old);
+    if (!old.isDeleting && widget.isDeleting) {
+      _ctrl.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isDeleting && !_ctrl.isAnimating) {
+      return widget.child;
+    }
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        return Opacity(
+          opacity: _opacity.value,
+          child: Transform.scale(
+            scale: _scale.value,
+            child: widget.child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 声音样本卡片 — 网格竖向布局，底部三按钮操作栏
+class _SoundCard extends StatelessWidget {
+  final SoundSample sound;
+  final bool isPlaying;
+  final bool isActive;
+  final AnimationController waveCtrl;
+  final VoidCallback onPlay;
+  final VoidCallback onShare;
+  final VoidCallback onDelete;
+  final VoidCallback onRename;
+
+  const _SoundCard({
+    required this.sound,
+    required this.isPlaying,
+    required this.isActive,
+    required this.waveCtrl,
+    required this.onPlay,
+    required this.onShare,
+    required this.onDelete,
+    required this.onRename,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPlay,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 顶部：图标 + 类型标签
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: _typeColor(sound.type).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _typeEmoji(sound.type),
+                        style: const TextStyle(fontSize: 19),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _typeColor(sound.type).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      sound.type.label,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: _typeColor(sound.type),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // 声音名称
+              Text(
+                sound.name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+
+              // 波形动画 / 占位区
+              _WaveBars(
+                waveCtrl: waveCtrl,
+                isActive: isActive,
+                isPlaying: isPlaying,
+                barColor: _typeColor(sound.type),
+              ),
+              const SizedBox(height: 8),
+
+              // 日期
+              Text(
+                Formatters.formatDateShort(sound.createdAt),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // 底部操作栏：▶ 播放 / ✏️ 重命名 / 📤 分享 / 🗑️ 删除
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _ActionButton(
+                    icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    label: isPlaying ? '暂停' : '播放',
+                    color: AppTheme.primaryGreen,
+                    onTap: onPlay,
+                  ),
+                  _ActionButton(
+                    icon: Icons.edit_outlined,
+                    label: '重命名',
+                    color: const Color(0xFF7C4DFF),
+                    onTap: onRename,
+                  ),
+                  _ActionButton(
+                    icon: Icons.share_outlined,
+                    label: '分享',
+                    color: const Color(0xFF4D96FF),
+                    onTap: onShare,
+                  ),
+                  _ActionButton(
+                    icon: Icons.delete_outline,
+                    label: '删除',
+                    color: AppTheme.error,
+                    onTap: onDelete,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Color _typeColor(SoundType type) {
@@ -362,4 +754,130 @@ class _SoundCard extends StatelessWidget {
       case SoundType.unknown: return '❓';
     }
   }
+}
+
+/// 单个操作按钮 — 图标 + 文字
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 卡片内波形跳动动画 — 播放时跳动，暂停时静止
+class _WaveBars extends StatelessWidget {
+  final AnimationController waveCtrl;
+  final bool isActive;
+  final bool isPlaying;
+  final Color barColor;
+
+  const _WaveBars({
+    required this.waveCtrl,
+    required this.isActive,
+    required this.isPlaying,
+    required this.barColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isActive) {
+      // 未激活：占位高度，保持卡片高度一致
+      return const SizedBox(height: 28);
+    }
+
+    return SizedBox(
+      height: 28,
+      child: AnimatedBuilder(
+        animation: waveCtrl,
+        builder: (context, _) {
+          final t = waveCtrl.value * 2 * 3.1415926535; // 0 … 2π
+          return CustomPaint(
+            size: const Size(double.infinity, 28),
+            painter: _WavePainter(
+              phase: t,
+              isPlaying: isPlaying,
+              color: barColor,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 波形绘制器 — 10 根竖条，相位偏移制造波浪感
+class _WavePainter extends CustomPainter {
+  final double phase;
+  final bool isPlaying;
+  final Color color;
+
+  _WavePainter({
+    required this.phase,
+    required this.isPlaying,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const barCount = 10;
+    const barWidth = 3.0;
+    final gap = (size.width - barCount * barWidth) / (barCount + 1);
+
+    for (int i = 0; i < barCount; i++) {
+      // 每根条独立相位，产生波浪效果
+      final barPhase = phase + i * 0.7;
+      final raw = (0.5 + 0.5 * (barPhase));
+      // 播放时全振幅，暂停时缩到 0.25 倍
+      final amplitude = isPlaying ? 1.0 : 0.25;
+      final height = (raw * size.height * 0.85).clamp(4.0, size.height) * amplitude;
+
+      final x = gap + i * (barWidth + gap);
+      final y = size.height - height;
+
+      final paint = Paint()
+        ..color = isPlaying
+            ? color.withValues(alpha: 0.55 + 0.45 * raw)
+            : color.withValues(alpha: 0.18)
+        ..style = PaintingStyle.fill;
+
+      final rRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, y, barWidth, height),
+        const Radius.circular(1.5),
+      );
+      canvas.drawRRect(rRect, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WavePainter old) =>
+      phase != old.phase || isPlaying != old.isPlaying || color != old.color;
 }

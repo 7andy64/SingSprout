@@ -10,6 +10,7 @@ import '../../core/constants/enums.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/providers/app_state.dart';
+import '../../shared/providers/economy_provider.dart';
 import '../../shared/services/audio_service.dart';
 import '../../shared/services/dash_scope_service.dart';
 import '../../shared/utils/audio_generator.dart'
@@ -46,6 +47,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
   // UI-only state (not business logic)
   bool _isLongPressing = false;
   bool _isFingerInside = true;
+  Timer? _silenceTimer;
 
   @override
   void initState() {
@@ -81,6 +83,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     _pressScaleController.dispose();
     _ringRotateController.dispose();
     _breatheController.dispose();
+    _silenceTimer?.cancel();
     _vm.dispose();
     super.dispose();
   }
@@ -93,6 +96,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
       _ringRotateController.repeat();
       _breatheController.repeat(reverse: true);
       await _vm.startRecording();
+      if (_vm.recordedFilePath == null) return;
     }
 
     if (_vm.stage == CreativeFlowStage.recording &&
@@ -153,6 +157,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     if (silentSec >= 4 &&
         _vm.stage == CreativeFlowStage.recording &&
         _isLongPressing) {
+      _silenceTimer?.cancel();
       _pressScaleController.reverse();
       setState(() {
         _isLongPressing = false;
@@ -190,6 +195,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
 
     if (work == null || !mounted) return;
     await context.read<AppState>().addWork(work);
+    _onWorkCreated();
 
     if (mounted) {
       await TreeGrowAnimation.show(context, state: TreeState.sprouting);
@@ -206,15 +212,41 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
     }
   }
 
+  /// 创作完成后触发守护动物祝贺/鼓励消息。
+  void _onWorkCreated() {
+    final appState = context.read<AppState>();
+    final count = appState.totalWorks;
+    final animal =
+        appState.userProfile?.guardianAnimal ?? GuardianAnimal.panda;
+    final name = animal.shortName;
+
+    String greeting;
+    if (count == 1) {
+      greeting = '$name说：🎉 恭喜你创作了第一首歌！这是你音乐之旅的开始！';
+    } else if (count == 5) {
+      greeting = '$name说：🌟 你已经创作了 5 首歌了！越来越棒了！';
+    } else if (count == 10) {
+      greeting = '$name说：🏆 10 首歌达成！你是个真正的小创作家！';
+    } else if (count == 20) {
+      greeting = '$name说：👑 20 首歌！你太厉害了，继续加油！';
+    } else {
+      // 非里程碑：随机选择一句鼓励语
+      final encouragements = [
+        '$name说：太棒了！你又创作了一首歌！',
+        '$name说：真好听！继续加油哦～',
+        '$name说：哇！这首歌真有感觉！',
+        '$name说：你又进步了！我为你骄傲！',
+      ];
+      greeting = encouragements[count % encouragements.length];
+    }
+
+    appState.setPendingAnimalGreeting(greeting);
+  }
+
   // ── Build ──
 
   @override
   Widget build(BuildContext context) {
-    // Check for silence auto-stop each build during recording
-    if (_vm.stage == CreativeFlowStage.recording && _isLongPressing) {
-      _onSilenceAutoStop();
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_stageLabel()),
@@ -259,10 +291,27 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
             await Future.delayed(const Duration(milliseconds: 300));
             if (!_isLongPressing || !mounted) return;
             await _vm.startRecording();
+            if (_vm.recordedFilePath == null) {
+              // 录音启动失败，回退动画并提示用户
+              if (mounted) {
+                setState(() => _isLongPressing = false);
+                _pressScaleController.reverse();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('录音启动失败，请重试'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+              return;
+            }
             _waveController.repeat();
             _ringRotateController.repeat();
             _breatheController.repeat(reverse: true);
             setState(() => _vm.stage = CreativeFlowStage.recording);
+            _silenceTimer?.cancel();
+            _silenceTimer = Timer.periodic(
+                const Duration(seconds: 1), (_) => _onSilenceAutoStop());
           },
           onFingerInsideChanged: (v) =>
               setState(() => _isFingerInside = v),
@@ -278,6 +327,7 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
               if (_isFingerInside) {
                 _stopRecordingFlow();
               } else {
+                _silenceTimer?.cancel();
                 _vm.cleanupRecording().then((_) {
                   if (mounted) {
                     setState(() => _vm.stage = CreativeFlowStage.idle);
@@ -309,12 +359,15 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
         return EditingStageWidget(
           vm: _vm,
           onSaveLocally: () => _saveWork(thenShare: false),
+          ownedInstrumentIds:
+              context.watch<EconomyProvider>().ownedItemIds,
           onSaveAndShare: () => _saveWork(thenShare: true),
         );
     }
   }
 
   Future<void> _stopRecordingFlow() async {
+    _silenceTimer?.cancel();
     _ringRotateController.stop();
     _breatheController.stop();
     await _vm.stopRecording();
@@ -383,10 +436,11 @@ class _CreativeFlowPageState extends State<CreativeFlowPage>
                   ),
                   Consumer<AppState>(
                     builder: (_, app, __) => AnimalAvatar(
-                        animal: app.userProfile?.guardianAnimal ??
-                            GuardianAnimal.panda,
-                        size: 72,
-                        speechBubble: null,),
+                      animal: app.userProfile?.guardianAnimal ??
+                          GuardianAnimal.panda,
+                      size: 72,
+                      animalState: app.animalState,
+                    ),
                   ),
                 ],
               ),
