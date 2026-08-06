@@ -6,7 +6,7 @@ class AppTheme {
   AppTheme._();
 
   // ── 品牌色 ──
-  static const Color primaryGreen = Color(0xFF5B9A4B);
+  static const Color primaryGreen = Color(0xFF81C784);
   static const Color primaryWarm = Color(0xFFF5D04A);
   static const Color primarySoil = Color(0xFF8B6914);
 
@@ -37,11 +37,11 @@ class AppTheme {
   static const Color divider = Color(0xFFE8E4DF);
 
   // ── 中性色（夜间） ──
-  static const Color darkBg = Color(0xFF1E1E1E);
+  static const Color darkBg = Color(0xFF1A1A1A);
   static const Color darkCard = Color(0xFF2C2C2C);
-  static const Color darkTextPrimary = Color(0xFFE0E0E0);
-  static const Color darkTextSecondary = Color(0xFFBDBDBD);
-  static const Color darkDivider = Color(0xFF3A3A3A);
+  static const Color darkTextPrimary = Color(0xFFE8E8E8);
+  static const Color darkTextSecondary = Color(0xFF9E9E9E);
+  static const Color darkDivider = Color(0x1FFFFFFF); // 白色 12% 透明度
 
   // ── 语义色 ──
   static const Color success = Color(0xFF52C41A);

@@ -65,6 +65,7 @@ class _AvatarCropPageState extends State<AvatarCropPage> {
                       child: ClipOval(
                         child: InteractiveViewer(
                           transformationController: _transformCtrl,
+                          constrained: false,
                           minScale: 1.0,
                           maxScale: 4.0,
                           child: Image.file(
