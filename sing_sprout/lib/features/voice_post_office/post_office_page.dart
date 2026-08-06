@@ -33,7 +33,7 @@ class PostOfficePage extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () => context.push(AppRoutes.composeCard),
                   icon: const Text('✍️', style: TextStyle(fontSize: 22)),
-                  label: const Text('写一张音乐明信片'),
+                  label: const Text('分享一首歌'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryWarm,
                     foregroundColor: AppTheme.textPrimary,
@@ -141,8 +141,8 @@ class _CardItem extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除明信片'),
-        content: const Text('确定要删除这张明信片吗？删除后无法恢复。'),
+        title: const Text('删除分享'),
+        content: const Text('确定要删除这条分享记录吗？删除后无法恢复。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -164,18 +164,19 @@ class _CardItem extends StatelessWidget {
   void _reshareCard(BuildContext context) {
     final appState = context.read<AppState>();
     final work = appState.works.where((w) => w.id == card.workId).firstOrNull;
+    final audioPath = card.audioPath ?? work?.audioPath;
 
-    if (card.coverUrl == null || card.coverUrl!.isEmpty) {
+    if (audioPath == null || audioPath.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('明信片图片不存在')),
+        const SnackBar(content: Text('音频文件不存在')),
       );
       return;
     }
 
     SocialShareService.showShareOptions(
       context,
-      imagePath: card.coverUrl!,
-      title: work?.title ?? '音乐明信片',
+      audioPath: audioPath,
+      title: work?.title ?? '音乐分享',
       message: card.textContent ?? '',
     );
   }
@@ -193,10 +194,10 @@ class _EmptyState extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: 48),
       child: Column(
         children: [
-          Text('📤', style: TextStyle(fontSize: 56, color: AppTheme.textSecondary)),
+          Text('🎵', style: TextStyle(fontSize: 56, color: AppTheme.textSecondary)),
           SizedBox(height: 16),
           Text(
-            '还没有发送过明信片\n创作一首歌然后发给爸妈',
+            '还没有分享过音乐\n创作一首歌然后发给爸妈',
             style: TextStyle(color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
           ),

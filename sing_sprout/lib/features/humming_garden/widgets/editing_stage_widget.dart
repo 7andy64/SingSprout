@@ -237,7 +237,7 @@ class EditingStageWidget extends StatelessWidget {
               icon:
                   const Text('📮', style: TextStyle(fontSize: 18)),
               label: const Text(
-                  '做成音乐明信片\n把这首歌寄给远方爸爸妈妈',),
+                  '分享音乐给家人\n把这首歌发给远方爸爸妈妈',),
               style: OutlinedButton.styleFrom(
                 minimumSize:
                     const Size(double.infinity, 56),
