@@ -180,9 +180,16 @@ class GuardianAnimalService {
   Future<bool> get isConfigured async {
     if (_cachedKey != null && _cachedKey!.isNotEmpty) return true;
     if (_keyChecked) return false;
-    _cachedKey = await _storage.read(key: _keyStorageKey);
+    _cachedKey = await _resolveApiKey();
     _keyChecked = true;
     return _cachedKey != null && _cachedKey!.isNotEmpty;
+  }
+
+  /// 解析 API Key：优先读守护动物专用 Key，回退读 DashScope 通用 Key。
+  Future<String?> _resolveApiKey() async {
+    final key = await _storage.read(key: _keyStorageKey);
+    if (key != null && key.isNotEmpty) return key;
+    return await _storage.read(key: 'dashscope_api_key');
   }
 
   // ═══════════════════════════════════════════
@@ -384,7 +391,7 @@ class GuardianAnimalService {
       );
     }
 
-    final key = _cachedKey ?? await _storage.read(key: _keyStorageKey);
+    final key = _cachedKey ?? await _resolveApiKey();
     if (key == null || key.isEmpty) {
       return GuardianChatResult.error(
         GuardianChatError.apiKeyMissing,
@@ -503,7 +510,7 @@ class GuardianAnimalService {
   // ═══════════════════════════════════════════
 
   Future<String?> testConnection() async {
-    final key = _cachedKey ?? await _storage.read(key: _keyStorageKey);
+    final key = _cachedKey ?? await _resolveApiKey();
     if (key == null || key.isEmpty) return '未设置 API Key';
 
     try {
