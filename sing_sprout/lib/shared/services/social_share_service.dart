@@ -2,22 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 
-/// 社交分享服务 — 通过系统分享面板发送明信片图片
+/// 社交分享服务 — 通过系统分享面板发送音频
 class SocialShareService {
   SocialShareService._();
 
-  /// 通过系统分享面板分享明信片图片（兼容微信/QQ/钉钉）
-  static Future<bool> shareAsImage({
-    required String imagePath,
+  static String _audioMimeType(String path) {
+    if (path.endsWith('.mp3')) return 'audio/mpeg';
+    if (path.endsWith('.wav')) return 'audio/wav';
+    if (path.endsWith('.m4a')) return 'audio/mp4';
+    if (path.endsWith('.ogg')) return 'audio/ogg';
+    return 'audio/mpeg';
+  }
+
+  /// 通过系统分享面板分享音频（兼容微信/QQ/钉钉）
+  static Future<bool> shareAsAudio({
+    required String audioPath,
     required String title,
     required String message,
   }) async {
     try {
       await SharePlus.instance.share(
         ShareParams(
-          files: [XFile(imagePath, mimeType: 'image/png')],
-          subject: '音乐明信片 — $title',
-          text: '🎵 $title\n${message.isNotEmpty ? '$message\n' : ''}\n— 来自声芽 SingSprout',
+          files: [XFile(audioPath, mimeType: _audioMimeType(audioPath))],
+          subject: '音乐分享 — $title',
+          text: '🎵 $title${message.isNotEmpty ? '\n$message' : ''}\n— 来自声芽 SingSprout',
         ),
       );
       return true;
@@ -29,7 +37,7 @@ class SocialShareService {
   /// 显示分享选项底部弹窗
   static void showShareOptions(
     BuildContext context, {
-    required String imagePath,
+    required String audioPath,
     required String title,
     required String message,
   }) {
@@ -39,7 +47,7 @@ class SocialShareService {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _ShareOptionsSheet(
-        imagePath: imagePath,
+        audioPath: audioPath,
         title: title,
         message: message,
       ),
@@ -48,12 +56,12 @@ class SocialShareService {
 }
 
 class _ShareOptionsSheet extends StatelessWidget {
-  final String imagePath;
+  final String audioPath;
   final String title;
   final String message;
 
   const _ShareOptionsSheet({
-    required this.imagePath,
+    required this.audioPath,
     required this.title,
     required this.message,
   });
@@ -76,7 +84,7 @@ class _ShareOptionsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              '分享音乐明信片',
+              '分享音乐',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -85,13 +93,13 @@ class _ShareOptionsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             _OptionTile(
-              icon: '📱',
-              title: '分享给微信/QQ好友',
-              subtitle: '以图片形式发送，对方可直接查看',
+              icon: '🎵',
+              title: '分享给微信/QQ/钉钉好友',
+              subtitle: '以音频形式发送，对方可直接播放',
               onTap: () async {
                 Navigator.pop(context);
-                await SocialShareService.shareAsImage(
-                  imagePath: imagePath,
+                await SocialShareService.shareAsAudio(
+                  audioPath: audioPath,
                   title: title,
                   message: message,
                 );

@@ -9,9 +9,8 @@ import '../../shared/providers/connectivity_provider.dart';
 import '../../shared/services/dash_scope_service.dart';
 import '../../shared/services/outbox_queue_service.dart';
 import '../../shared/services/social_share_service.dart';
-import '../../shared/utils/postcard_generator.dart';
 
-/// 撰写音乐明信片 — 选择作品 + 写一句话 + 语音祝福 → 生成卡片 → 分享
+/// 撰写音乐分享 — 选择作品 + 写一句话 + 语音祝福 → 分享音频
 class ComposePage extends StatefulWidget {
   final String? initialWorkId;
   const ComposePage({super.key, this.initialWorkId});
@@ -24,7 +23,7 @@ class _ComposePageState extends State<ComposePage> {
   final _messageController = TextEditingController();
   final _greetingController = TextEditingController();
   MusicWork? _selectedWork;
-  bool _generating = false;
+  bool _sharing = false;
   bool _generatingGreeting = false;
   String? _greetingAudioPath;
   String? _greetingText;
@@ -106,7 +105,7 @@ class _ComposePageState extends State<ComposePage> {
     }
   }
 
-  Future<void> _generateAndShare() async {
+  Future<void> _shareAudio() async {
     if (_selectedWork == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请先选择一首作品')),
@@ -114,28 +113,19 @@ class _ComposePageState extends State<ComposePage> {
       return;
     }
 
-    setState(() => _generating = true);
+    setState(() => _sharing = true);
     try {
       final appState = context.read<AppState>();
       final profile = appState.userProfile;
-      final senderName = profile?.nickname ?? '声芽用户';
       final isOnline = context.read<ConnectivityProvider>().isConnected;
 
-      // 1. 生成明信片图片
-      final imagePath = await PostcardGenerator.generate(
-        work: _selectedWork!,
-        message: _messageController.text.trim(),
-        senderName: senderName,
-        greetingText: _greetingText,
-      );
-
-      // 2. 保存明信片记录
+      // 1. 保存分享记录
       final card = VoiceCard.send(
         senderId: profile?.localId ?? 'anonymous',
         workId: _selectedWork!.id,
         audioPath: _selectedWork!.audioPath,
         textContent: _messageController.text.trim(),
-        coverUrl: imagePath,
+        coverUrl: null,
         greetingAudioPath: _greetingAudioPath,
         greetingText: _greetingText,
       );
@@ -144,16 +134,16 @@ class _ComposePageState extends State<ComposePage> {
       if (!mounted) return;
 
       if (isOnline) {
-        // 3. 在线：弹出分享选项面板
+        // 2. 在线：弹出分享选项面板，分享音频
         if (!mounted) return;
         SocialShareService.showShareOptions(
           context,
-          imagePath: imagePath,
+          audioPath: _selectedWork!.audioPath,
           title: _selectedWork!.title,
           message: _messageController.text.trim(),
         );
       } else {
-        // 3. 离线：缓存到发件箱
+        // 2. 离线：缓存到发件箱
         await OutboxQueueService().enqueue(card);
 
         if (!mounted) return;
@@ -165,10 +155,10 @@ class _ComposePageState extends State<ComposePage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('生成失败: $e')),
+        SnackBar(content: Text('分享失败: $e')),
       );
     } finally {
-      if (mounted) setState(() => _generating = false);
+      if (mounted) setState(() => _sharing = false);
     }
   }
 
@@ -180,7 +170,7 @@ class _ComposePageState extends State<ComposePage> {
           icon: const Text('←', style: TextStyle(fontSize: 22, color: AppTheme.textPrimary)),
           onPressed: () => context.pop(),
         ),
-        title: const Text('写音乐明信片'),
+        title: const Text('分享音乐'),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -342,15 +332,15 @@ class _ComposePageState extends State<ComposePage> {
 
               const SizedBox(height: 24),
 
-              // 生成并分享
+              // 分享音频按钮
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _generating ? null : _generateAndShare,
-                  icon: _generating
+                  onPressed: _sharing ? null : _shareAudio,
+                  icon: _sharing
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('📤', style: TextStyle(fontSize: 20)),
-                  label: Text(_generating ? '生成中...' : '生成明信片并分享'),
+                  label: const Text('分享音频给家人'),
                 ),
               ),
               const SizedBox(height: 12),
